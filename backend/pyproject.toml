@@ -1,0 +1,44 @@
+[project]
+name = "mymenu-backend"
+version = "0.1.0"
+description = "Family Menu Planner: Django REST backend"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "dj-database-url>=3.1.2",
+    "django>=6.1,<7",
+    "djangorestframework>=3.18.1",
+    "gunicorn>=26.2.0",
+    "httpx>=0.28.1",
+    "pgvector>=0.5.0",
+    "psycopg[binary]>=3.3.6",
+    "python-dotenv>=1.2.4",
+    "whitenoise>=6.12.0",
+]
+
+[tool.uv]
+# A Django project, not an installable package.
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "DJ"]
+# Django Meta classes and DRF viewsets use mutable class attributes by design.
+ignore = ["RUF012"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+# WhiteNoise complains when collectstatic has not run, which tests never need.
+filterwarnings = ["ignore:No directory at:UserWarning"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-django>=4.14.0",
+    "ruff>=0.16.10",
+]

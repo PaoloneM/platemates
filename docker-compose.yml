@@ -1,0 +1,66 @@
+# Family Menu Planner. Runs unchanged on an ARM64 Mac, a Raspberry Pi or an x86 cloud VM.
+#
+# The generative LLM is NOT part of this stack: it is an external OpenAI-compatible service
+# (Unsloth Studio on the host by default) reached through LLM_BASE_URL.
+#
+#   docker compose up -d db                 # just the database, for native development
+#   docker compose up -d                    # everything
+#   docker compose --profile embeddings up  # also the bundled local embedding service
+
+name: mymenu
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mymenu}
+      POSTGRES_USER: ${POSTGRES_USER:-mymenu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mymenu}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-mymenu}:${POSTGRES_PASSWORD:-mymenu}@db:5432/${POSTGRES_DB:-mymenu}
+      # Inside a container, "127.0.0.1" is the container itself: reach the host instead.
+      LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
+      EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:8080:80"
+
+  embeddings:
+    build: ./services/embeddings
+    profiles: ["embeddings"]
+    environment:
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    ports:
+      - "127.0.0.1:8100:8100"
+
+volumes:
+  pgdata:
+  hf-cache:

@@ -1,0 +1,123 @@
+# CLAUDE.md
+
+## Project Context
+
+This is the **Family Menu Planner** project: a web application for managing the weekly family menu and the shopping list, driven by an LLM that acts in an agentic way. For the full purpose and the conceptual model (menu, recipe, ingredient catalog, family profile), see `README.md`.
+
+The functional and architectural design was defined in a planning session with the user (Paolo). This document guides operational development in Claude Code.
+
+## Project Status
+
+**Scaffolding in place.** Data model, REST API, AI adapters, embedding service, a stub SPA and
+the Docker Compose stack exist and are tested. The menu generation engine, recipe discovery,
+embedding jobs and the real UI are not built yet. See `docs/architecture.md` for how the code maps
+onto the concepts, and for the design decisions taken so far.
+
+## Technology Stack
+
+- **Backend**: Python, **Django** + Django REST Framework
+  - Reasons: robust ORM for a highly relational data model (families, recipes, ingredients, menus), app-based structure (recipe book, menu/families, LLM integration), free admin panel, native authentication that can later be extended with Keycloak
+- **Frontend**: **React** (SPA), decoupled from the backend via REST API
+  - Possible future wrapping in **Tauri** for a desktop version with local storage, same codebase
+- **Database**: **PostgreSQL** as the single database
+  - **pgvector** for embeddings (chosen over a dedicated vector DB such as Qdrant for operational simplicity: one DB to manage and deploy, direct joins between relational and vector data; the expected scale does not justify a separate system)
+  - **JSONB** for any semi-structured fields
+  - No Elasticsearch or CouchDB/Couchbase: at this scale, PostgreSQL's full-text indexes and vector search are enough
+- **Local generative LLM**: **Unsloth Studio** on the host (`http://127.0.0.1:8888`), as in Paolo's
+  `spyone` project (`../spyone`); default model `unsloth/Qwen3.6-35B-A3B-MTP-GGUF`
+- **Embeddings**: **swappable** component behind a stable interface (OpenAI-compatible style)
+  - Starting point: local open-source model (sentence-transformers family, multilingual)
+  - Open alternative: cloud API (e.g. Google Cloud) if quality justifies it; usage is occasional (only on new recipes/ingredients), so cost would be negligible
+  - Write an adapter for the chosen provider; do not hardcode it
+- **Recipe discovery**: native web search capability of the LLM (no dedicated scraping at this stage)
+- **Deployment**: **Docker Compose**, portable between a local ARM64 Mac, a home Raspberry Pi, and a cloud VM. No "all-in-one" packaging
+
+## Architecture
+
+- The Django backend exposes REST APIs consumed by the React frontend
+- The generative LLM and the embedding component are **decoupled services**, reached by the backend through stable OpenAI-compatible-style interfaces, swappable without touching application logic
+- Relational data (recipes, ingredients, families, menus, feedback) and vector data (recipe and family-profile embeddings) coexist in PostgreSQL
+- The menu generation engine is agentic and uses **RAG** logic: it retrieves structured data and vector similarity results and passes them as context to the LLM. Feedback informs the context; it is **not** used for fine-tuning
+- Two levels of vector similarity: between recipes (variety and discovery) and between family profiles (collaborative recommendation)
+- Shopping list: in the first version it is a pure output generated from the menu; offline use on mobile is delegated to a possible integration with an existing app (API/MCP)
+
+## Development Guiding Principles
+
+- **Parametricity**: no family data (people, ages, tastes, tools) hardcoded
+- **Multi-family from the data model**: even with a single real user at the start, the schema must not assume a single family
+- **People per slot**: the number of people is an attribute of each meal in the menu (default 2 at lunch, 3 at dinner, overridable, even 0), not of the family
+- **Responsive web interface**: desktop-first, mobile-ready in design
+- **Proactive LLM, not just reactive**: the engine actively proposes variety, including recipes not yet in the recipe book
+- **The user always has the final say**: every property derived or suggested by the LLM (seasonality, tags, cuisine, etc.) is editable and confirmable by the user, at recipe level or single-ingredient level
+- **Swappable LLM/embedding components**: never tie application logic to a specific provider
+- **Optional feedback**: the implicit signal (menu followed / what was actually eaten) is the baseline; explicit rating is optional
+
+## Reference Features
+
+Full detail in `README.md`:
+
+1. Structured recipe book (normalized ingredients, two-level seasonality, cuisine type, times, ratings)
+2. Parametric family profile
+3. Weekly menu generation engine (agentic, proactive)
+4. Shopping list generation
+5. New recipe discovery
+6. Kitchen tool inventory
+7. Feedback and learning (implicit + explicit, via RAG)
+8. Collaborative recommendation between families
+
+## Working Conventions for Claude Code
+
+### Layout
+
+- `backend/`: Django project (`config/`), domain apps in `apps/` (`catalog`, `recipes`,
+  `families`, `menus`; `core` holds abstract mixins only), AI adapters in `ai/`, tests in `tests/`
+- `frontend/`: React + TypeScript (Vite); `src/api.ts` is the only place that calls `fetch`
+- `services/embeddings/`: standalone OpenAI-compatible embedding server
+- `docs/architecture.md`: design decisions; update it when you change one
+
+### Environment
+
+- Python 3.12 managed with **uv** in `backend/` and `services/embeddings/` (`uv run`, `uv add`);
+  never call pip directly. If a stale `VIRTUAL_ENV` from pyenv is set, `export VIRTUAL_ENV=`
+  silences uv's warning
+- Node 24, npm in `frontend/`
+- Configuration only from the root `.env` (template: `.env.example`); never commit `.env`
+- PostgreSQL is the only supported database, also for tests: start it with
+  `docker compose up -d db`
+
+### Commands
+
+```bash
+docker compose up -d db                                 # database only, for native development
+cd backend && uv run python manage.py migrate           # apply migrations
+cd backend && uv run python manage.py runserver         # API on :8000, admin on /admin/
+cd backend && uv run pytest                             # backend tests (needs the db running)
+cd backend && uv run ruff check --fix . && uv run ruff format .
+cd services/embeddings && uv run uvicorn app.main:app --port 8100   # local embeddings
+cd services/embeddings && uv run pytest
+cd frontend && npm run dev                              # SPA on :5173, proxies /api to :8000
+cd frontend && npm run build && npm run lint
+docker compose up -d --build                            # full stack on :8080
+docker compose --profile embeddings up -d --build       # ... plus the embedding service
+```
+
+### Rules
+
+- Every property the LLM suggests or the code derives goes through `ProvenanceMixin.propose`;
+  never assign it directly. API writes are user decisions and are marked as such automatically
+- Family-owned data is reached only through `FamilyScopedMixin` querysets: a user never sees
+  another family's data
+- Application logic talks to AI only through `ai.get_chat_provider()` /
+  `ai.get_embedding_provider()`; provider-specific code lives in `ai/` only
+- Embeddings are always stored with the model name that produced them
+- No dependency that requires CUDA: the stack must run on a Raspberry Pi
+- UI strings go through i18next (`frontend/src/i18n/locales/{it,en}.json`), Italian default; add
+  every new key to both files. Backend labels use `gettext_lazy`
+- Seasonality is stored as months; season mode is only a view (see `docs/architecture.md`)
+- Tests use synthetic data, never real family data
+- Commit messages: imperative summary line, English; one logical change per commit
+
+## Cross-References
+
+- Unsloth Studio: `../spyone/CLAUDE.md` and `../spyone/docs/architecture.md` (verified endpoints,
+  auth, model loading); the parts relevant here are summarized in `docs/architecture.md`

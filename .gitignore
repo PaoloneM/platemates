@@ -1,0 +1,31 @@
+# Personal data: never in the repository
+*.db
+*.db-shm
+*.db-wal
+*.json.gz
+*.sql
+*.dump
+notes/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+backend/staticfiles/
+
+# Node
+node_modules/
+frontend/dist/
+*.log
+
+# Secrets
+.env
+*_API_KEY
+*.key
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/

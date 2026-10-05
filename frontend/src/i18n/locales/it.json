@@ -1,0 +1,33 @@
+{
+  "app": { "title": "Menu di famiglia", "language": "Lingua" },
+  "health": {
+    "checking": "Verifica dei servizi...",
+    "unreachable": "Backend non raggiungibile: {{error}}",
+    "ok": "ok",
+    "unavailable": "non disponibile",
+    "service": {
+      "backend": "backend",
+      "database": "database",
+      "llm": "LLM",
+      "embeddings": "embedding"
+    }
+  },
+  "recipes": {
+    "title": "Ricette",
+    "signIn": "Accedi",
+    "signInToSee": "per vedere il ricettario.",
+    "loading": "Caricamento ricette...",
+    "empty": "Nessuna ricetta. Aggiungine dal pannello di amministrazione.",
+    "servings_one": "{{count}} porzione",
+    "servings_other": "{{count}} porzioni",
+    "minutes": "{{count}} min"
+  },
+  "season": {
+    "winter": "Inverno",
+    "spring": "Primavera",
+    "summer": "Estate",
+    "autumn": "Autunno",
+    "allYear": "Tutto l'anno",
+    "advanced": "Scegli i mesi"
+  }
+}

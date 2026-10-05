@@ -1,0 +1,151 @@
+"""Django settings for the Family Menu Planner backend.
+
+Every value that differs between deployments (local Mac, Raspberry Pi, cloud VM) comes from the
+environment, loaded from a gitignored `.env` at the repository root. Nothing here is specific to a
+family or to an LLM provider.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import dj_database_url
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent
+
+load_dotenv(REPO_ROOT / ".env", override=False)
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name: str, default: str = "") -> list[str]:
+    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+
+
+DEBUG = env_bool("DJANGO_DEBUG", default=False)
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or ("insecure-dev-only-key" if DEBUG else None)
+if not SECRET_KEY:
+    raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off.")
+
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.postgres",
+    "rest_framework",
+    "apps.catalog",
+    "apps.recipes",
+    "apps.families",
+    "apps.menus",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "config.wsgi.application"
+
+# PostgreSQL is the only supported database: the schema relies on ArrayField and pgvector.
+DATABASES = {
+    "default": dj_database_url.config(
+        default="postgres://mymenu:mymenu@localhost:5432/mymenu",
+        conn_max_age=60,
+    )
+}
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+# Italian by default; English available. The SPA has its own translations (frontend/src/i18n);
+# these cover the admin, choice labels and API error messages. Per-request language comes from
+# the Accept-Language header via LocaleMiddleware.
+LANGUAGE_CODE = os.getenv("DJANGO_LANGUAGE_CODE", "it")
+LANGUAGES = [("it", "Italiano"), ("en", "English")]
+LOCALE_PATHS = [BASE_DIR / "locale"]
+TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "Europe/Rome")
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 50,
+}
+
+# -- AI components --------------------------------------------------------------------------------
+# Both the generative model and the embedding model are external services reached through an
+# OpenAI-compatible API. Swapping provider means changing these variables, never the code.
+# See `ai/` and docs/architecture.md.
+
+AI = {
+    "CHAT": {
+        # "unsloth_studio" adds Studio-specific behaviour (model-loaded checks, thinking toggle) on
+        # top of the plain "openai_compatible" protocol.
+        "PROVIDER": os.getenv("LLM_PROVIDER", "unsloth_studio"),
+        "BASE_URL": os.getenv("LLM_BASE_URL", "http://127.0.0.1:8888").rstrip("/"),
+        "API_KEY": os.getenv("LLM_API_KEY") or None,
+        "MODEL": os.getenv("LLM_MODEL", "unsloth/Qwen3.6-35B-A3B-MTP-GGUF"),
+        "TIMEOUT_SECONDS": float(os.getenv("LLM_TIMEOUT_SECONDS", "300")),
+    },
+    "EMBEDDINGS": {
+        "PROVIDER": os.getenv("EMBEDDINGS_PROVIDER", "openai_compatible"),
+        "BASE_URL": os.getenv("EMBEDDINGS_BASE_URL", "http://127.0.0.1:8100").rstrip("/"),
+        "API_KEY": os.getenv("EMBEDDINGS_API_KEY") or None,
+        "MODEL": os.getenv(
+            "EMBEDDINGS_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+        ),
+        "TIMEOUT_SECONDS": float(os.getenv("EMBEDDINGS_TIMEOUT_SECONDS", "60")),
+    },
+}

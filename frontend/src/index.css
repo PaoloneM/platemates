@@ -1,0 +1,86 @@
+:root {
+  --bg: #fbfaf7;
+  --fg: #1f2421;
+  --muted: #66706a;
+  --ok: #2e7d4f;
+  --bad: #b3261e;
+  --line: #e4e1da;
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161917;
+    --fg: #e8ebe9;
+    --muted: #9aa49e;
+    --line: #2c312e;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Desktop-first, but every block collapses to a single column on narrow screens. */
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.ok {
+  color: var(--ok);
+}
+
+.bad {
+  color: var(--bad);
+}
+
+.recipes {
+  padding: 0;
+  list-style: none;
+}
+
+.recipes li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.recipes span {
+  color: var(--muted);
+}
+
+.language {
+  font-size: 0.875rem;
+  color: var(--muted);
+}

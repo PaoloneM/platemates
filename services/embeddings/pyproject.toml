@@ -1,0 +1,41 @@
+[project]
+name = "mymenu-embeddings"
+version = "0.1.0"
+description = "Local OpenAI-compatible embedding service (sentence-transformers)"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "fastapi>=0.142.2",
+    "sentence-transformers>=6.1.0",
+    "torch>=2.14.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+# On Linux (the container) take the CPU-only torch build: the CUDA one is gigabytes larger and the
+# project must run on hardware without an Nvidia GPU. macOS wheels come from PyPI as usual.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]

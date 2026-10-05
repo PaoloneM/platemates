@@ -1,0 +1,33 @@
+{
+  "app": { "title": "Family Menu Planner", "language": "Language" },
+  "health": {
+    "checking": "Checking services...",
+    "unreachable": "Backend unreachable: {{error}}",
+    "ok": "ok",
+    "unavailable": "unavailable",
+    "service": {
+      "backend": "backend",
+      "database": "database",
+      "llm": "LLM",
+      "embeddings": "embeddings"
+    }
+  },
+  "recipes": {
+    "title": "Recipes",
+    "signIn": "Sign in",
+    "signInToSee": "to see your recipe book.",
+    "loading": "Loading recipes...",
+    "empty": "No recipes yet. Add some from the admin panel.",
+    "servings_one": "{{count}} serving",
+    "servings_other": "{{count}} servings",
+    "minutes": "{{count}} min"
+  },
+  "season": {
+    "winter": "Winter",
+    "spring": "Spring",
+    "summer": "Summer",
+    "autumn": "Autumn",
+    "allYear": "All year",
+    "advanced": "Choose months"
+  }
+}
