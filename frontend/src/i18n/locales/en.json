@@ -15,24 +15,23 @@
       "embeddings": "embeddings"
     }
   },
-  "recipes": {
-    "title": "Recipes",
-    "loading": "Loading recipes...",
-    "empty": "The recipe book is empty.",
-    "servings_one": "{{count}} serving",
-    "servings_other": "{{count}} servings",
-    "minutes": "{{count}} min"
-  },
   "season": {
     "winter": "Winter",
     "spring": "Spring",
     "summer": "Summer",
     "autumn": "Autumn",
     "allYear": "All year",
-    "advanced": "Choose months"
+    "advanced": "Choose months",
+    "bySeason": "Choose by season"
   },
   "common": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "error": "Something went wrong. Please try again."
   },
   "auth": {
     "tagline": "The weekly menu and the shopping list, made for your family.",
@@ -63,5 +62,127 @@
       "notFound": "Invitation not found. Check the link.",
       "generic": "Something went wrong. Please try again."
     }
+  },
+  "shell": {
+    "account": "Account"
+  },
+  "course": {
+    "first": "First course",
+    "main": "Main course",
+    "single": "Single-dish meal",
+    "side": "Side dish",
+    "starter": "Starter",
+    "dessert": "Dessert"
+  },
+  "unit": {
+    "g": "g",
+    "ml": "ml",
+    "pc": "pcs",
+    "tt": "to taste"
+  },
+  "category": {
+    "vegetable": "Vegetable",
+    "fruit": "Fruit",
+    "legume": "Legume",
+    "cereal": "Cereal, pasta, bread",
+    "red_meat": "Red meat",
+    "white_meat": "White meat",
+    "cured_meat": "Cured meat",
+    "fish": "Fish",
+    "seafood": "Seafood",
+    "egg": "Egg",
+    "dairy": "Milk, yogurt, cream",
+    "cheese": "Cheese",
+    "fat": "Oil, butter, fat",
+    "nut_seed": "Nuts and seeds",
+    "herb_spice": "Herbs and spices",
+    "condiment": "Condiments and sauces",
+    "sweetener": "Sugar, honey, sweeteners",
+    "other": "Other"
+  },
+  "book": {
+    "title": "Recipe book",
+    "search": "Search the recipe book",
+    "inSeason": "In season",
+    "empty": "The recipe book is empty",
+    "emptyHint": "Add the recipes you usually cook: they are what menus will be built from.",
+    "addFirst": "Add the first recipe",
+    "noMatch": "No recipes found",
+    "loadMore": "Show more",
+    "add": "Add recipe"
+  },
+  "recipe": {
+    "servings_one": "{{count}} serving",
+    "servings_other": "{{count}} servings",
+    "minutes": "{{count}} min",
+    "people_one": "{{count}} person",
+    "people_other": "{{count}} people",
+    "fewerPeople": "Fewer people",
+    "morePeople": "More people",
+    "ingredients": "Ingredients",
+    "ingredient": "Ingredient",
+    "steps": "Method",
+    "optional": "optional",
+    "season": "Season",
+    "private": "Private",
+    "shared": "Shared",
+    "source": "Source",
+    "yourRating": "Your rating",
+    "noIngredients": "No ingredients.",
+    "noSteps": "No steps.",
+    "notFound": "Recipe not found.",
+    "removeFromBook": "Remove from recipe book",
+    "addToBook": "Add to recipe book",
+    "removeTitle": "Remove the recipe?",
+    "removePrivate": "This recipe is private: removing it from the recipe book deletes it.",
+    "removeShared": "The recipe stays available to other families, but will no longer be in your recipe book."
+  },
+  "editor": {
+    "newTitle": "New recipe",
+    "editTitle": "Edit recipe",
+    "about": "The recipe",
+    "title": "Title",
+    "description": "Description",
+    "course": "Course",
+    "cuisine": "Cuisine",
+    "cuisineHint": "E.g. Italian, Japanese; type a new one if missing",
+    "servings": "Servings",
+    "servingsHint": "Quantities are for this many people",
+    "servingsInvalid": "At least 1",
+    "prep": "Preparation",
+    "cook": "Cooking",
+    "tools": "Tools needed",
+    "addIngredient": "Ingredient",
+    "quantity": "Quantity",
+    "note": "Note",
+    "notePlaceholder": "E.g. finely chopped",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "addStep": "Step",
+    "stepPlaceholder": "Describe the step",
+    "ingredientSeason": "Ingredient seasonality",
+    "computed": "Computed",
+    "seasonAutoHint": "Computed from the ingredients: {{season}}. Change it to decide yourself.",
+    "seasonUserHint": "Set by you: no longer recomputed from the ingredients.",
+    "backToComputed": "Back to automatic",
+    "climateSeason": "Suits the weather",
+    "climateHint": "When the dish suits the weather (a hot soup is not for August).",
+    "sharing": "Sharing",
+    "shareWithFamilies": "Shared with other families",
+    "sharedHint": "Other families can see it and add it to their recipe book; only you can change it.",
+    "privateHint": "Only your family sees it.",
+    "source": "Source link",
+    "required": "Required"
+  },
+  "ingredient": {
+    "newTitle": "New ingredient",
+    "sharedHint": "Ingredients are common to all families: use a simple, singular name.",
+    "name": "Name",
+    "nameHint": "E.g. tomato, not “peeled tomatoes” (details go in the note)",
+    "category": "Category",
+    "unit": "Unit",
+    "season": "Seasonality",
+    "addNamed": "Add “{{name}}” as a new ingredient",
+    "typeToSearch": "Type to search"
   }
 }

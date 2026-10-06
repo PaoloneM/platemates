@@ -32,20 +32,94 @@ export type InvitationPreview = {
   expires_at: string
 }
 
+export type Seasonality = { months: number[]; seasons: Season[]; by_season: boolean }
+export type Season = 'winter' | 'spring' | 'summer' | 'autumn'
+export type Unit = 'g' | 'ml' | 'pc' | 'tt'
+export type Course = 'first' | 'main' | 'side' | 'single' | 'starter' | 'dessert'
+export type Visibility = 'shared' | 'private'
+export type Source = 'llm' | 'derived' | 'user'
+
+export type Ingredient = {
+  id: number
+  name: string
+  aliases: string[]
+  category: string
+  default_unit: Unit
+  season_months: Seasonality
+  provenance: Record<string, Source>
+}
+
+export type Cuisine = { id: number; name: string }
+export type KitchenTool = { id: number; name: string; heats_kitchen: boolean }
+
+export type RecipeLine = {
+  id?: number
+  ingredient: number
+  ingredient_name?: string
+  ingredient_category?: string
+  ingredient_season_months?: number[]
+  quantity: string | null
+  unit: Unit
+  optional: boolean
+  note: string
+}
+
+export type BookEntryRef = { id: number; family: number; status: string; rating: number | null }
+
 export type Recipe = {
   id: number
   title: string
-  course: string
+  description: string
+  steps: string[]
+  course: Course
+  cuisine: number | null
+  cuisine_name: string | null
+  servings: number
+  prep_minutes: number | null
+  cook_minutes: number | null
+  total_minutes: number | null
+  tools: number[]
+  season_months: Seasonality
+  climate_months: Seasonality
+  source_url: string
+  visibility: Visibility
+  owner_family: number | null
+  can_edit: boolean
+  book_entries: BookEntryRef[]
+  ingredients: RecipeLine[]
+  provenance: Record<string, Source>
+}
+
+export type RecipeSummary = {
+  id: number
+  title: string
+  course: Course
+  cuisine_name: string | null
   servings: number
   total_minutes: number | null
+  season_months: number[]
+  visibility: Visibility
+}
+
+export type BookEntry = {
+  id: number
+  family: number
+  recipe: number
+  recipe_summary: RecipeSummary
+  status: 'candidate' | 'approved' | 'rejected'
+  rating: number | null
+  notes: string
 }
 
 export class ApiError extends Error {
   status: number
+  // Parsed error body: DRF validation errors are {field: [messages]}.
+  body: unknown
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body: unknown = null) {
     super(message)
     this.status = status
+    this.body = body
   }
 }
 
@@ -66,7 +140,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     },
   })
   if (!response.ok) {
-    throw new ApiError(response.status, `${init.method ?? 'GET'} ${path}: ${response.status}`)
+    const body = await response.json().catch(() => null)
+    throw new ApiError(response.status, `${init.method ?? 'GET'} ${path}: ${response.status}`, body)
   }
   return response.status === 204 ? (undefined as T) : response.json()
 }

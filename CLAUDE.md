@@ -31,7 +31,9 @@ onto the concepts, and for the design decisions taken so far.
   - Starting point: local open-source model (sentence-transformers family, multilingual)
   - Open alternative: cloud API (e.g. Google Cloud) if quality justifies it; usage is occasional (only on new recipes/ingredients), so cost would be negligible
   - Write an adapter for the chosen provider; do not hardcode it
-- **Recipe discovery**: native web search capability of the LLM (no dedicated scraping at this stage)
+- **Recipe discovery**: native web search capability of the LLM (no dedicated scraping at this stage).
+  Importing a single page whose link the user gives is allowed: schema.org Recipe data first,
+  LLM extraction as fallback; no crawling, no per-site scrapers
 - **Deployment**: **Docker Compose**, portable between a local ARM64 Mac, a home Raspberry Pi, and a cloud VM. No "all-in-one" packaging
 
 ## Architecture
@@ -73,7 +75,8 @@ Full detail in `README.md`:
 
 - `backend/`: Django project (`config/`), domain apps in `apps/` (`catalog`, `recipes`,
   `families`, `menus`; `core` holds abstract mixins only), AI adapters in `ai/`, tests in `tests/`
-- `frontend/`: React + TypeScript (Vite); `src/api.ts` is the only place that calls `fetch`
+- `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
+  `src/api.ts` is the only place that calls `fetch`; enum labels live in `src/labels.ts`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
 - `keycloak/`: Keycloak image (login theme, Apple provider)
 - `scripts/`: repository-level tooling (`init_env.py`, `backup.py`)
@@ -137,6 +140,9 @@ docker compose --profile embeddings up -d --build       # ... plus the embedding
 - Users are matched on the OIDC `sub` claim, never on email; no OIDC token is ever sent to the
   browser
 - No dependency that requires CUDA: the stack must run on a Raspberry Pi
+- MUI 9 no longer accepts style props on components (`alignItems`, `fontWeight`, ...): put
+  them in `sx`. Colours come from the theme (`theme.vars` for anything outside `sx`), never
+  hardcoded, so light and dark both work
 - UI strings go through i18next (`frontend/src/i18n/locales/{it,en}.json`), Italian default; add
   every new key to both files. Backend labels use `gettext_lazy`
 - Seasonality is stored as months; season mode is only a view (see `docs/architecture.md`)

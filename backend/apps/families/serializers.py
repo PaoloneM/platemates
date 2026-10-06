@@ -33,9 +33,31 @@ class FamilySerializer(serializers.ModelSerializer):
         ]
 
 
+class RecipeSummarySerializer(serializers.Serializer):
+    """What the recipe book list shows of each recipe."""
+
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    course = serializers.CharField()
+    cuisine_name = serializers.CharField(source="cuisine.name", default=None)
+    servings = serializers.IntegerField()
+    total_minutes = serializers.IntegerField()
+    season_months = serializers.ListField(child=serializers.IntegerField())
+    visibility = serializers.CharField()
+
+
 class RecipeBookEntrySerializer(serializers.ModelSerializer):
-    recipe_title = serializers.CharField(source="recipe.title", read_only=True)
+    recipe_summary = RecipeSummarySerializer(source="recipe", read_only=True)
 
     class Meta:
         model = RecipeBookEntry
-        fields = ["id", "family", "recipe", "recipe_title", "status", "rating", "notes", "added_at"]
+        fields = [
+            "id",
+            "family",
+            "recipe",
+            "recipe_summary",
+            "status",
+            "rating",
+            "notes",
+            "added_at",
+        ]

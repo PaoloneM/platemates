@@ -1,9 +1,9 @@
+import { Alert, Button, Divider, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { api, type IdentityProvider, type LoginOptions, loginUrl } from '../api'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
-import { Logo } from '../components/Logo'
+import { AuthLayout } from '../components/AuthLayout'
 import { ProviderIcon } from '../components/ProviderIcon'
 
 const PROVIDER_NAMES: Record<IdentityProvider, string> = {
@@ -29,36 +29,39 @@ export function LoginPage({ next = '/', invited = false }: { next?: string; invi
   }, [])
 
   return (
-    <div className="auth-screen">
-      <div className="auth-topbar">
-        <LanguageSwitcher />
-      </div>
-      <main className="auth-card">
-        <Logo />
-        <h1>{t('app.title')}</h1>
-        <p className="muted">{t('auth.tagline')}</p>
+    <AuthLayout>
+      <Typography variant="h1">{t('app.title')}</Typography>
+      <Typography color="text.secondary">{t('auth.tagline')}</Typography>
 
-        {invited && <p className="notice">{t('auth.invitedSignIn')}</p>}
-        {params.get('login') === 'failed' && <p className="notice bad">{t('auth.failed')}</p>}
+      {invited && <Alert severity="info">{t('auth.invitedSignIn')}</Alert>}
+      {params.get('login') === 'failed' && <Alert severity="error">{t('auth.failed')}</Alert>}
 
-        <div className="auth-actions">
-          {providers.map((idp) => (
-            <a key={idp} className="button provider" href={loginUrl({ next, idp })}>
-              <ProviderIcon provider={idp} />
-              {t('auth.continueWith', { provider: PROVIDER_NAMES[idp] })}
-            </a>
-          ))}
-          {providers.length > 0 && <div className="divider">{t('auth.or')}</div>}
-          <a className="button primary" href={loginUrl({ next })}>
-            {t('auth.signInWithEmail')}
-          </a>
-          <a className="button link" href={loginUrl({ next, signup: true })}>
-            {t('auth.createAccount')}
-          </a>
-        </div>
+      <Stack spacing={1.25} sx={{ alignSelf: 'stretch', pt: 1 }}>
+        {providers.map((idp) => (
+          <Button
+            key={idp}
+            variant="outlined"
+            color="inherit"
+            size="large"
+            href={loginUrl({ next, idp })}
+            startIcon={<ProviderIcon provider={idp} />}
+            sx={{ borderColor: 'divider', '& svg': { width: 20, height: 20 } }}
+          >
+            {t('auth.continueWith', { provider: PROVIDER_NAMES[idp] })}
+          </Button>
+        ))}
+        {providers.length > 0 && (
+          <Divider sx={{ color: 'text.secondary', fontSize: 14 }}>{t('auth.or')}</Divider>
+        )}
+        <Button variant="contained" size="large" href={loginUrl({ next })}>
+          {t('auth.signInWithEmail')}
+        </Button>
+        <Button href={loginUrl({ next, signup: true })}>{t('auth.createAccount')}</Button>
+      </Stack>
 
-        <p className="fine-print">{t('auth.invitationOnly')}</p>
-      </main>
-    </div>
+      <Typography variant="body2" color="text.secondary" sx={{ pt: 1 }}>
+        {t('auth.invitationOnly')}
+      </Typography>
+    </AuthLayout>
   )
 }

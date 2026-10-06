@@ -1,18 +1,17 @@
+import { Alert, Button, CircularProgress, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router'
 import { api, ApiError, type InvitationPreview } from '../api'
 import { useAuth } from '../auth/context'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
-import { Logo } from '../components/Logo'
+import { AuthLayout } from '../components/AuthLayout'
 import { LoginPage } from './LoginPage'
 
 /** `/invite/:token`: sign in first if needed, then show the family and accept. */
 export function InvitePage() {
   const { token = '' } = useParams()
-  const { t } = useTranslation()
   const { me } = useAuth()
-  if (!me) return <p className="muted page">{t('common.loading')}</p>
+  if (!me) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 8 }} />
   if (!me.authenticated) return <LoginPage next={`/invite/${token}`} invited />
   return <AcceptInvitation token={token} />
 }
@@ -44,32 +43,24 @@ function AcceptInvitation({ token }: { token: string }) {
   }
 
   let body
-  if (error) body = <p className="notice bad">{t(`invite.error.${error}`)}</p>
-  else if (!invitation) body = <p className="muted">{t('common.loading')}</p>
+  if (error) body = <Alert severity="error">{t(`invite.error.${error}`)}</Alert>
+  else if (!invitation) body = <CircularProgress />
   else if (invitation.state !== 'pending')
-    body = <p className="notice bad">{t(`invite.state.${invitation.state}`)}</p>
+    body = <Alert severity="warning">{t(`invite.state.${invitation.state}`)}</Alert>
   else
     body = (
       <>
-        <p>{t('invite.body', { family: invitation.family_name })}</p>
-        <div className="auth-actions">
-          <button className="button primary" onClick={accept} disabled={busy}>
-            {t('invite.accept')}
-          </button>
-        </div>
+        <Typography>{t('invite.body', { family: invitation.family_name })}</Typography>
+        <Button variant="contained" size="large" fullWidth onClick={accept} disabled={busy}>
+          {t('invite.accept')}
+        </Button>
       </>
     )
 
   return (
-    <div className="auth-screen">
-      <div className="auth-topbar">
-        <LanguageSwitcher />
-      </div>
-      <main className="auth-card">
-        <Logo />
-        <h1>{t('invite.title')}</h1>
-        {body}
-      </main>
-    </div>
+    <AuthLayout>
+      <Typography variant="h1">{t('invite.title')}</Typography>
+      {body}
+    </AuthLayout>
   )
 }

@@ -15,24 +15,23 @@
       "embeddings": "embedding"
     }
   },
-  "recipes": {
-    "title": "Ricette",
-    "loading": "Caricamento ricette...",
-    "empty": "Il ricettario è vuoto.",
-    "servings_one": "{{count}} porzione",
-    "servings_other": "{{count}} porzioni",
-    "minutes": "{{count}} min"
-  },
   "season": {
     "winter": "Inverno",
     "spring": "Primavera",
     "summer": "Estate",
     "autumn": "Autunno",
     "allYear": "Tutto l'anno",
-    "advanced": "Scegli i mesi"
+    "advanced": "Scegli i mesi",
+    "bySeason": "Scegli per stagione"
   },
   "common": {
-    "loading": "Caricamento..."
+    "loading": "Caricamento...",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "add": "Aggiungi",
+    "error": "Qualcosa è andato storto. Riprova."
   },
   "auth": {
     "tagline": "Il menu della settimana e la lista della spesa, pensati per la tua famiglia.",
@@ -63,5 +62,127 @@
       "notFound": "Invito non trovato. Controlla il link.",
       "generic": "Qualcosa è andato storto. Riprova."
     }
+  },
+  "shell": {
+    "account": "Account"
+  },
+  "course": {
+    "first": "Primo",
+    "main": "Secondo",
+    "single": "Piatto unico",
+    "side": "Contorno",
+    "starter": "Antipasto",
+    "dessert": "Dolce"
+  },
+  "unit": {
+    "g": "g",
+    "ml": "ml",
+    "pc": "pz",
+    "tt": "q.b."
+  },
+  "category": {
+    "vegetable": "Verdura",
+    "fruit": "Frutta",
+    "legume": "Legumi",
+    "cereal": "Cereali, pasta, pane",
+    "red_meat": "Carne rossa",
+    "white_meat": "Carne bianca",
+    "cured_meat": "Salumi e insaccati",
+    "fish": "Pesce",
+    "seafood": "Frutti di mare",
+    "egg": "Uova",
+    "dairy": "Latte, yogurt, panna",
+    "cheese": "Formaggi",
+    "fat": "Olio, burro, grassi",
+    "nut_seed": "Frutta secca e semi",
+    "herb_spice": "Erbe e spezie",
+    "condiment": "Condimenti e salse",
+    "sweetener": "Zucchero, miele, dolcificanti",
+    "other": "Altro"
+  },
+  "book": {
+    "title": "Ricettario",
+    "search": "Cerca nel ricettario",
+    "inSeason": "Di stagione",
+    "empty": "Il ricettario è vuoto",
+    "emptyHint": "Aggiungi le ricette che cucinate di solito: serviranno a proporvi i menu.",
+    "addFirst": "Aggiungi la prima ricetta",
+    "noMatch": "Nessuna ricetta trovata",
+    "loadMore": "Mostra altre",
+    "add": "Aggiungi ricetta"
+  },
+  "recipe": {
+    "servings_one": "{{count}} porzione",
+    "servings_other": "{{count}} porzioni",
+    "minutes": "{{count}} min",
+    "people_one": "{{count}} persona",
+    "people_other": "{{count}} persone",
+    "fewerPeople": "Meno persone",
+    "morePeople": "Più persone",
+    "ingredients": "Ingredienti",
+    "ingredient": "Ingrediente",
+    "steps": "Procedimento",
+    "optional": "facoltativo",
+    "season": "Stagione",
+    "private": "Privata",
+    "shared": "Condivisa",
+    "source": "Fonte",
+    "yourRating": "Il vostro voto",
+    "noIngredients": "Nessun ingrediente.",
+    "noSteps": "Nessun passaggio.",
+    "notFound": "Ricetta non trovata.",
+    "removeFromBook": "Rimuovi dal ricettario",
+    "addToBook": "Aggiungi al ricettario",
+    "removeTitle": "Rimuovere la ricetta?",
+    "removePrivate": "La ricetta è privata: rimuovendola dal ricettario verrà eliminata.",
+    "removeShared": "La ricetta resta disponibile alle altre famiglie, ma non sarà più nel vostro ricettario."
+  },
+  "editor": {
+    "newTitle": "Nuova ricetta",
+    "editTitle": "Modifica ricetta",
+    "about": "La ricetta",
+    "title": "Titolo",
+    "description": "Descrizione",
+    "course": "Portata",
+    "cuisine": "Cucina",
+    "cuisineHint": "Es. italiana, giapponese; scrivine una nuova se manca",
+    "servings": "Porzioni",
+    "servingsHint": "Le quantità sono per queste persone",
+    "servingsInvalid": "Almeno 1",
+    "prep": "Preparazione",
+    "cook": "Cottura",
+    "tools": "Attrezzi necessari",
+    "addIngredient": "Ingrediente",
+    "quantity": "Quantità",
+    "note": "Nota",
+    "notePlaceholder": "Es. tritato finemente",
+    "moveUp": "Sposta su",
+    "moveDown": "Sposta giù",
+    "addStep": "Passaggio",
+    "stepPlaceholder": "Descrivi il passaggio",
+    "ingredientSeason": "Stagionalità degli ingredienti",
+    "computed": "Calcolata",
+    "seasonAutoHint": "Calcolata dagli ingredienti: {{season}}. Modificala per decidere tu.",
+    "seasonUserHint": "Impostata da te: non viene più ricalcolata dagli ingredienti.",
+    "backToComputed": "Torna al calcolo automatico",
+    "climateSeason": "Adatta al clima",
+    "climateHint": "Quando il piatto è adatto al tempo che fa (una zuppa calda non è da agosto).",
+    "sharing": "Condivisione",
+    "shareWithFamilies": "Condivisa con le altre famiglie",
+    "sharedHint": "Le altre famiglie potranno vederla e aggiungerla al loro ricettario; solo voi potrete modificarla.",
+    "privateHint": "Solo la vostra famiglia la vede.",
+    "source": "Link alla fonte",
+    "required": "Obbligatorio"
+  },
+  "ingredient": {
+    "newTitle": "Nuovo ingrediente",
+    "sharedHint": "Gli ingredienti sono comuni a tutte le famiglie: usa un nome semplice, al singolare.",
+    "name": "Nome",
+    "nameHint": "Es. pomodoro, non «pomodori pelati» (i dettagli vanno nella nota)",
+    "category": "Categoria",
+    "unit": "Unità",
+    "season": "Stagionalità",
+    "addNamed": "Aggiungi «{{name}}» come nuovo ingrediente",
+    "typeToSearch": "Scrivi per cercare"
   }
 }

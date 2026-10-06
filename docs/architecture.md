@@ -32,7 +32,7 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
 | App | Models | Notes |
 |---|---|---|
 | `catalog` | `Ingredient`, `KitchenTool` | Global, shared by every family. Ingredient names are normalized on save (lowercase, single spaces); variants go in `aliases`. |
-| `recipes` | `Cuisine`, `Recipe`, `RecipeIngredient`, `RecipeEmbedding` | Recipes are global too; quantities refer to `Recipe.servings` and scale linearly. |
+| `recipes` | `Cuisine`, `Recipe`, `RecipeIngredient`, `RecipeEmbedding` | Recipes live in one common pool; quantities refer to `Recipe.servings` and scale linearly. The method is `Recipe.steps`, one entry per step. |
 | `families` | `Family`, `Membership`, `FamilyMember`, `Preference`, `RecipeBookEntry`, `FamilyEmbedding` | Everything family-specific. `RecipeBookEntry` is the per-family view of a recipe: candidate / approved / rejected, plus the explicit rating. |
 | `menus` | `WeeklyMenu`, `MealSlot`, `SlotDish` | 7 days × {lunch, dinner}. Shopping list in `menus/shopping.py`, computed, never stored. |
 | `accounts` | `OIDCIdentity`, `Invitation` | OIDC backend and login view (`oidc.py`), Keycloak realm setup (`keycloak_admin.py`), `/api/me/`, invitations. |
@@ -41,6 +41,16 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
 ### Decisions worth knowing
 
 - **Shared recipes, per-family recipe book** (confirmed by Paolo 2026-10-05). One `Recipe` row can be in many families' books.
+  A recipe has an **owner family** (the one that created it, the only one that can edit it;
+  staff can edit everything) and a **visibility**: `shared` (default, decided 2026-10-06) or
+  `private` (only the owner family sees it). `Recipe.objects.visible_to(user)` and
+  `editable_by(user)` hold these rules. Creating a recipe through the API puts it in the
+  creating family's book. Other families add a shared recipe to their own book; the owner can
+  delete a recipe only while no other family keeps it. Removing a private recipe from the
+  owner's book deletes it.
+- **Shared catalogs** (ingredients, cuisines, kitchen tools): any user may read and add
+  entries, only staff may change or delete them (`CatalogPermission`), because an edit would
+  silently change other families' recipes. Ingredient search matches names and aliases.
   This is what makes collaborative recommendation possible ("families like yours loved X"), and
   keeps discovery candidates separate from accepted recipes (`RecipeBookEntry.Status.CANDIDATE`).
 - **People per slot.** `MealSlot.people` is the source of truth. `Family.default_people` only
@@ -57,9 +67,11 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
   or **by month** (advanced). The API field (`SeasonalityField`) reads as
   `{"months": [...], "seasons": [...], "by_season": bool}`, where `by_season` says whether the
   value is a union of whole seasons and so can be shown in season mode. It accepts
-  `{"seasons": [...]}` or `{"months": [...]}` on write. A recipe has two levels:
+  `{"seasons": [...]}` or `{"months": [...]}` on write, or `{"auto": true}` to hand the value back
+  to automatic derivation. A recipe has two levels:
   `season_months` (derived bottom-up via `Recipe.derive_season_months`, the intersection of its
-  non-optional ingredients' months) and `climate_months` (whether the dish suits the weather).
+  non-optional ingredients' months, or their union when they do not overlap; recomputed on every
+  save until the user sets it) and `climate_months` (whether the dish suits the weather).
   `Recipe.suitable_months()` combines them.
 - **Proteins are explicit categories.** `IngredientCategory` separates red meat, white meat, cured
   meat, fish, seafood, egg, legume and cheese, so the "no same protein on adjacent days" rule can
@@ -102,7 +114,61 @@ invitation (or by staff creating the family for them). Viewsets over family-owne
 pointing at somebody else's family. Global catalogs (ingredients, tools, cuisines, recipes) are
 readable and writable by any authenticated user for now.
 
-## AI integration (`backend/ai/`)
+## Adding recipes (decided with Paolo 2026-10-06)
+
+Built so far (step 1): MUI theme, recipe book (search, course filter, "in season" badge,
+ratings), recipe page (scaling by number of people, rating, add/remove from book) and the
+recipe editor, which is also where assistant drafts will be reviewed. The "+" FAB opens the
+editor directly until step 2 turns it into the menu below.
+
+
+- **UI library**: MUI (Material UI) with the app's own theme (colours as in `frontend/src/index.css`).
+  Material 3's guidance is followed where MUI allows (e.g. labelled FAB menu items).
+- **Entry point**: a "+" FAB on the recipe book. **Tap/click always opens the menu** (hover may
+  open it early on desktop), with labels always visible, so it behaves the same on touch:
+  1. "Tell me the recipe" (first, highlighted): the user describes it, the LLM builds
+     ingredients and steps, asking questions only when something essential is missing;
+  2. "Help me search": guided search, local recipes first, then the web (Studio's built-in
+     search);
+  3. "Give me a link": import from a recipe page;
+  4. "Upload or take a photo": a cookbook page, a handwritten card, a screenshot.
+- **One assistant, three entry points**: the menu items open the same conversational panel in a
+  given mode; the LLM still recognizes a pasted link or a search request in any mode.
+- **Every path ends in the same draft review** (which doubles as manual entry): everything the
+  LLM proposed is editable and marked as suggested (provenance) until the user saves.
+  Ingredients are matched to the catalog, or proposed as new with suggested category/season/unit.
+- **Visibility**: recipes are **shared by default** with other families (the collaborative
+  recommendation needs a common pool); a family can mark a recipe private.
+
+**Link import** (no crawling, no per-site scrapers; it reads only the page the user gave):
+
+1. schema.org `Recipe` JSON-LD in the page, parsed without any LLM. Checked 2026-10-06: present on
+   GialloZafferano, La Cucina Italiana, BBC Good Food, Acadèmia; absent on Il Cucchiaio and on a
+   small blog.
+2. Otherwise, LLM extraction from the page's visible text into the recipe JSON schema
+   (`response_format`). Generic "main content" extractors are not enough: trafilatura dropped Il
+   Cucchiaio's ingredient box, losing every quantity. What worked: all visible text, cut to a
+   window around where quantities ("320 g", "50 ml") cluster, ~9k characters to fit the context.
+   Both pages extracted correctly in 3-6 s.
+3. Pages that cannot be read this way (rendered by JavaScript, bot-protected, social/video posts)
+   fall back to asking the user to paste the text or take a screenshot (photo mode).
+
+**Photo mode**: a vision-capable model reads the image. Checked 2026-10-06 with a synthetic
+handwritten card: both `Qwen3.6-35B-A3B` and `gemma-4-E2B` read it in ~5 s, but Qwen, asked to
+"transcribe", **embellished the method with steps not on the card**. So photo import is two
+steps: a strictly literal transcription prompt ("only what is written, nothing added"), then the
+same structuring as link import, and the review screen shows the source image beside the draft.
+Real photos (blur, real handwriting, two-column cookbook pages) are untested.
+
+**Context size**: Studio currently loads the chat model with an 8,192-token context (the model
+supports 262k). Page text, images and conversations all count against it; raise it in Studio
+when loading the model if long pages or conversations get truncated.
+
+**Build order**: 1. MUI, recipe book, draft review / manual entry; 2. FAB and assistant panel;
+3. link import; 4. photo import (reuses link import's structuring); 5. "Tell me the recipe";
+6. "Help me search" (needs recipe embeddings first).
+
+
 
 Application code depends only on the protocols in `ai/base.py` and on `get_chat_provider()` and
 `get_embedding_provider()`. The concrete provider is chosen by environment variables
@@ -154,5 +220,5 @@ Verified live on 2026-10-05 against this project's adapter:
 ## Not built yet
 
 Menu generation engine (agentic, RAG), recipe discovery, embedding computation jobs,
-collaborative recommendation, a UI for creating invitations, and every frontend screen beyond
-sign-in, invitations and the recipe list stub.
+collaborative recommendation, a UI for creating invitations, the recipe assistant (FAB menu,
+link and photo import, "tell me", "help me search"), weekly menus and the shopping list UI.

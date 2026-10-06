@@ -1,6 +1,7 @@
+import { MenuItem, TextField } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { saveLanguage } from '../auth/language'
 import { useAuth } from '../auth/context'
+import { saveLanguage } from '../auth/language'
 import { supportedLanguages } from '../i18n'
 
 export function LanguageSwitcher() {
@@ -14,15 +15,19 @@ export function LanguageSwitcher() {
   }
 
   return (
-    <label className="language">
-      <span className="visually-hidden">{t('app.language')}</span>
-      <select value={i18n.resolvedLanguage} onChange={(e) => change(e.target.value)}>
-        {Object.entries(supportedLanguages).map(([code, name]) => (
-          <option key={code} value={code}>
-            {name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <TextField
+      select
+      size="small"
+      fullWidth={false}
+      value={i18n.resolvedLanguage}
+      onChange={(e) => change(e.target.value)}
+      slotProps={{ htmlInput: { 'aria-label': t('app.language') } }}
+    >
+      {Object.entries(supportedLanguages).map(([code, name]) => (
+        <MenuItem key={code} value={code}>
+          {name}
+        </MenuItem>
+      ))}
+    </TextField>
   )
 }

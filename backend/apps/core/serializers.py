@@ -5,6 +5,9 @@ from rest_framework import serializers
 from .provenance import Source
 from .seasons import SEASON_MONTHS, is_season_aligned, months_to_seasons, seasons_to_months
 
+# Returned by fields whose value the user hands back to automatic derivation.
+AUTO = object()
+
 
 class SeasonalityField(serializers.Field):
     """A month-set field, exposed in both editing modes.
@@ -13,11 +16,12 @@ class SeasonalityField(serializers.Field):
     whether the value can be shown in the default season mode or needs the advanced month view.
     Empty `months` means all year.
 
-    Write: `{"seasons": [...]}` (season mode) or `{"months": [...]}` (advanced mode).
+    Write: `{"seasons": [...]}` (season mode), `{"months": [...]}` (advanced mode), or
+    `{"auto": true}` to drop the user's decision and let the value be derived again.
     """
 
     default_error_messages = {
-        "invalid": 'Expected {"seasons": [...]} or {"months": [...]}.',
+        "invalid": 'Expected {"seasons": [...]}, {"months": [...]} or {"auto": true}.',
         "season": "Unknown season '{value}'. Known: {known}.",
         "month": "Months are integers from 1 to 12.",
     }
@@ -33,6 +37,8 @@ class SeasonalityField(serializers.Field):
     def to_internal_value(self, data):
         if not isinstance(data, dict) or len(data) != 1:
             self.fail("invalid")
+        if data.get("auto") is True:
+            return AUTO
         if "seasons" in data:
             unknown = [s for s in data["seasons"] if s not in SEASON_MONTHS]
             if unknown:
@@ -58,10 +64,22 @@ class UserDecisionSerializerMixin(serializers.ModelSerializer):
 
     def _mark_user_fields(self, validated_data: dict) -> None:
         tracked = getattr(self.Meta, "tracked_fields", ())
-        touched = {name: Source.USER.value for name in tracked if name in validated_data}
-        if touched:
-            current = validated_data.get("provenance") or getattr(self.instance, "provenance", {})
-            validated_data["provenance"] = {**(current or {}), **touched}
+        current = dict(
+            validated_data.get("provenance") or getattr(self.instance, "provenance", None) or {}
+        )
+        changed = False
+        for name in tracked:
+            if name not in validated_data:
+                continue
+            if validated_data[name] is AUTO:
+                # The user gives the field back to automatic derivation.
+                del validated_data[name]
+                current.pop(name, None)
+            else:
+                current[name] = Source.USER.value
+            changed = True
+        if changed:
+            validated_data["provenance"] = current
 
     def create(self, validated_data: dict):
         self._mark_user_fields(validated_data)

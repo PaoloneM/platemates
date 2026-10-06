@@ -1,28 +1,27 @@
+import { Button, Typography } from '@mui/material'
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { csrfToken } from '../api'
 import { useAuth } from '../auth/context'
-import { LogoutButton } from '../components/LogoutButton'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
-import { Logo } from '../components/Logo'
+import { AuthLayout } from '../components/AuthLayout'
 
 /** Signed in, but not a member of any family yet: access is invitation-only. */
 export function NoFamilyPage() {
   const { t } = useTranslation()
   const { me } = useAuth()
+  const form = useRef<HTMLFormElement>(null)
   const email = me?.authenticated ? me.user.email : ''
   return (
-    <div className="auth-screen">
-      <div className="auth-topbar">
-        <LanguageSwitcher />
-      </div>
-      <main className="auth-card">
-        <Logo />
-        <h1>{t('noFamily.title')}</h1>
-        <p>{t('noFamily.body', { email })}</p>
-        <p className="muted">{t('noFamily.hint')}</p>
-        <div className="auth-actions">
-          <LogoutButton />
-        </div>
-      </main>
-    </div>
+    <AuthLayout>
+      <Typography variant="h1">{t('noFamily.title')}</Typography>
+      <Typography>{t('noFamily.body', { email })}</Typography>
+      <Typography color="text.secondary">{t('noFamily.hint')}</Typography>
+      <form ref={form} method="post" action="/oidc/logout/">
+        <input type="hidden" name="csrfmiddlewaretoken" value={csrfToken()} />
+        <Button variant="outlined" type="submit">
+          {t('auth.logout')}
+        </Button>
+      </form>
+    </AuthLayout>
   )
 }

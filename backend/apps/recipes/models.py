@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -15,7 +16,7 @@ from pgvector.django import VectorField
 
 from apps.catalog.models import Ingredient, KitchenTool, Unit
 from apps.core.provenance import ProvenanceMixin
-from apps.core.seasons import intersect_months, month_set_field
+from apps.core.seasons import ALL_MONTHS, as_months, intersect_months, month_set_field
 
 
 class Cuisine(models.Model):
@@ -39,10 +40,43 @@ class Course(models.TextChoices):
     DESSERT = "dessert", _("Dessert")
 
 
+class Visibility(models.TextChoices):
+    # Visible to every family: feeds collaborative recommendation. The default.
+    SHARED = "shared", _("Shared with other families")
+    # Visible only to the owner family.
+    PRIVATE = "private", _("Private to the family")
+
+
+class RecipeQuerySet(models.QuerySet):
+    def visible_to(self, user) -> RecipeQuerySet:
+        """Shared recipes, plus the private ones of the user's families."""
+        return self.filter(
+            models.Q(visibility=Visibility.SHARED) | models.Q(owner_family__memberships__user=user)
+        ).distinct()
+
+    def editable_by(self, user) -> RecipeQuerySet:
+        """Only the family that owns a recipe edits it; staff can edit everything."""
+        if user.is_staff:
+            return self
+        return self.filter(owner_family__memberships__user=user).distinct()
+
+
 class Recipe(ProvenanceMixin, models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    instructions = models.TextField(blank=True)
+    # The method, one entry per step.
+    steps = ArrayField(models.TextField(), default=list, blank=True)
+    # The family that created the recipe and may edit it. Null for recipes seeded by staff.
+    owner_family = models.ForeignKey(
+        "families.Family",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="owned_recipes",
+    )
+    visibility = models.CharField(
+        max_length=10, choices=Visibility.choices, default=Visibility.SHARED
+    )
     course = models.CharField(max_length=10, choices=Course.choices, default=Course.SINGLE)
     cuisine = models.ForeignKey(
         Cuisine, null=True, blank=True, on_delete=models.SET_NULL, related_name="recipes"
@@ -64,6 +98,8 @@ class Recipe(ProvenanceMixin, models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = RecipeQuerySet.as_manager()
+
     class Meta:
         ordering = ["title"]
 
@@ -77,15 +113,21 @@ class Recipe(ProvenanceMixin, models.Model):
         return (self.prep_minutes or 0) + (self.cook_minutes or 0)
 
     def derive_season_months(self) -> list[int]:
-        """Months in which every non-optional ingredient is in season."""
-        months = intersect_months(
-            *(
-                line.ingredient.season_months
-                for line in self.ingredients.select_related("ingredient")
-                if not line.optional
-            )
-        )
-        return sorted(months)
+        """Months in which every non-optional ingredient is in season.
+
+        If the ingredients' seasons do not overlap at all, the union is returned instead: an
+        empty list would read as "all year", and such recipes usually rely on a preserved
+        ingredient anyway. The user confirms or corrects it, like any derived value.
+        """
+        month_lists = [
+            line.ingredient.season_months
+            for line in self.ingredients.select_related("ingredient")
+            if not line.optional
+        ]
+        months = intersect_months(*month_lists)
+        if not months:
+            months = frozenset().union(*(as_months(m) for m in month_lists))
+        return [] if months == ALL_MONTHS else sorted(months)
 
     def suitable_months(self) -> frozenset[int]:
         """Both seasonality levels combined: when the recipe makes sense to propose."""
