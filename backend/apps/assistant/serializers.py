@@ -33,13 +33,16 @@ class AssistantSessionSerializer(serializers.ModelSerializer):
             if message["role"] == "user":
                 out.append({"role": "user", "text": message["content"]})
             elif message["role"] == "assistant":
-                out.append(
-                    {
-                        "role": "assistant",
-                        "text": message.get("content") or "",
-                        "draft": bool(message.get("tool_calls")),
-                    }
-                )
+                entry = {
+                    "role": "assistant",
+                    "text": message.get("content") or "",
+                    "draft": bool(message.get("tool_calls")),
+                }
+                if message.get("error"):
+                    # The UI shows a translated explanation instead of the raw text.
+                    entry["error"] = message["error"]
+                    entry["text"] = ""
+                out.append(entry)
         return out
 
     def get_matches(self, session) -> list[dict]:

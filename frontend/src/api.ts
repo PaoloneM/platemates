@@ -124,6 +124,7 @@ export type Draft = {
   ingredients: DraftLine[]
   steps: string[]
   climate_months: number[]
+  source_url: string
 }
 
 export type MatchCandidate = {
@@ -145,7 +146,7 @@ export type AssistantSession = {
   recipe: number | null
   draft: Draft | null
   matches: IngredientMatch[]
-  transcript: { role: 'user' | 'assistant'; text: string; draft?: boolean }[]
+  transcript: { role: 'user' | 'assistant'; text: string; draft?: boolean; error?: string }[]
 }
 
 export type BookEntry = {

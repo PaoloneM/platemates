@@ -129,6 +129,8 @@ docker compose --profile embeddings up -d --build       # ... plus the embedding
 - Application logic talks to AI only through `ai.get_chat_provider()` /
   `ai.get_embedding_provider()`; provider-specific code lives in `ai/` only
 - Embeddings are always stored with the model name that produced them
+- The backend fetches user-given URLs only through `apps.assistant.web.fetch`, which refuses
+  non-public addresses at every redirect: never fetch a user-supplied URL with a bare httpx call
 - An assistant mode is enabled (`AVAILABLE_MODES`) only once its tools exist: the LLM must never
   be asked about a page, photo or search result it cannot actually read
 - Everything the assistant produces goes through `normalize_draft` and the editor's review;

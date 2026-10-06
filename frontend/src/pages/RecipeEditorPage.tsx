@@ -182,6 +182,7 @@ function fromDraft(session: AssistantSession, cuisines: Cuisine[]): Form {
     }),
     steps: d.steps.length ? d.steps : [''],
     climateMonths: d.climate_months,
+    sourceUrl: d.source_url ?? '',
   }
 }
 
@@ -214,7 +215,11 @@ export function RecipeEditorPage() {
   const { family } = useFamily()
   const editing = id != null
 
-  const [form, setForm] = useState<Form | null>(editing ? null : { ...EMPTY, lines: [newLine()] })
+  // Editing or reviewing a draft: show a spinner until the data is loaded, rather than an empty
+  // form the user might start typing into.
+  const [form, setForm] = useState<Form | null>(
+    editing || sessionId ? null : { ...EMPTY, lines: [newLine()] },
+  )
   const [cuisines, setCuisines] = useState<Cuisine[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
   const [creating, setCreating] = useState<
@@ -230,7 +235,7 @@ export function RecipeEditorPage() {
       api<Cuisine[]>('/cuisines/'),
     ])
       .then(([session, all]) => {
-        if (session.draft) setForm(fromDraft(session, all))
+        setForm(session.draft ? fromDraft(session, all) : { ...EMPTY, lines: [newLine()] })
       })
       .catch(() => setErrors({ load: t('assistant.notFound') }))
   }, [sessionId, editing, t])

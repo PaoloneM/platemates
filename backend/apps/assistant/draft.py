@@ -54,7 +54,9 @@ DRAFT_SCHEMA: dict[str, Any] = {
                         "description": "months the ingredient is in season; empty = all year",
                     },
                 },
-                "required": ["name", "quantity", "unit"],
+                # Category and season are required so the model always proposes them: the
+                # user then only confirms, instead of filling them in for every new ingredient.
+                "required": ["name", "quantity", "unit", "category", "season_months"],
             },
         },
         "steps": {"type": "array", "items": {"type": "string"}},
@@ -62,6 +64,7 @@ DRAFT_SCHEMA: dict[str, Any] = {
             **MONTHS,
             "description": "months the dish suits the weather; empty = all year",
         },
+        "source_url": {"type": "string", "description": "page the recipe was imported from"},
     },
     "required": ["title", "servings", "ingredients", "steps"],
 }
@@ -152,4 +155,10 @@ def normalize_draft(raw: dict[str, Any]) -> dict[str, Any]:
         ],
         "steps": [str(s).strip() for s in steps if str(s).strip()],
         "climate_months": _months(raw.get("climate_months")),
+        "source_url": _url(raw.get("source_url")),
     }
+
+
+def _url(value) -> str:
+    text = str(value or "").strip()
+    return text[:500] if re.match(r"https?://", text, re.IGNORECASE) else ""

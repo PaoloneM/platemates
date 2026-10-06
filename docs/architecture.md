@@ -119,8 +119,8 @@ readable and writable by any authenticated user for now.
 
 Built so far: MUI theme, recipe book (search, course filter, "in season" badge, ratings),
 recipe page (scaling by number of people, rating, add/remove from book), the recipe editor, the
-"+" FAB menu and the assistant in "tell me" mode. "Help me search", "Give me a link" and "Upload
-a photo" are listed as "coming soon" (`AVAILABLE_MODES` in `apps/assistant/models.py`): offering a
+"+" FAB menu and the assistant in "tell me" and "give me a link" modes. "Help me search" and
+"Upload a photo" are listed as "coming soon" (`AVAILABLE_MODES` in `apps/assistant/models.py`): offering a
 mode before its tools exist would let the LLM invent the content of pages or photos.
 
 **How the assistant works**
@@ -143,6 +143,33 @@ mode before its tools exist would let the LLM invent the content of pages or pho
   unknown ones must be created (category, unit and season prefilled from the draft) or replaced
   before saving. Saving links the recipe to the session and closes it.
 - Gunicorn runs threaded workers so a turn waiting on the LLM does not block other requests.
+
+**Link import** (`apps/assistant/web.py`, built 2026-10-06)
+
+- A message containing a URL, in "tell me" or "link" mode, imports the page instead of asking
+  the chat model. One page, the one given, fetched once; no crawling.
+- **Only public addresses are fetched**: every redirect hop is checked, and every address the
+  host resolves to must be global. `keycloak:8080`, `db`, `host.docker.internal`, LAN and
+  loopback addresses are refused (verified from inside the backend container). The page is
+  capped at 3 MB and must be HTML. A DNS answer changing between check and connection is not
+  covered; acceptable for a family app, revisit before exposing the app widely.
+- Text for the model: schema.org `Recipe` data when present, else the visible text with block
+  elements split into lines (minified pages are one line otherwise) and cut to a ~9k-character
+  window around where quantities cluster.
+- A separate extraction call (`response_format` with the draft schema, temperature 0) structures
+  the text. Ingredient names are always in the user's language, generic and singular, so they
+  match the family catalog (an English page still yields "uovo", "parmigiano"); title,
+  description and steps stay in the page's language. Cups, ounces and spoons become g/ml with
+  the original measure in the note.
+- From structured data, title (site name stripped), servings, times and steps are kept
+  verbatim rather than as the model rewrote them; GialloZafferano-style photo numbers in steps
+  ("padella antiaderente 4 e") are removed when they form a 1, 2, 3, ... sequence.
+- The result is recorded in the history as a `propose_recipe` call, so corrections ("for 2
+  people") work as in "tell me"; the source URL survives corrections.
+- Failures carry a stable code (`unreachable`, `http_error`, `no_content`, `no_recipe`, ...)
+  that the UI translates; the code is stripped from what is sent back to the model.
+- Measured live: 9-16 s per import on GialloZafferano, Il Cucchiaio, BBC Good Food, Acadèmia and
+  a small blog.
 
 
 - **UI library**: MUI (Material UI) with the app's own theme (colours as in `frontend/src/index.css`).

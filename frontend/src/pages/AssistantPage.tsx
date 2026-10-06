@@ -118,7 +118,9 @@ export function AssistantPage() {
         <Bubble role="assistant">{t(`assistant.intro.${session.mode}`)}</Bubble>
         {session.transcript.map((m, i) => (
           <Bubble key={i} role={m.role}>
-            {m.text || (m.draft ? t('assistant.draftReady') : '…')}
+            {m.error
+              ? t(`assistant.importError.${m.error}`, { defaultValue: t('assistant.importError.generic') })
+              : m.text || (m.draft ? t('assistant.draftReady') : '…')}
           </Bubble>
         ))}
         {pending && <Bubble role="user">{pending}</Bubble>}

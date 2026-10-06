@@ -204,13 +204,13 @@
     "intro": {
       "tell": "Raccontami la ricetta come la racconteresti a un amico: ingredienti, dosi se le sai, come la prepari. Preparo io la bozza da controllare.",
       "search": "",
-      "link": "",
+      "link": "Incollami il link della pagina con la ricetta: la leggo e preparo la bozza da controllare. Funziona anche incollando un link in «Raccontami».",
       "photo": ""
     },
     "placeholder": {
       "tell": "Es. «La pasta e ceci di mia nonna, per 4…»",
       "search": "",
-      "link": "",
+      "link": "https://…",
       "photo": ""
     },
     "correctPlaceholder": "Correggi o aggiungi qualcosa…",
@@ -226,6 +226,18 @@
     "send": "Invia",
     "closed": "Questa conversazione è chiusa.",
     "notFound": "Conversazione non trovata.",
-    "unavailable": "L'assistente non risponde. Unsloth Studio è avviato?"
+    "unavailable": "L'assistente non risponde. Unsloth Studio è avviato?",
+    "importError": {
+      "generic": "Non sono riuscito a importare la ricetta da questo link.",
+      "invalid_url": "Il link non sembra valido: deve iniziare con http:// o https://.",
+      "unreachable": "Non riesco a raggiungere la pagina. Controlla il link o riprova più tardi.",
+      "forbidden_address": "Questo indirizzo non è una pagina web pubblica, quindi non posso aprirlo.",
+      "http_error": "Il sito ha rifiutato la richiesta (può succedere con siti che bloccano gli accessi automatici). Prova a incollarmi il testo della ricetta.",
+      "not_html": "Il link non porta a una pagina web (forse un PDF o un'immagine).",
+      "too_large": "La pagina è troppo grande da leggere.",
+      "too_many_redirects": "Il link rimanda troppe volte ad altre pagine.",
+      "no_content": "La pagina non contiene testo leggibile: forse viene generata da JavaScript, o è un video o un post social. Prova a incollarmi il testo della ricetta.",
+      "no_recipe": "Nella pagina non ho trovato una ricetta. Prova a incollarmi il testo della ricetta."
+    }
   }
 }

@@ -204,13 +204,13 @@
     "intro": {
       "tell": "Tell me the recipe the way you would tell a friend: ingredients, amounts if you know them, how you make it. I will prepare a draft for you to check.",
       "search": "",
-      "link": "",
+      "link": "Paste the link of the page with the recipe: I will read it and prepare a draft for you to check. Pasting a link in “Tell me the recipe” works too.",
       "photo": ""
     },
     "placeholder": {
       "tell": "E.g. “My grandmother's pasta e ceci, for 4…”",
       "search": "",
-      "link": "",
+      "link": "https://…",
       "photo": ""
     },
     "correctPlaceholder": "Correct or add something…",
@@ -226,6 +226,18 @@
     "send": "Send",
     "closed": "This conversation is closed.",
     "notFound": "Conversation not found.",
-    "unavailable": "The assistant is not answering. Is Unsloth Studio running?"
+    "unavailable": "The assistant is not answering. Is Unsloth Studio running?",
+    "importError": {
+      "generic": "I could not import a recipe from this link.",
+      "invalid_url": "The link does not look valid: it must start with http:// or https://.",
+      "unreachable": "I cannot reach the page. Check the link or try again later.",
+      "forbidden_address": "This address is not a public web page, so I cannot open it.",
+      "http_error": "The site refused the request (some sites block automated access). Try pasting the recipe text instead.",
+      "not_html": "The link does not lead to a web page (maybe a PDF or an image).",
+      "too_large": "The page is too large to read.",
+      "too_many_redirects": "The link redirects too many times.",
+      "no_content": "The page has no readable text: it may be built by JavaScript, or be a video or social post. Try pasting the recipe text instead.",
+      "no_recipe": "I found no recipe on the page. Try pasting the recipe text instead."
+    }
   }
 }
