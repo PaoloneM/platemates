@@ -6,6 +6,8 @@
 *.sql
 *.dump
 notes/
+backups/
+.env.from-backup
 
 # Python
 .venv/

@@ -76,9 +76,10 @@ Full detail in `README.md`:
 - `frontend/`: React + TypeScript (Vite); `src/api.ts` is the only place that calls `fetch`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
 - `keycloak/`: Keycloak image (login theme, Apple provider)
-- `scripts/`: repository-level tooling (`init_env.py`)
+- `scripts/`: repository-level tooling (`init_env.py`, `backup.py`)
 - `docs/architecture.md`: design decisions; update it when you change one
 - `docs/authentication.md`: login flow, invitations, provider setup
+- `docs/operations.md`: where data lives, backup/restore, moving to another machine
 
 ### Environment
 
@@ -111,6 +112,8 @@ cd services/embeddings && uv run pytest
 cd frontend && npm run dev                              # SPA on :5173, proxies /api to :8000
 cd frontend && npm run build && npm run lint
 docker compose up -d --build                            # full stack on :8080
+python3 scripts/backup.py create                        # back up both databases + .env to backups/
+python3 scripts/backup.py restore backups/<file>.tar    # replace all data (takes a safety backup first)
 docker compose --profile embeddings up -d --build       # ... plus the embedding service
 ```
 
@@ -127,6 +130,8 @@ docker compose --profile embeddings up -d --build       # ... plus the embedding
   mirrors configuration, convergent (re-running after a config change applies the change).
   Today: `init_env.py`, migrations and seed data, `db-init`, `setup_keycloak`, `create_family`.
   Verify a new step by running it twice
+- Never run `docker compose down -v` (or remove `mymenu_pgdata`) without a fresh backup: it deletes
+  both databases, Keycloak accounts included. `backups/` holds personal data: never commit it
 - Keycloak is configured only through `setup_keycloak` (from `.env`), never by hand in its console
 - The interface language is a per-user preference saved in the backend, not only in the browser
 - Users are matched on the OIDC `sub` claim, never on email; no OIDC token is ever sent to the

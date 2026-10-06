@@ -106,4 +106,7 @@ family (access is invitation-only):
 
 Or the whole stack in containers: `docker compose --profile embeddings up -d --build`, then
 http://localhost:8080. Architecture: `docs/architecture.md`; authentication and social login
-setup: `docs/authentication.md`.
+setup: `docs/authentication.md`; data, backups and moving the stack: `docs/operations.md`.
+
+All data lives in the `mymenu_pgdata` volume: `docker compose down` keeps it, `down -v` deletes
+it. Back up with `python3 scripts/backup.py create`.
