@@ -159,6 +159,8 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - UI strings go through i18next (`frontend/src/i18n/locales/{it,en}.json`), Italian default; add
   every new key to both files. Backend labels use `gettext_lazy`
 - Seasonality is stored as months; season mode is only a view (see `docs/architecture.md`)
+- Catalog entries the app ships with (kitchen tools) have a stable `code` and are translated in
+  the UI; never show their stored English name to users. User-added entries have no code
 - Tests use synthetic data, never real family data
 - Commit messages: imperative summary line, English; one logical change per commit
 

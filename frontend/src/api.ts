@@ -50,7 +50,8 @@ export type Ingredient = {
 }
 
 export type Cuisine = { id: number; name: string }
-export type KitchenTool = { id: number; name: string; heats_kitchen: boolean }
+// `code` is set for the tools the app ships with (shown translated), null for the ones users add.
+export type KitchenTool = { id: number; code: string | null; name: string; heats_kitchen: boolean }
 
 export type RecipeLine = {
   id?: number

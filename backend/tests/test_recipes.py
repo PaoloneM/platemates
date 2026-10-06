@@ -191,3 +191,26 @@ def test_book_summary_combines_ingredient_and_climate_seasons(api, family, tomat
     assert book["Pomodori"] == [8, 9]  # tomato season (6-9) within the climate (8-10)
     assert book["Pane"] == []
     assert soup and summer and anytime
+
+
+def test_shipped_kitchen_tools_have_codes_for_translation(api):
+    tools = api.get("/api/kitchen-tools/").json()
+    oven = next(t for t in tools if t["name"] == "conventional oven")
+    assert oven["code"] == "conventional_oven" and oven["heats_kitchen"] is True
+
+
+def test_users_add_kitchen_tools_in_their_own_words(api):
+    created = api.post(
+        "/api/kitchen-tools/",
+        {"name": "  Macchina   del pane ", "heats_kitchen": True, "code": "sneaky"},
+        format="json",
+    )
+    assert created.status_code == 201
+    assert created.json() == {
+        "id": created.json()["id"],
+        "code": None,
+        "name": "Macchina del pane",
+        "heats_kitchen": True,
+    }
+    duplicate = api.post("/api/kitchen-tools/", {"name": "macchina DEL pane"}, format="json")
+    assert duplicate.status_code == 400

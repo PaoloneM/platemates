@@ -135,7 +135,8 @@
     "addToBook": "Aggiungi al ricettario",
     "removeTitle": "Rimuovere la ricetta?",
     "removePrivate": "La ricetta è privata: rimuovendola dal ricettario verrà eliminata.",
-    "removeShared": "La ricetta resta disponibile alle altre famiglie, ma non sarà più nel vostro ricettario."
+    "removeShared": "La ricetta resta disponibile alle altre famiglie, ma non sarà più nel vostro ricettario.",
+    "tools": "Attrezzi"
   },
   "editor": {
     "newTitle": "Nuova ricetta",
@@ -257,5 +258,26 @@
       "web_search_empty": "Sul web non ho trovato pagine con una ricetta singola. Prova a nominare un piatto preciso.",
       "web_search_failed": "La ricerca sul web non ha risposto. Riprova tra poco."
     }
+  },
+  "tool": {
+    "air_fryer": "Friggitrice ad aria",
+    "blender": "Frullatore",
+    "conventional_oven": "Forno tradizionale",
+    "deep_fryer": "Friggitrice",
+    "food_processor": "Robot da cucina",
+    "gas_hob": "Piano cottura a gas",
+    "grill": "Griglia",
+    "induction_hob": "Piano a induzione",
+    "microwave": "Microonde",
+    "pressure_cooker": "Pentola a pressione",
+    "slow_cooker": "Slow cooker",
+    "steam_oven": "Forno a vapore",
+    "newTitle": "Nuovo attrezzo",
+    "name": "Nome",
+    "sharedHint": "Gli attrezzi sono comuni a tutte le famiglie: usa un nome semplice.",
+    "heatsKitchen": "Scalda la cucina",
+    "heatsKitchenHint": "Come il forno o la friggitrice: d'estate i menu ne terranno conto.",
+    "addNamed": "Aggiungi «{{name}}» come nuovo attrezzo",
+    "exists": "Esiste già un attrezzo con questo nome."
   }
 }

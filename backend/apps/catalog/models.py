@@ -97,6 +97,10 @@ class KitchenTool(models.Model):
     """A piece of equipment a recipe may need and a family may own."""
 
     name = models.CharField(max_length=80, unique=True)
+    # Stable code of the tools the app ships with ("conventional_oven"): the interface shows
+    # them translated. Null for tools added by users, which are shown by their name, in the
+    # language they were written in.
+    code = models.SlugField(max_length=40, unique=True, null=True, blank=True, editable=False)
     # Tools that heat up the kitchen (conventional oven, deep fryer) are less welcome in summer.
     heats_kitchen = models.BooleanField(default=False)
 

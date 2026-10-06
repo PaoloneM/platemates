@@ -7,6 +7,7 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import {
   Alert,
   Autocomplete,
+  createFilterOptions,
   Box,
   Button,
   Card,
@@ -43,6 +44,7 @@ import {
 import { IngredientDialog } from '../components/IngredientDialog'
 import { IngredientPicker, type PickedIngredient } from '../components/IngredientPicker'
 import { SeasonPicker } from '../components/SeasonPicker'
+import { ToolDialog } from '../components/ToolDialog'
 import { useFamily } from '../family'
 import { COURSES, UNITS, useDescribeMonths, useLabels } from '../labels'
 
@@ -77,6 +79,8 @@ type Form = {
   visibility: Visibility
   sourceUrl: string
 }
+
+const toolFilter = createFilterOptions<KitchenTool | { create: string }>()
 
 let nextKey = 1
 const newLine = (): Line => ({
@@ -222,6 +226,7 @@ export function RecipeEditorPage() {
   )
   const [cuisines, setCuisines] = useState<Cuisine[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
+  const [creatingTool, setCreatingTool] = useState<string | null>(null)
   const [creating, setCreating] = useState<
     { name: string; lineKey: number; suggestion?: DraftLine } | null
   >(null)
@@ -463,13 +468,36 @@ export function RecipeEditorPage() {
               slotProps={{ htmlInput: { min: 0 }, input: { endAdornment: <InputAdornment position="end">min</InputAdornment> } }} />
           </Grid>
           <Grid size={12}>
-            <Autocomplete
+            <Autocomplete<KitchenTool | { create: string }, true>
               multiple
-              options={tools}
+              // Alphabetical in the interface language, not by the stored (English) names.
+              options={[...tools].sort((a, b) => labels.tool(a).localeCompare(labels.tool(b)))}
               value={form.tools}
-              getOptionLabel={(o) => o.name}
-              isOptionEqualToValue={(a, b) => a.id === b.id}
-              onChange={(_, v) => set('tools', v)}
+              getOptionLabel={(o) => ('create' in o ? o.create : labels.tool(o))}
+              isOptionEqualToValue={(a, b) => 'id' in a && 'id' in b && a.id === b.id}
+              filterOptions={(options, state) => {
+                const filtered = toolFilter(options, state)
+                const typed = state.inputValue.trim()
+                const known = options.some(
+                  (o) => 'id' in o && labels.tool(o).toLowerCase() === typed.toLowerCase(),
+                )
+                // Not in the list: offer to add it, as for ingredients.
+                if (typed && !known) filtered.push({ create: typed })
+                return filtered
+              }}
+              renderOption={(props, o) => {
+                const { key, ...rest } = props as typeof props & { key: string }
+                return (
+                  <li key={key} {...rest}>
+                    {'create' in o ? t('tool.addNamed', { name: o.create }) : labels.tool(o)}
+                  </li>
+                )
+              }}
+              onChange={(_, values) => {
+                const created = values.find((v) => 'create' in v)
+                if (created && 'create' in created) setCreatingTool(created.create)
+                else set('tools', values as KitchenTool[])
+              }}
               renderInput={(params) => <TextField {...params} label={t('editor.tools')} />}
             />
           </Grid>
@@ -661,6 +689,18 @@ export function RecipeEditorPage() {
           {t('common.save')}
         </Button>
       </Box>
+
+      {creatingTool != null && (
+        <ToolDialog
+          initialName={creatingTool}
+          onClose={() => setCreatingTool(null)}
+          onCreated={(tool) => {
+            setTools((all) => [...all, tool])
+            set('tools', [...form.tools, tool])
+            setCreatingTool(null)
+          }}
+        />
+      )}
 
       {creating && (
         <IngredientDialog

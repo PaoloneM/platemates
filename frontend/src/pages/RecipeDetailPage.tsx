@@ -29,7 +29,7 @@ import {
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
-import { api, type Recipe, type RecipeLine } from '../api'
+import { api, type KitchenTool, type Recipe, type RecipeLine } from '../api'
 import { useFamily } from '../family'
 import { formatQuantity, useDescribeMonths, useLabels } from '../labels'
 
@@ -74,6 +74,11 @@ export function RecipeDetailPage() {
   const [error, setError] = useState(false)
   const [people, setPeople] = useState<number | null>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [allTools, setAllTools] = useState<KitchenTool[]>([])
+
+  useEffect(() => {
+    api<KitchenTool[]>('/kitchen-tools/').then(setAllTools).catch(() => undefined)
+  }, [])
 
   useEffect(() => {
     api<Recipe>(`/recipes/${id}/`)
@@ -88,6 +93,7 @@ export function RecipeDetailPage() {
   if (!recipe || people == null) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 6 }} />
 
   const entry = recipe.book_entries.find((e) => e.family === family.id)
+  const tools = allTools.filter((tool) => recipe.tools.includes(tool.id))
   const factor = people / recipe.servings
   const suitable = recipe.season_months.months.length === 0
     ? recipe.climate_months.months
@@ -205,6 +211,11 @@ export function RecipeDetailPage() {
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                 {t('recipe.season')}: {describeMonths(suitable)}
               </Typography>
+              {tools.length > 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {t('recipe.tools')}: {tools.map(labels.tool).join(', ')}
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>

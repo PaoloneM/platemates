@@ -135,7 +135,8 @@
     "addToBook": "Add to recipe book",
     "removeTitle": "Remove the recipe?",
     "removePrivate": "This recipe is private: removing it from the recipe book deletes it.",
-    "removeShared": "The recipe stays available to other families, but will no longer be in your recipe book."
+    "removeShared": "The recipe stays available to other families, but will no longer be in your recipe book.",
+    "tools": "Tools"
   },
   "editor": {
     "newTitle": "New recipe",
@@ -257,5 +258,26 @@
       "web_search_empty": "I found no single-recipe pages on the web. Try naming a specific dish.",
       "web_search_failed": "The web search did not answer. Try again shortly."
     }
+  },
+  "tool": {
+    "air_fryer": "Air fryer",
+    "blender": "Blender",
+    "conventional_oven": "Conventional oven",
+    "deep_fryer": "Deep fryer",
+    "food_processor": "Food processor",
+    "gas_hob": "Gas hob",
+    "grill": "Grill",
+    "induction_hob": "Induction hob",
+    "microwave": "Microwave",
+    "pressure_cooker": "Pressure cooker",
+    "slow_cooker": "Slow cooker",
+    "steam_oven": "Steam oven",
+    "newTitle": "New kitchen tool",
+    "name": "Name",
+    "sharedHint": "Kitchen tools are common to all families: use a simple name.",
+    "heatsKitchen": "Heats up the kitchen",
+    "heatsKitchenHint": "Like an oven or a deep fryer: summer menus will take it into account.",
+    "addNamed": "Add “{{name}}” as a new tool",
+    "exists": "A kitchen tool with this name already exists."
   }
 }

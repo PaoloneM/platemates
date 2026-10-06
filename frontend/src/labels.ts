@@ -27,6 +27,9 @@ export function useLabels() {
     unit: (u: string) => t(`unit.${u}`),
     category: (c: string) => t(`category.${c}`),
     season: (s: string) => t(`season.${s}`),
+    // Shipped tools are translated from their code; tools added by users keep their own name.
+    tool: (tool: { code: string | null; name: string }) =>
+      tool.code ? t(`tool.${tool.code}`, { defaultValue: tool.name }) : tool.name,
     month: (m: number) => monthFormat.format(new Date(2026, m - 1, 1)),
     monthLong: (m: number) => monthLong.format(new Date(2026, m - 1, 1)),
   }

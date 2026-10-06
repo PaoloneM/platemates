@@ -52,6 +52,10 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
 - **Shared catalogs** (ingredients, cuisines, kitchen tools): any user may read and add
   entries, only staff may change or delete them (`CatalogPermission`), because an edit would
   silently change other families' recipes. Ingredient search matches names and aliases.
+  Ingredients and kitchen tools can be added from the recipe editor (no admin needed). The
+  kitchen tools the app ships with carry a stable `code` and are shown translated
+  (`tool.<code>` in the frontend locales); tools added by users have no code and are shown by
+  the name they were given. Tool names are unique regardless of case.
   This is what makes collaborative recommendation possible ("families like yours loved X"), and
   keeps discovery candidates separate from accepted recipes (`RecipeBookEntry.Status.CANDIDATE`).
 - **People per slot.** `MealSlot.people` is the source of truth. `Family.default_people` only

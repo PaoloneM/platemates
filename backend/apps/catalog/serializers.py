@@ -26,4 +26,14 @@ class IngredientSerializer(UserDecisionSerializerMixin, serializers.ModelSeriali
 class KitchenToolSerializer(serializers.ModelSerializer):
     class Meta:
         model = KitchenTool
-        fields = ["id", "name", "heats_kitchen"]
+        fields = ["id", "code", "name", "heats_kitchen"]
+        read_only_fields = ["code"]
+
+    def validate_name(self, name: str) -> str:
+        name = " ".join(name.split())
+        existing = KitchenTool.objects.filter(name__iexact=name)
+        if self.instance is not None:
+            existing = existing.exclude(pk=self.instance.pk)
+        if existing.exists():
+            raise serializers.ValidationError("A kitchen tool with this name already exists.")
+        return name
