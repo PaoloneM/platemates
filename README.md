@@ -92,12 +92,18 @@ Requirements: Docker, [uv](https://docs.astral.sh/uv/), Node 24, and Unsloth Stu
 host for the generative LLM.
 
 ```bash
-cp .env.example .env                        # then set LLM_API_KEY (Studio: Settings -> API keys)
-docker compose up -d db
-cd backend && uv run python manage.py migrate && uv run python manage.py createsuperuser
-uv run python manage.py runserver           # http://localhost:8000/admin/
-cd ../frontend && npm install && npm run dev  # http://localhost:5173
+python3 scripts/init_env.py   # creates .env and its secrets; then set LLM_API_KEY
+                              # (Studio: Settings -> API keys). Social login is optional
+docker compose up -d db keycloak
+cd backend && uv run python manage.py migrate && uv run python manage.py setup_keycloak
+uv run python manage.py runserver
+cd ../frontend && npm install && npm run dev    # http://localhost:5173
 ```
 
+Every step above can be re-run safely. Sign in once, then make yourself owner of the first
+family (access is invitation-only):
+`uv run python manage.py create_family "My family" --owner you@example.com --staff`.
+
 Or the whole stack in containers: `docker compose --profile embeddings up -d --build`, then
-http://localhost:8080. Architecture and design decisions: `docs/architecture.md`.
+http://localhost:8080. Architecture: `docs/architecture.md`; authentication and social login
+setup: `docs/authentication.md`.

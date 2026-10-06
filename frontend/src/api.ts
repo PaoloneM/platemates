@@ -7,6 +7,31 @@ export type Health = Record<string, ServiceHealth>
 
 export type Paginated<T> = { count: number; next: string | null; results: T[] }
 
+export type Me =
+  | { authenticated: false }
+  | {
+      authenticated: true
+      user: {
+        id: number
+        email: string
+        first_name: string
+        last_name: string
+        is_staff: boolean
+        language: string | null
+      }
+      families: { id: number; name: string; role: 'owner' | 'member' }[]
+    }
+
+export type LoginOptions = { identity_providers: IdentityProvider[] }
+export type IdentityProvider = 'google' | 'microsoft' | 'apple'
+
+export type InvitationPreview = {
+  family_name: string
+  role: 'owner' | 'member'
+  state: 'pending' | 'accepted' | 'expired' | 'revoked'
+  expires_at: string
+}
+
 export type Recipe = {
   id: number
   title: string
@@ -24,7 +49,7 @@ export class ApiError extends Error {
   }
 }
 
-function csrfToken(): string {
+export function csrfToken(): string {
   return document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] ?? ''
 }
 
@@ -44,4 +69,15 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(response.status, `${init.method ?? 'GET'} ${path}: ${response.status}`)
   }
   return response.status === 204 ? (undefined as T) : response.json()
+}
+
+/** Full-page navigation to the backend's OIDC login, which redirects to Keycloak. */
+export function loginUrl(options: { next?: string; idp?: IdentityProvider; signup?: boolean } = {}) {
+  const params = new URLSearchParams({
+    next: options.next ?? '/',
+    lang: i18n.resolvedLanguage ?? 'it',
+  })
+  if (options.idp) params.set('idp', options.idp)
+  if (options.signup) params.set('signup', '1')
+  return `/oidc/authenticate/?${params}`
 }

@@ -7,7 +7,8 @@ integration.
 
 ```
  browser ──► frontend (nginx: SPA + reverse proxy) ──► backend (Django + DRF) ──► PostgreSQL + pgvector
-                                                          │
+    │                                                     │
+    └──── login pages ──► Keycloak ◄──── OIDC ────────────┤
                                                           ├──► generative LLM   (OpenAI-compatible; Unsloth Studio on the host)
                                                           └──► embedding model  (OpenAI-compatible; services/embeddings by default)
 ```
@@ -17,9 +18,14 @@ integration.
 | `backend/` | Django project `config`, domain apps in `apps/`, AI adapters in `ai/` | `backend` container, or `uv run` natively |
 | `frontend/` | React + TypeScript SPA (Vite) | `frontend` container (nginx), or `npm run dev` |
 | `services/embeddings/` | OpenAI-compatible `/v1/embeddings` around sentence-transformers | `embeddings` container (compose profile), or `uv run uvicorn` |
+| `keycloak/` | Keycloak image: login theme `mymenu` + Apple provider extension | `keycloak` container; realm configured by `keycloak-setup` |
 
 The frontend and backend always share one origin (Vite proxy in development, nginx in
-production), so the API uses Django session auth and CSRF without CORS.
+production), so the API uses Django session auth and CSRF without CORS. Both proxies must keep
+the original `Host` header: Django builds the OIDC callback URL from it.
+
+**Authentication** is Keycloak (email/password, Google, Microsoft, Apple) with Django as OIDC
+client, and access is invitation-only. Full design and setup: `docs/authentication.md`.
 
 ## Domain apps
 
@@ -29,6 +35,7 @@ production), so the API uses Django session auth and CSRF without CORS.
 | `recipes` | `Cuisine`, `Recipe`, `RecipeIngredient`, `RecipeEmbedding` | Recipes are global too; quantities refer to `Recipe.servings` and scale linearly. |
 | `families` | `Family`, `Membership`, `FamilyMember`, `Preference`, `RecipeBookEntry`, `FamilyEmbedding` | Everything family-specific. `RecipeBookEntry` is the per-family view of a recipe: candidate / approved / rejected, plus the explicit rating. |
 | `menus` | `WeeklyMenu`, `MealSlot`, `SlotDish` | 7 days × {lunch, dinner}. Shopping list in `menus/shopping.py`, computed, never stored. |
+| `accounts` | `OIDCIdentity`, `Invitation` | OIDC backend and login view (`oidc.py`), Keycloak realm setup (`keycloak_admin.py`), `/api/me/`, invitations. |
 | `core` | none (abstract mixins and helpers) | Seasonality and provenance helpers, shared serializer mixin. |
 
 ### Decisions worth knowing
@@ -89,7 +96,8 @@ Never assign a tracked field directly from LLM output; always go through `propos
 
 ### Multi-family access
 
-A user sees only families they hold a `Membership` in. Viewsets over family-owned data use
+A user sees only families they hold a `Membership` in, and gets one only by accepting an
+invitation (or by staff creating the family for them). Viewsets over family-owned data use
 `FamilyScopedMixin` (`apps/families/permissions.py`), which filters querysets and rejects writes
 pointing at somebody else's family. Global catalogs (ingredients, tools, cuisines, recipes) are
 readable and writable by any authenticated user for now.
@@ -146,4 +154,5 @@ Verified live on 2026-10-05 against this project's adapter:
 ## Not built yet
 
 Menu generation engine (agentic, RAG), recipe discovery, embedding computation jobs,
-collaborative recommendation, and every frontend screen beyond the health/recipe list stub.
+collaborative recommendation, a UI for creating invitations, and every frontend screen beyond
+sign-in, invitations and the recipe list stub.

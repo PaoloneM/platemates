@@ -1,10 +1,19 @@
+/* Colours are kept in step with the Keycloak login theme
+   (keycloak/themes/mymenu/login/resources/css/mymenu.css). */
 :root {
   --bg: #fbfaf7;
+  --surface: #ffffff;
   --fg: #1f2421;
   --muted: #66706a;
+  --accent: #2e7d4f;
+  --accent-hover: #24643f;
+  --on-accent: #fbfaf7;
   --ok: #2e7d4f;
   --bad: #b3261e;
+  --bad-bg: #fbeceb;
+  --notice-bg: #eaf3ed;
   --line: #e4e1da;
+  --radius: 10px;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   line-height: 1.5;
@@ -13,8 +22,15 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #161917;
+    --surface: #1e2220;
     --fg: #e8ebe9;
     --muted: #9aa49e;
+    --accent: #4fa874;
+    --accent-hover: #63b885;
+    --on-accent: #0f1311;
+    --bad: #f2867e;
+    --bad-bg: #3a1f1d;
+    --notice-bg: #1d2e24;
     --line: #2c312e;
   }
 }
@@ -29,29 +45,13 @@ body {
   color: var(--fg);
 }
 
-/* Desktop-first, but every block collapses to a single column on narrow screens. */
-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px 16px;
+h1,
+h2 {
+  line-height: 1.2;
 }
 
-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px 24px;
-  border-bottom: 1px solid var(--line);
-}
-
-.services {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 0;
-  list-style: none;
-  font-size: 0.875rem;
+.muted {
+  color: var(--muted);
 }
 
 .ok {
@@ -60,6 +60,211 @@ header {
 
 .bad {
   color: var(--bad);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* -- Buttons --------------------------------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.button.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.button.provider,
+.button.secondary {
+  background: var(--surface);
+  color: var(--fg);
+  border-color: var(--line);
+}
+
+.button.provider:hover,
+.button.secondary:hover {
+  border-color: var(--muted);
+}
+
+.button.provider svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.button.link {
+  background: none;
+  color: var(--accent);
+}
+
+.button.link:hover {
+  text-decoration: underline;
+}
+
+.inline-form {
+  display: contents;
+}
+
+select {
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+}
+
+/* -- Sign-in, invitation and waiting screens -------------------------------------------------- */
+
+.auth-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.auth-topbar {
+  align-self: stretch;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 420px;
+  margin: auto 0;
+  padding: 32px 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.auth-card h1 {
+  margin: 16px 0 4px;
+  font-size: 1.6rem;
+}
+
+.auth-card > p {
+  margin: 8px 0;
+}
+
+.auth-actions {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--line);
+}
+
+.notice {
+  align-self: stretch;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--notice-bg);
+  font-size: 0.925rem;
+}
+
+.notice.bad {
+  background: var(--bad-bg);
+}
+
+.fine-print {
+  margin-top: 24px !important;
+  color: var(--muted);
+  font-size: 0.825rem;
+}
+
+/* -- Application shell ----------------------------------------------------------------------- */
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.user-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Desktop-first, but every block collapses to a single column on narrow screens. */
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
 }
 
 .recipes {
@@ -77,10 +282,5 @@ header {
 }
 
 .recipes span {
-  color: var(--muted);
-}
-
-.language {
-  font-size: 0.875rem;
   color: var(--muted);
 }

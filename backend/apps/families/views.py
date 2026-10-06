@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.exceptions import PermissionDenied
 
 from .models import Family, FamilyMember, Membership, Preference, RecipeBookEntry
 from .permissions import FamilyScopedMixin
@@ -19,6 +20,9 @@ class FamilyViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
+        # Access is invitation-only: new families are created by staff, everyone else joins one.
+        if not self.request.user.is_staff:
+            raise PermissionDenied("Only staff can create families; ask for an invitation.")
         family = serializer.save()
         Membership.objects.create(user=self.request.user, family=family, role=Membership.Role.OWNER)
 

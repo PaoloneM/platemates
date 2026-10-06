@@ -16,7 +16,9 @@ onto the concepts, and for the design decisions taken so far.
 ## Technology Stack
 
 - **Backend**: Python, **Django** + Django REST Framework
-  - Reasons: robust ORM for a highly relational data model (families, recipes, ingredients, menus), app-based structure (recipe book, menu/families, LLM integration), free admin panel, native authentication that can later be extended with Keycloak
+  - Reasons: robust ORM for a highly relational data model (families, recipes, ingredients, menus), app-based structure (recipe book, menu/families, LLM integration), free admin panel
+- **Authentication**: **Keycloak** (email/password, Google, Microsoft, Apple) with Django as OIDC
+  client and session cookies; invitation-only access. See `docs/authentication.md`
 - **Frontend**: **React** (SPA), decoupled from the backend via REST API
   - Possible future wrapping in **Tauri** for a desktop version with local storage, same codebase
 - **Database**: **PostgreSQL** as the single database
@@ -73,7 +75,10 @@ Full detail in `README.md`:
   `families`, `menus`; `core` holds abstract mixins only), AI adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite); `src/api.ts` is the only place that calls `fetch`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
+- `keycloak/`: Keycloak image (login theme, Apple provider)
+- `scripts/`: repository-level tooling (`init_env.py`)
 - `docs/architecture.md`: design decisions; update it when you change one
+- `docs/authentication.md`: login flow, invitations, provider setup
 
 ### Environment
 
@@ -81,14 +86,22 @@ Full detail in `README.md`:
   never call pip directly. If a stale `VIRTUAL_ENV` from pyenv is set, `export VIRTUAL_ENV=`
   silences uv's warning
 - Node 24, npm in `frontend/`
-- Configuration only from the root `.env` (template: `.env.example`); never commit `.env`
+- Configuration only from the root `.env` (template: `.env.example`); never commit `.env`.
+  `python3 scripts/init_env.py` creates or completes it (generates missing secrets, adds new
+  keys, never overwrites a value)
 - PostgreSQL is the only supported database, also for tests: start it with
   `docker compose up -d db`
+- Signing in needs Keycloak running and configured: `docker compose up -d db keycloak`, then
+  `uv run python manage.py setup_keycloak`. Use the app through the SPA's origin (`:5173` or
+  `:8080`), never directly on `:8000`: Keycloak only accepts those as redirect targets
 
 ### Commands
 
 ```bash
-docker compose up -d db                                 # database only, for native development
+python3 scripts/init_env.py                             # create/complete .env (idempotent)
+docker compose up -d db keycloak                        # database + identity provider, for native development
+cd backend && uv run python manage.py setup_keycloak    # configure the Keycloak realm from .env (idempotent)
+cd backend && uv run python manage.py create_family "Name" --owner you@example.com --staff  # bootstrap
 cd backend && uv run python manage.py migrate           # apply migrations
 cd backend && uv run python manage.py runserver         # API on :8000, admin on /admin/
 cd backend && uv run pytest                             # backend tests (needs the db running)
@@ -110,6 +123,14 @@ docker compose --profile embeddings up -d --build       # ... plus the embedding
 - Application logic talks to AI only through `ai.get_chat_provider()` /
   `ai.get_embedding_provider()`; provider-specific code lives in `ai/` only
 - Embeddings are always stored with the model name that produced them
+- **Every initialization step must be idempotent** (safe to re-run, same result) and, where it
+  mirrors configuration, convergent (re-running after a config change applies the change).
+  Today: `init_env.py`, migrations and seed data, `db-init`, `setup_keycloak`, `create_family`.
+  Verify a new step by running it twice
+- Keycloak is configured only through `setup_keycloak` (from `.env`), never by hand in its console
+- The interface language is a per-user preference saved in the backend, not only in the browser
+- Users are matched on the OIDC `sub` claim, never on email; no OIDC token is ever sent to the
+  browser
 - No dependency that requires CUDA: the stack must run on a Raspberry Pi
 - UI strings go through i18next (`frontend/src/i18n/locales/{it,en}.json`), Italian default; add
   every new key to both files. Backend labels use `gettext_lazy`

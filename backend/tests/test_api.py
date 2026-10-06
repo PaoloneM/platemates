@@ -15,7 +15,13 @@ def test_api_requires_authentication(db):
     assert APIClient().get("/api/recipes/").status_code in (401, 403)
 
 
-def test_creating_a_family_makes_the_user_its_owner(api):
+def test_only_staff_can_create_families(api):
+    assert api.post("/api/families/", {"name": "New"}, format="json").status_code == 403
+
+
+def test_creating_a_family_makes_the_staff_user_its_owner(api, user):
+    user.is_staff = True
+    user.save()
     response = api.post("/api/families/", {"name": "New"}, format="json")
     assert response.status_code == 201
     assert api.get("/api/families/").json()["count"] == 1

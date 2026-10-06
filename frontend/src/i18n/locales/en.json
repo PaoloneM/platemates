@@ -1,5 +1,8 @@
 {
-  "app": { "title": "Family Menu Planner", "language": "Language" },
+  "app": {
+    "title": "Family Menu Planner",
+    "language": "Language"
+  },
   "health": {
     "checking": "Checking services...",
     "unreachable": "Backend unreachable: {{error}}",
@@ -14,10 +17,8 @@
   },
   "recipes": {
     "title": "Recipes",
-    "signIn": "Sign in",
-    "signInToSee": "to see your recipe book.",
     "loading": "Loading recipes...",
-    "empty": "No recipes yet. Add some from the admin panel.",
+    "empty": "The recipe book is empty.",
     "servings_one": "{{count}} serving",
     "servings_other": "{{count}} servings",
     "minutes": "{{count}} min"
@@ -29,5 +30,38 @@
     "autumn": "Autumn",
     "allYear": "All year",
     "advanced": "Choose months"
+  },
+  "common": {
+    "loading": "Loading..."
+  },
+  "auth": {
+    "tagline": "The weekly menu and the shopping list, made for your family.",
+    "continueWith": "Continue with {{provider}}",
+    "or": "or",
+    "signInWithEmail": "Sign in with email and password",
+    "createAccount": "Create an account",
+    "invitationOnly": "Access is by invitation: once signed in, you can join the family that invited you.",
+    "invitedSignIn": "You have been invited to a family. Sign in or create an account to accept.",
+    "failed": "Sign-in failed. Please try again.",
+    "logout": "Sign out"
+  },
+  "noFamily": {
+    "title": "Just the invitation missing",
+    "body": "You are signed in as {{email}}, but your account is not part of any family yet.",
+    "hint": "Ask whoever manages your family to send you an invitation link, then open it in this browser."
+  },
+  "invite": {
+    "title": "Invitation",
+    "body": "You have been invited to join the “{{family}}” family.",
+    "accept": "Accept and join",
+    "state": {
+      "accepted": "This invitation has already been used.",
+      "expired": "This invitation has expired. Ask for a new one.",
+      "revoked": "This invitation has been cancelled."
+    },
+    "error": {
+      "notFound": "Invitation not found. Check the link.",
+      "generic": "Something went wrong. Please try again."
+    }
   }
 }

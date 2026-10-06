@@ -36,7 +36,10 @@ if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off.")
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
-CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
+CSRF_TRUSTED_ORIGINS = env_list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    "http://localhost:5173,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:8080",
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -47,6 +50,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.postgres",
     "rest_framework",
+    "mozilla_django_oidc",
+    "apps.accounts",
     "apps.catalog",
     "apps.recipes",
     "apps.families",
@@ -115,13 +120,63 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.BasicAuthentication",
-    ],
+    # The SPA is same-origin and authenticated by the Django session that the OIDC login opens.
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
+}
+
+# -- Authentication: Keycloak via OIDC ------------------------------------------------------------
+# Keycloak authenticates (email/password, Google, Microsoft, Apple); Django is its OIDC client and
+# turns a successful login into an ordinary session. See apps/accounts and docs/architecture.md.
+# ModelBackend stays for local superusers (`createsuperuser`), e.g. to reach the admin when
+# Keycloak is down.
+
+AUTHENTICATION_BACKENDS = [
+    "apps.accounts.oidc.KeycloakBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "mymenu")
+# Browsers are redirected to the public URL; the backend calls Keycloak on the internal one
+# (a container hostname under Docker Compose). Tokens carry the public URL as issuer either way.
+KEYCLOAK_PUBLIC_URL = os.getenv("KEYCLOAK_PUBLIC_URL", "http://localhost:8180").rstrip("/")
+KEYCLOAK_INTERNAL_URL = os.getenv("KEYCLOAK_INTERNAL_URL", KEYCLOAK_PUBLIC_URL).rstrip("/")
+_oidc_public = f"{KEYCLOAK_PUBLIC_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
+_oidc_internal = f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
+
+OIDC_RP_CLIENT_ID = os.getenv("OIDC_RP_CLIENT_ID", "mymenu-backend")
+OIDC_RP_CLIENT_SECRET = os.getenv("OIDC_RP_CLIENT_SECRET", "")
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid email profile"
+OIDC_USE_PKCE = True
+OIDC_OP_AUTHORIZATION_ENDPOINT = f"{_oidc_public}/auth"
+OIDC_OP_LOGOUT_ENDPOINT = f"{_oidc_public}/logout"
+OIDC_OP_TOKEN_ENDPOINT = f"{_oidc_internal}/token"
+OIDC_OP_USER_ENDPOINT = f"{_oidc_internal}/userinfo"
+OIDC_OP_JWKS_ENDPOINT = f"{_oidc_internal}/certs"
+OIDC_AUTHENTICATE_CLASS = "apps.accounts.oidc.KeycloakAuthenticationRequestView"
+OIDC_OP_LOGOUT_URL_METHOD = "apps.accounts.oidc.keycloak_logout_url"
+# Kept server-side in the session, only as `id_token_hint` for logout.
+OIDC_STORE_ID_TOKEN = True
+OIDC_TIMEOUT = 15
+LOGIN_URL = "/oidc/authenticate/"
+LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL_FAILURE = "/?login=failed"
+LOGOUT_REDIRECT_URL = "/"
+
+# Which social providers are configured, in the order the login screen shows them. The same
+# variables configure Keycloak through `manage.py setup_keycloak`.
+KEYCLOAK_IDENTITY_PROVIDERS = {
+    "google": bool(os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET")),
+    "microsoft": bool(os.getenv("MICROSOFT_CLIENT_ID") and os.getenv("MICROSOFT_CLIENT_SECRET")),
+    "apple": bool(
+        os.getenv("APPLE_CLIENT_ID")
+        and os.getenv("APPLE_TEAM_ID")
+        and os.getenv("APPLE_KEY_ID")
+        and os.getenv("APPLE_PRIVATE_KEY_FILE")
+    ),
 }
 
 # -- AI components --------------------------------------------------------------------------------

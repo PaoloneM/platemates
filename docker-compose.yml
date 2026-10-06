@@ -3,7 +3,7 @@
 # The generative LLM is NOT part of this stack: it is an external OpenAI-compatible service
 # (Unsloth Studio on the host by default) reached through LLM_BASE_URL.
 #
-#   docker compose up -d db                 # just the database, for native development
+#   docker compose up -d db keycloak        # database + identity provider, for native development
 #   docker compose up -d                    # everything
 #   docker compose --profile embeddings up  # also the bundled local embedding service
 
@@ -26,8 +26,83 @@ services:
       timeout: 3s
       retries: 20
 
+  # One-shot, idempotent: creates Keycloak's own database on the same PostgreSQL server if it
+  # does not exist yet. Runs on every `up`, so it works on fresh and existing volumes alike
+  # (Postgres' own init scripts would only run on a fresh volume).
+  db-init:
+    image: pgvector/pgvector:pg17
+    restart: "no"
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-mymenu}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-mymenu}
+      PGDATABASE: ${POSTGRES_DB:-mymenu}
+      KEYCLOAK_DB: ${KEYCLOAK_DB:-keycloak}
+    command:
+      - sh
+      - -c
+      - >-
+        psql -v ON_ERROR_STOP=1 -tc "SELECT 1 FROM pg_database WHERE datname = '$${KEYCLOAK_DB}'"
+        | grep -q 1 && echo "database $${KEYCLOAK_DB} already exists"
+        || (createdb "$${KEYCLOAK_DB}" && echo "created database $${KEYCLOAK_DB}")
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Identity provider: email/password accounts plus Google, Microsoft and Apple via brokering.
+  # Django is its OIDC client; the browser sees Keycloak only for the login pages.
+  keycloak:
+    build: ./keycloak
+    command: ["start", "--optimized"]
+    environment:
+      KC_DB_URL: jdbc:postgresql://db:5432/${KEYCLOAK_DB:-keycloak}
+      KC_DB_USERNAME: ${POSTGRES_USER:-mymenu}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-mymenu}
+      # The URL browsers use. Tokens carry it as issuer, whichever route the backend calls.
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      # Plain HTTP is acceptable on localhost only. Behind a TLS reverse proxy, set
+      # KEYCLOAK_PUBLIC_URL to the https URL and add KC_PROXY_HEADERS: xforwarded here.
+      KC_HTTP_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in .env}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8180:8080"
+    healthcheck:
+      # The image has no curl: speak HTTP to the management port through bash's /dev/tcp.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # One-shot: creates or updates the realm, the Django client and the identity providers from
+  # .env. Idempotent, safe to re-run after changing provider credentials.
+  keycloak-setup:
+    # Same image as the backend: built once, by the backend service.
+    image: mymenu-backend
+    pull_policy: never
+    command: ["python", "manage.py", "setup_keycloak"]
+    restart: "no"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      DATABASE_URL: postgres://${POSTGRES_USER:-mymenu}:${POSTGRES_PASSWORD:-mymenu}@db:5432/${POSTGRES_DB:-mymenu}
+    # APPLE_PRIVATE_KEY_FILE is relative to the repository root, which is / in the container.
+    volumes:
+      - ./secrets:/secrets:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
   backend:
     build: ./backend
+    image: mymenu-backend
     env_file:
       - path: .env
         required: false
@@ -36,10 +111,13 @@ services:
       # Inside a container, "127.0.0.1" is the container itself: reach the host instead.
       LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       db:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"

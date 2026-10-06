@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from apps.accounts.views import InvitationViewSet, login_options, me
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
 from apps.core.views import health
 from apps.families.views import (
@@ -24,10 +25,13 @@ router.register("preferences", PreferenceViewSet)
 router.register("recipe-book", RecipeBookEntryViewSet)
 router.register("menus", WeeklyMenuViewSet)
 router.register("slots", MealSlotViewSet)
+router.register("invitations", InvitationViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health),
-    path("api/auth/", include("rest_framework.urls")),
+    path("oidc/", include("mozilla_django_oidc.urls")),
+    path("api/me/", me),
+    path("api/login-options/", login_options),
     path("api/", include(router.urls)),
 ]

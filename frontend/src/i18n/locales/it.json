@@ -1,5 +1,8 @@
 {
-  "app": { "title": "Menu di famiglia", "language": "Lingua" },
+  "app": {
+    "title": "Menu di famiglia",
+    "language": "Lingua"
+  },
   "health": {
     "checking": "Verifica dei servizi...",
     "unreachable": "Backend non raggiungibile: {{error}}",
@@ -14,10 +17,8 @@
   },
   "recipes": {
     "title": "Ricette",
-    "signIn": "Accedi",
-    "signInToSee": "per vedere il ricettario.",
     "loading": "Caricamento ricette...",
-    "empty": "Nessuna ricetta. Aggiungine dal pannello di amministrazione.",
+    "empty": "Il ricettario è vuoto.",
     "servings_one": "{{count}} porzione",
     "servings_other": "{{count}} porzioni",
     "minutes": "{{count}} min"
@@ -29,5 +30,38 @@
     "autumn": "Autunno",
     "allYear": "Tutto l'anno",
     "advanced": "Scegli i mesi"
+  },
+  "common": {
+    "loading": "Caricamento..."
+  },
+  "auth": {
+    "tagline": "Il menu della settimana e la lista della spesa, pensati per la tua famiglia.",
+    "continueWith": "Continua con {{provider}}",
+    "or": "oppure",
+    "signInWithEmail": "Accedi con email e password",
+    "createAccount": "Crea un account",
+    "invitationOnly": "L'accesso è su invito: dopo l'accesso potrai entrare nella famiglia che ti ha invitato.",
+    "invitedSignIn": "Sei stato invitato in una famiglia. Accedi o crea un account per accettare l'invito.",
+    "failed": "Accesso non riuscito. Riprova.",
+    "logout": "Esci"
+  },
+  "noFamily": {
+    "title": "Manca solo l'invito",
+    "body": "Hai effettuato l'accesso come {{email}}, ma il tuo account non fa ancora parte di nessuna famiglia.",
+    "hint": "Chiedi a chi gestisce la tua famiglia di inviarti un link di invito, poi aprilo da questo browser."
+  },
+  "invite": {
+    "title": "Invito",
+    "body": "Sei stato invitato a unirti alla famiglia «{{family}}».",
+    "accept": "Accetta e entra",
+    "state": {
+      "accepted": "Questo invito è già stato usato.",
+      "expired": "Questo invito è scaduto. Chiedine uno nuovo.",
+      "revoked": "Questo invito è stato annullato."
+    },
+    "error": {
+      "notFound": "Invito non trovato. Controlla il link.",
+      "generic": "Qualcosa è andato storto. Riprova."
+    }
   }
 }
