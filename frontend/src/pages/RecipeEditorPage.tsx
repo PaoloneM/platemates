@@ -27,12 +27,14 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router'
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   api,
   ApiError,
+  type AssistantSession,
   type Course,
   type Cuisine,
+  type DraftLine,
   type KitchenTool,
   type Recipe,
   type Unit,
@@ -47,6 +49,10 @@ import { COURSES, UNITS, useDescribeMonths, useLabels } from '../labels'
 type Line = {
   key: number
   ingredient: PickedIngredient | null
+  // From an assistant draft: what it proposed for this line, kept until the user resolves it.
+  suggestion?: DraftLine
+  // Set when the draft name was matched to a catalog entry by similarity, not exactly.
+  matchedFrom?: string
   quantity: string
   unit: Unit
   optional: boolean
@@ -145,6 +151,40 @@ function fromRecipe(r: Recipe, tools: KitchenTool[]): Form {
   }
 }
 
+/** Turn an assistant draft into the editor's form: everything stays to be reviewed. */
+function fromDraft(session: AssistantSession, cuisines: Cuisine[]): Form {
+  const d = session.draft!
+  return {
+    ...EMPTY,
+    title: d.title,
+    description: d.description,
+    course: d.course,
+    cuisine: cuisines.find((c) => c.name.toLowerCase() === d.cuisine.toLowerCase()) ?? (d.cuisine || null),
+    servings: String(d.servings),
+    prep: d.prep_minutes?.toString() ?? '',
+    cook: d.cook_minutes?.toString() ?? '',
+    lines: d.ingredients.map((line, index) => {
+      const match = session.matches[index]
+      const candidate = match?.candidates.find((c) => c.id === match.match)
+      return {
+        key: nextKey++,
+        ingredient: candidate
+          ? { id: candidate.id, name: candidate.name, category: candidate.category,
+              default_unit: candidate.default_unit, season_months: candidate.season_months }
+          : null,
+        suggestion: line,
+        matchedFrom: candidate && !match.exact ? line.name : undefined,
+        quantity: line.quantity ?? '',
+        unit: line.unit,
+        optional: line.optional,
+        note: line.note,
+      }
+    }),
+    steps: d.steps.length ? d.steps : [''],
+    climateMonths: d.climate_months,
+  }
+}
+
 function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <Card>
@@ -169,15 +209,31 @@ export function RecipeEditorPage() {
   const describeMonths = useDescribeMonths()
   const navigate = useNavigate()
   const { id } = useParams()
+  const [params] = useSearchParams()
+  const sessionId = params.get('session')
   const { family } = useFamily()
   const editing = id != null
 
   const [form, setForm] = useState<Form | null>(editing ? null : { ...EMPTY, lines: [newLine()] })
   const [cuisines, setCuisines] = useState<Cuisine[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
-  const [creating, setCreating] = useState<{ name: string; lineKey: number } | null>(null)
+  const [creating, setCreating] = useState<
+    { name: string; lineKey: number; suggestion?: DraftLine } | null
+  >(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!sessionId || editing) return
+    Promise.all([
+      api<AssistantSession>(`/assistant/sessions/${sessionId}/`),
+      api<Cuisine[]>('/cuisines/'),
+    ])
+      .then(([session, all]) => {
+        if (session.draft) setForm(fromDraft(session, all))
+      })
+      .catch(() => setErrors({ load: t('assistant.notFound') }))
+  }, [sessionId, editing, t])
 
   useEffect(() => {
     api<Cuisine[]>('/cuisines/').then(setCuisines).catch(() => undefined)
@@ -228,6 +284,7 @@ export function RecipeEditorPage() {
     const problems: Record<string, string> = {}
     if (!form!.title.trim()) problems.title = t('editor.required')
     if (!(Number(form!.servings) >= 1)) problems.servings = t('editor.servingsInvalid')
+    if (form!.lines.some((l) => l.suggestion && !l.ingredient)) problems.save = t('editor.unresolved')
     if (Object.keys(problems).length) {
       setErrors(problems)
       return
@@ -267,7 +324,13 @@ export function RecipeEditorPage() {
         method: editing ? 'PATCH' : 'POST',
         body: JSON.stringify(payload),
       })
-      navigate(`/recipes/${saved.id}`, { replace: editing })
+      if (sessionId && !editing) {
+        await api(`/assistant/sessions/${sessionId}/close/`, {
+          method: 'POST',
+          body: JSON.stringify({ recipe: saved.id }),
+        }).catch(() => undefined)
+      }
+      navigate(`/recipes/${saved.id}`, { replace: editing || !!sessionId })
     } catch (e) {
       const body = e instanceof ApiError ? (e.body as Record<string, unknown>) : null
       const first = body && Object.entries(body)[0]
@@ -293,6 +356,14 @@ export function RecipeEditorPage() {
           {t('common.save')}
         </Button>
       </Stack>
+      {sessionId && !editing && (
+        <Alert severity="info" icon={<AutoIcon />}
+          action={<Button color="inherit" size="small" component={RouterLink} to={`/assistant/${sessionId}`}>
+            {t('editor.backToAssistant')}
+          </Button>}>
+          {t('editor.fromAssistant')}
+        </Alert>
+      )}
       {errors.save && <Alert severity="error">{errors.save}</Alert>}
 
       <Section title={t('editor.about')}>
@@ -390,11 +461,29 @@ export function RecipeEditorPage() {
                   onChange={(ingredient) =>
                     setLine(line.key, {
                       ingredient,
-                      unit: ingredient ? ingredient.default_unit : line.unit,
+                      matchedFrom: undefined,
+                      unit: ingredient && !line.suggestion ? ingredient.default_unit : line.unit,
                     })
                   }
-                  onCreate={(name) => setCreating({ name, lineKey: line.key })}
+                  onCreate={(name) => setCreating({ name, lineKey: line.key, suggestion: line.suggestion })}
+                  error={!!line.suggestion && !line.ingredient}
                 />
+                {line.suggestion && !line.ingredient && (
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
+                    <Typography variant="caption" color="warning.main">
+                      {t('editor.newIngredient', { name: line.suggestion.name })}
+                    </Typography>
+                    <Button size="small" onClick={() =>
+                      setCreating({ name: line.suggestion!.name, lineKey: line.key, suggestion: line.suggestion })}>
+                      {t('editor.create')}
+                    </Button>
+                  </Stack>
+                )}
+                {line.matchedFrom && line.ingredient && (
+                  <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+                    {t('editor.similarMatch', { name: line.matchedFrom, match: line.ingredient.name })}
+                  </Typography>
+                )}
               </Grid>
               <Grid size={{ xs: 4, md: 2 }}>
                 <TextField size="small" label={t('editor.quantity')} value={line.unit === 'tt' ? '' : line.quantity}
@@ -540,11 +629,14 @@ export function RecipeEditorPage() {
       {creating && (
         <IngredientDialog
           initialName={creating.name}
+          suggestion={creating.suggestion}
           onClose={() => setCreating(null)}
           onCreated={(ingredient) => {
+            const line = form.lines.find((l) => l.key === creating.lineKey)
             setLine(creating.lineKey, {
               ingredient: { ...ingredient, season_months: ingredient.season_months.months },
-              unit: ingredient.default_unit,
+              // A draft line keeps the unit the assistant used with its quantity.
+              unit: line?.suggestion ? line.unit : ingredient.default_unit,
             })
             setCreating(null)
           }}

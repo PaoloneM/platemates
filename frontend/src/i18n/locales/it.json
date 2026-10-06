@@ -105,7 +105,7 @@
     "search": "Cerca nel ricettario",
     "inSeason": "Di stagione",
     "empty": "Il ricettario è vuoto",
-    "emptyHint": "Aggiungi le ricette che cucinate di solito: serviranno a proporvi i menu.",
+    "emptyHint": "Aggiungi le ricette che cucinate di solito con il pulsante +: puoi raccontarle all'assistente o scriverle tu.",
     "addFirst": "Aggiungi la prima ricetta",
     "noMatch": "Nessuna ricetta trovata",
     "loadMore": "Mostra altre",
@@ -172,7 +172,13 @@
     "sharedHint": "Le altre famiglie potranno vederla e aggiungerla al loro ricettario; solo voi potrete modificarla.",
     "privateHint": "Solo la vostra famiglia la vede.",
     "source": "Link alla fonte",
-    "required": "Obbligatorio"
+    "required": "Obbligatorio",
+    "fromAssistant": "Bozza preparata dall'assistente: controlla ingredienti, dosi e stagionalità prima di salvare.",
+    "backToAssistant": "Torna alla conversazione",
+    "newIngredient": "«{{name}}» non è nel catalogo",
+    "create": "Crea",
+    "similarMatch": "Abbinato a «{{match}}» (proposto: «{{name}}»): verifica",
+    "unresolved": "Alcuni ingredienti proposti non sono ancora nel catalogo: creali o scegline uno esistente."
   },
   "ingredient": {
     "newTitle": "Nuovo ingrediente",
@@ -183,6 +189,43 @@
     "unit": "Unità",
     "season": "Stagionalità",
     "addNamed": "Aggiungi «{{name}}» come nuovo ingrediente",
-    "typeToSearch": "Scrivi per cercare"
+    "typeToSearch": "Scrivi per cercare",
+    "suggested": "Categoria, unità e stagione sono suggerite dall'assistente: controllale."
+  },
+  "assistant": {
+    "mode": {
+      "tell": "Raccontami la ricetta",
+      "search": "Aiutami a cercare",
+      "link": "Dammi un link",
+      "photo": "Carica o scatta una foto",
+      "manual": "Scrivila tu"
+    },
+    "soon": "presto",
+    "intro": {
+      "tell": "Raccontami la ricetta come la racconteresti a un amico: ingredienti, dosi se le sai, come la prepari. Preparo io la bozza da controllare.",
+      "search": "",
+      "link": "",
+      "photo": ""
+    },
+    "placeholder": {
+      "tell": "Es. «La pasta e ceci di mia nonna, per 4…»",
+      "search": "",
+      "link": "",
+      "photo": ""
+    },
+    "correctPlaceholder": "Correggi o aggiungi qualcosa…",
+    "thinking": "Sto preparando la risposta… {{seconds}} s",
+    "draftReady": "Ecco la bozza: controllala qui sotto, o dimmi cosa cambiare.",
+    "untitled": "Ricetta senza titolo",
+    "ingredientCount_one": "{{count}} ingrediente",
+    "ingredientCount_other": "{{count}} ingredienti",
+    "stepCount_one": "{{count}} passaggio",
+    "stepCount_other": "{{count}} passaggi",
+    "review": "Rivedi e salva",
+    "openRecipe": "Apri la ricetta",
+    "send": "Invia",
+    "closed": "Questa conversazione è chiusa.",
+    "notFound": "Conversazione non trovata.",
+    "unavailable": "L'assistente non risponde. Unsloth Studio è avviato?"
   }
 }

@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -11,26 +12,31 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { api, ApiError, type Ingredient, type Unit } from '../api'
+import { api, ApiError, type DraftLine, type Ingredient, type Unit } from '../api'
 import { INGREDIENT_CATEGORIES, UNITS, useLabels } from '../labels'
 import { SeasonPicker } from './SeasonPicker'
 
 /** Adds an ingredient to the shared catalog, from the recipe editor. */
 export function IngredientDialog({
   initialName,
+  suggestion,
   onClose,
   onCreated,
 }: {
   initialName: string
+  // From an assistant draft: category, unit and season it proposed, to confirm or change.
+  suggestion?: DraftLine
   onClose: () => void
   onCreated: (ingredient: Ingredient) => void
 }) {
   const { t } = useTranslation()
   const labels = useLabels()
   const [name, setName] = useState(initialName)
-  const [category, setCategory] = useState('other')
-  const [unit, setUnit] = useState<Unit>('g')
-  const [months, setMonths] = useState<number[]>([])
+  const [category, setCategory] = useState(suggestion?.category ?? 'other')
+  const [unit, setUnit] = useState<Unit>(
+    suggestion && suggestion.unit !== 'tt' ? suggestion.unit : 'g',
+  )
+  const [months, setMonths] = useState<number[]>(suggestion?.season_months ?? [])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -63,6 +69,7 @@ export function IngredientDialog({
           <Typography variant="body2" color="text.secondary">
             {t('ingredient.sharedHint')}
           </Typography>
+          {suggestion && <Alert severity="info">{t('ingredient.suggested')}</Alert>}
           <TextField
             label={t('ingredient.name')}
             value={name}

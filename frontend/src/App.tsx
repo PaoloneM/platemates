@@ -5,6 +5,7 @@ import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/context'
 import { AppShell } from './components/AppShell'
 import { FamilyProvider } from './family'
+import { AssistantPage } from './pages/AssistantPage'
 import { InvitePage } from './pages/InvitePage'
 import { LoginPage } from './pages/LoginPage'
 import { NoFamilyPage } from './pages/NoFamilyPage'
@@ -30,6 +31,7 @@ function Protected() {
           <Route path="/recipes/new" element={<RecipeEditorPage />} />
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
           <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />
+          <Route path="/assistant/:id" element={<AssistantPage />} />
           <Route path="*" element={<RecipeBookPage />} />
         </Routes>
       </AppShell>

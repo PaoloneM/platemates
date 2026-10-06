@@ -101,6 +101,53 @@ export type RecipeSummary = {
   visibility: Visibility
 }
 
+export type AssistantMode = 'tell' | 'search' | 'link' | 'photo'
+
+export type DraftLine = {
+  name: string
+  quantity: string | null
+  unit: Unit
+  note: string
+  optional: boolean
+  category: string
+  season_months: number[]
+}
+
+export type Draft = {
+  title: string
+  description: string
+  course: Course
+  cuisine: string
+  servings: number
+  prep_minutes: number | null
+  cook_minutes: number | null
+  ingredients: DraftLine[]
+  steps: string[]
+  climate_months: number[]
+}
+
+export type MatchCandidate = {
+  id: number
+  name: string
+  category: string
+  default_unit: Unit
+  season_months: number[]
+  similarity: number
+}
+
+export type IngredientMatch = { match: number | null; exact: boolean; candidates: MatchCandidate[] }
+
+export type AssistantSession = {
+  id: number
+  family: number
+  mode: AssistantMode
+  status: 'open' | 'saved' | 'abandoned'
+  recipe: number | null
+  draft: Draft | null
+  matches: IngredientMatch[]
+  transcript: { role: 'user' | 'assistant'; text: string; draft?: boolean }[]
+}
+
 export type BookEntry = {
   id: number
   family: number

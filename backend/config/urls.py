@@ -3,6 +3,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import InvitationViewSet, login_options, me
+from apps.assistant.views import AssistantSessionViewSet
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
 from apps.core.views import health
 from apps.families.views import (
@@ -26,6 +27,7 @@ router.register("recipe-book", RecipeBookEntryViewSet)
 router.register("menus", WeeklyMenuViewSet)
 router.register("slots", MealSlotViewSet)
 router.register("invitations", InvitationViewSet)
+router.register("assistant/sessions", AssistantSessionViewSet, basename="assistant-session")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

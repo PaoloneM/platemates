@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "apps.recipes",
     "apps.families",
     "apps.menus",
+    "apps.assistant",
 ]
 
 MIDDLEWARE = [

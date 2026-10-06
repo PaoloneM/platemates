@@ -11,7 +11,6 @@ import {
   CardActionArea,
   CardContent,
   Chip,
-  Fab,
   Grid,
   InputAdornment,
   Rating,
@@ -25,6 +24,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useNavigate } from 'react-router'
 import { api, type BookEntry, type Paginated } from '../api'
+import { AddRecipeFab } from '../components/AddRecipeFab'
 import { useFamily } from '../family'
 import { COURSES, useLabels } from '../labels'
 
@@ -188,14 +188,7 @@ export function RecipeBookPage() {
         </>
       )}
 
-      <Fab
-        color="primary"
-        aria-label={t('book.add')}
-        onClick={() => navigate('/recipes/new')}
-        sx={{ position: 'fixed', right: { xs: 16, sm: 32 }, bottom: { xs: 16, sm: 32 } }}
-      >
-        <AddIcon />
-      </Fab>
+      <AddRecipeFab />
     </Stack>
   )
 }

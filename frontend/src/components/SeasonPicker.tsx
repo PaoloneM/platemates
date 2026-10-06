@@ -18,7 +18,12 @@ export function SeasonPicker({
 }) {
   const { t } = useTranslation()
   const labels = useLabels()
-  const [byMonth, setByMonth] = useState(!isSeasonAligned(months))
+  // Month mode is forced whenever the value is not made of whole seasons (it may change after
+  // mounting, e.g. a derived season updating as ingredients are added); otherwise it is the
+  // user's choice.
+  const aligned = isSeasonAligned(months)
+  const [monthChosen, setMonthChosen] = useState(false)
+  const byMonth = monthChosen || !aligned
   const allYear = months.length === 0
   const selected = new Set(allYear ? [] : months)
 
@@ -79,8 +84,8 @@ export function SeasonPicker({
       <Box>
         <Button
           size="small"
-          onClick={() => setByMonth(!byMonth)}
-          disabled={disabled || (byMonth && !isSeasonAligned(months))}
+          onClick={() => setMonthChosen(!byMonth)}
+          disabled={disabled || !aligned}
         >
           {byMonth ? t('season.bySeason') : t('season.advanced')}
         </Button>

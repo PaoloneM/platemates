@@ -36,6 +36,7 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
 | `families` | `Family`, `Membership`, `FamilyMember`, `Preference`, `RecipeBookEntry`, `FamilyEmbedding` | Everything family-specific. `RecipeBookEntry` is the per-family view of a recipe: candidate / approved / rejected, plus the explicit rating. |
 | `menus` | `WeeklyMenu`, `MealSlot`, `SlotDish` | 7 days × {lunch, dinner}. Shopping list in `menus/shopping.py`, computed, never stored. |
 | `accounts` | `OIDCIdentity`, `Invitation` | OIDC backend and login view (`oidc.py`), Keycloak realm setup (`keycloak_admin.py`), `/api/me/`, invitations. |
+| `assistant` | `AssistantSession` | The recipe assistant: conversation turns (`agent.py`), the recipe draft shape shared by every mode (`draft.py`). |
 | `core` | none (abstract mixins and helpers) | Seasonality and provenance helpers, shared serializer mixin. |
 
 ### Decisions worth knowing
@@ -116,10 +117,32 @@ readable and writable by any authenticated user for now.
 
 ## Adding recipes (decided with Paolo 2026-10-06)
 
-Built so far (step 1): MUI theme, recipe book (search, course filter, "in season" badge,
-ratings), recipe page (scaling by number of people, rating, add/remove from book) and the
-recipe editor, which is also where assistant drafts will be reviewed. The "+" FAB opens the
-editor directly until step 2 turns it into the menu below.
+Built so far: MUI theme, recipe book (search, course filter, "in season" badge, ratings),
+recipe page (scaling by number of people, rating, add/remove from book), the recipe editor, the
+"+" FAB menu and the assistant in "tell me" mode. "Help me search", "Give me a link" and "Upload
+a photo" are listed as "coming soon" (`AVAILABLE_MODES` in `apps/assistant/models.py`): offering a
+mode before its tools exist would let the LLM invent the content of pages or photos.
+
+**How the assistant works**
+
+- An `AssistantSession` (family, user, mode) stores the exchange in OpenAI chat format, so a
+  draft survives a page reload; only its author sees it.
+- Each turn (`apps/assistant/agent.py`) sends a mode-specific system prompt plus the history and
+  one tool, `propose_recipe`, whose parameters are the draft schema (`draft.py`). The model
+  either asks a short question or calls the tool with the **whole** draft; after each correction
+  it calls it again, so the latest call is the current draft. Tool calls and their results stay
+  paired in the history. The history is trimmed at user turns to fit the 8k context; when it
+  is, the current draft is re-sent as a system note.
+- Drafts are normalized (`normalize_draft`): units mapped (kg -> g, "q.b." -> to taste),
+  unknown categories/courses fall back to safe values. Measured live 2026-10-06 with
+  Qwen3.6-35B-A3B: first draft in 7-16 s, a correction in about 4 s.
+- Draft ingredients are matched to the catalog (`apps/catalog/matching.py`): exact name or
+  alias, otherwise PostgreSQL trigram similarity (`pg_trgm`), preselecting a candidate from
+  0.45 similarity ("pomodori" -> "pomodoro") and flagging it for the user to check.
+- "Review and save" opens the editor with `?session=<id>`: matched ingredients are filled in,
+  unknown ones must be created (category, unit and season prefilled from the draft) or replaced
+  before saving. Saving links the recipe to the session and closes it.
+- Gunicorn runs threaded workers so a turn waiting on the LLM does not block other requests.
 
 
 - **UI library**: MUI (Material UI) with the app's own theme (colours as in `frontend/src/index.css`).
@@ -220,5 +243,5 @@ Verified live on 2026-10-05 against this project's adapter:
 ## Not built yet
 
 Menu generation engine (agentic, RAG), recipe discovery, embedding computation jobs,
-collaborative recommendation, a UI for creating invitations, the recipe assistant (FAB menu,
-link and photo import, "tell me", "help me search"), weekly menus and the shopping list UI.
+collaborative recommendation, a UI for creating invitations, the assistant's link, photo and
+search modes, streaming replies, weekly menus and the shopping list UI.

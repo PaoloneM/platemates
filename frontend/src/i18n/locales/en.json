@@ -105,7 +105,7 @@
     "search": "Search the recipe book",
     "inSeason": "In season",
     "empty": "The recipe book is empty",
-    "emptyHint": "Add the recipes you usually cook: they are what menus will be built from.",
+    "emptyHint": "Add the recipes you usually cook with the + button: tell them to the assistant or write them yourself.",
     "addFirst": "Add the first recipe",
     "noMatch": "No recipes found",
     "loadMore": "Show more",
@@ -172,7 +172,13 @@
     "sharedHint": "Other families can see it and add it to their recipe book; only you can change it.",
     "privateHint": "Only your family sees it.",
     "source": "Source link",
-    "required": "Required"
+    "required": "Required",
+    "fromAssistant": "Draft prepared by the assistant: check ingredients, amounts and seasonality before saving.",
+    "backToAssistant": "Back to the conversation",
+    "newIngredient": "“{{name}}” is not in the catalog",
+    "create": "Create",
+    "similarMatch": "Matched to “{{match}}” (proposed: “{{name}}”): check it",
+    "unresolved": "Some proposed ingredients are not in the catalog yet: create them or pick an existing one."
   },
   "ingredient": {
     "newTitle": "New ingredient",
@@ -183,6 +189,43 @@
     "unit": "Unit",
     "season": "Seasonality",
     "addNamed": "Add “{{name}}” as a new ingredient",
-    "typeToSearch": "Type to search"
+    "typeToSearch": "Type to search",
+    "suggested": "Category, unit and season are suggested by the assistant: check them."
+  },
+  "assistant": {
+    "mode": {
+      "tell": "Tell me the recipe",
+      "search": "Help me search",
+      "link": "Give me a link",
+      "photo": "Upload or take a photo",
+      "manual": "Write it yourself"
+    },
+    "soon": "soon",
+    "intro": {
+      "tell": "Tell me the recipe the way you would tell a friend: ingredients, amounts if you know them, how you make it. I will prepare a draft for you to check.",
+      "search": "",
+      "link": "",
+      "photo": ""
+    },
+    "placeholder": {
+      "tell": "E.g. “My grandmother's pasta e ceci, for 4…”",
+      "search": "",
+      "link": "",
+      "photo": ""
+    },
+    "correctPlaceholder": "Correct or add something…",
+    "thinking": "Working on it… {{seconds}} s",
+    "draftReady": "Here is the draft: check it below, or tell me what to change.",
+    "untitled": "Untitled recipe",
+    "ingredientCount_one": "{{count}} ingredient",
+    "ingredientCount_other": "{{count}} ingredients",
+    "stepCount_one": "{{count}} step",
+    "stepCount_other": "{{count}} steps",
+    "review": "Review and save",
+    "openRecipe": "Open the recipe",
+    "send": "Send",
+    "closed": "This conversation is closed.",
+    "notFound": "Conversation not found.",
+    "unavailable": "The assistant is not answering. Is Unsloth Studio running?"
   }
 }

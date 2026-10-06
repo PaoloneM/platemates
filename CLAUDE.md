@@ -73,8 +73,8 @@ Full detail in `README.md`:
 
 ### Layout
 
-- `backend/`: Django project (`config/`), domain apps in `apps/` (`catalog`, `recipes`,
-  `families`, `menus`; `core` holds abstract mixins only), AI adapters in `ai/`, tests in `tests/`
+- `backend/`: Django project (`config/`), domain apps in `apps/` (`accounts`, `catalog`,
+  `recipes`, `families`, `menus`, `assistant`; `core` holds abstract mixins only), AI adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
   `src/api.ts` is the only place that calls `fetch`; enum labels live in `src/labels.ts`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
@@ -129,6 +129,10 @@ docker compose --profile embeddings up -d --build       # ... plus the embedding
 - Application logic talks to AI only through `ai.get_chat_provider()` /
   `ai.get_embedding_provider()`; provider-specific code lives in `ai/` only
 - Embeddings are always stored with the model name that produced them
+- An assistant mode is enabled (`AVAILABLE_MODES`) only once its tools exist: the LLM must never
+  be asked about a page, photo or search result it cannot actually read
+- Everything the assistant produces goes through `normalize_draft` and the editor's review;
+  nothing it proposes is saved without the user
 - **Every initialization step must be idempotent** (safe to re-run, same result) and, where it
   mirrors configuration, convergent (re-running after a config change applies the change).
   Today: `init_env.py`, migrations and seed data, `db-init`, `setup_keycloak`, `create_family`.
