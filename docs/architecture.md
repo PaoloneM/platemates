@@ -119,8 +119,8 @@ readable and writable by any authenticated user for now.
 
 Built so far: MUI theme, recipe book (search, course filter, "in season" badge, ratings),
 recipe page (scaling by number of people, rating, add/remove from book), the recipe editor, the
-"+" FAB menu and the assistant in "tell me" and "give me a link" modes. "Help me search" and
-"Upload a photo" are listed as "coming soon" (`AVAILABLE_MODES` in `apps/assistant/models.py`): offering a
+"+" FAB menu and the assistant in "tell me", "give me a link" and "photo" modes. "Help me search"
+is listed as "coming soon" (`AVAILABLE_MODES` in `apps/assistant/models.py`): offering a
 mode before its tools exist would let the LLM invent the content of pages or photos.
 
 **How the assistant works**
@@ -170,6 +170,24 @@ mode before its tools exist would let the LLM invent the content of pages or pho
   that the UI translates; the code is stripped from what is sent back to the model.
 - Measured live: 9-16 s per import on GialloZafferano, Il Cucchiaio, BBC Good Food, Acadèmia and
   a small blog.
+
+**Photo import** (built 2026-10-06)
+
+- The camera button next to the message box works in every mode (in "photo" mode it is the
+  main action); on phones it opens the back camera. The browser downscales to 1280 px JPEG before
+  upload (`frontend/src/images.ts`): a 3300x4200 photo became 73 KB, about 1,500 tokens for the
+  vision model. The backend accepts only JPEG/PNG/WebP, checked by their bytes, up to 10 MB
+  (nginx allows 12 MB).
+- Photos are stored in the database (`Attachment`), so they are in the backups, are shown beside
+  the draft in the review screen, and are visible only to the conversation's author.
+- Two steps, as decided: a strictly literal transcription by the vision model (`LLM_VISION_MODEL`,
+  default the chat model), then the same structuring as link import. Compared on synthetic
+  cookbook pages and handwritten cards (2026-10-06): with the literal prompt Qwen3.6 transcribed
+  faithfully (one inflection wrong), gemma-4-E2B misread words, invented one and reordered a
+  paragraph. The review screen shows each photo with the text read from it.
+- All photos of a conversation are read together, so a recipe spanning pages is sent as several
+  photos. Untested on real photos (blur, real handwriting).
+- Measured live: 10-25 s per photo.
 
 
 - **UI library**: MUI (Material UI) with the app's own theme (colours as in `frontend/src/index.css`).
@@ -270,5 +288,5 @@ Verified live on 2026-10-05 against this project's adapter:
 ## Not built yet
 
 Menu generation engine (agentic, RAG), recipe discovery, embedding computation jobs,
-collaborative recommendation, a UI for creating invitations, the assistant's link, photo and
-search modes, streaming replies, weekly menus and the shopping list UI.
+collaborative recommendation, a UI for creating invitations, the assistant's search mode,
+streaming replies, weekly menus and the shopping list UI.

@@ -18,7 +18,7 @@ class Mode(models.TextChoices):
 
 # Modes whose backend exists. The others are listed in the UI as "coming soon": offering them
 # before their tools exist would let the LLM invent the content of pages or photos.
-AVAILABLE_MODES = {Mode.TELL, Mode.LINK}
+AVAILABLE_MODES = {Mode.TELL, Mode.LINK, Mode.PHOTO}
 
 
 class AssistantSession(models.Model):
@@ -49,3 +49,27 @@ class AssistantSession(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_mode_display()} by {self.user} ({self.status})"
+
+
+class Attachment(models.Model):
+    """A photo sent to the assistant, and what was read from it.
+
+    Kept in the database (not on disk) so it is in the backups with everything else, and so the
+    review screen can show it beside the draft. Images are downscaled by the browser first
+    (a few hundred KB each).
+    """
+
+    session = models.ForeignKey(
+        AssistantSession, on_delete=models.CASCADE, related_name="attachments"
+    )
+    content_type = models.CharField(max_length=50)
+    data = models.BinaryField()
+    # Literal transcription of the text in the image; empty until read.
+    transcription = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self) -> str:
+        return f"Photo {self.pk} of session {self.session_id}"

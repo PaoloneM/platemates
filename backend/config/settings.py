@@ -193,6 +193,11 @@ AI = {
         "BASE_URL": os.getenv("LLM_BASE_URL", "http://127.0.0.1:8888").rstrip("/"),
         "API_KEY": os.getenv("LLM_API_KEY") or None,
         "MODEL": os.getenv("LLM_MODEL", "unsloth/Qwen3.6-35B-A3B-MTP-GGUF"),
+        # Model that reads photos. Defaults to the chat model: no swap in Studio, and in a
+        # comparison on recipe photos (2026-10-06) Qwen3.6 transcribed faithfully where
+        # gemma-4-E2B misread and reordered words.
+        "VISION_MODEL": os.getenv("LLM_VISION_MODEL")
+        or os.getenv("LLM_MODEL", "unsloth/Qwen3.6-35B-A3B-MTP-GGUF"),
         "TIMEOUT_SECONDS": float(os.getenv("LLM_TIMEOUT_SECONDS", "300")),
     },
     "EMBEDDINGS": {

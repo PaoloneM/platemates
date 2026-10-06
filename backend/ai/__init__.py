@@ -14,7 +14,7 @@ from .base import (
     EmbeddingProvider,
     ModelNotLoadedError,
 )
-from .factory import get_chat_provider, get_embedding_provider
+from .factory import get_chat_provider, get_embedding_provider, get_vision_provider
 
 __all__ = [
     "AIError",
@@ -27,4 +27,5 @@ __all__ = [
     "ModelNotLoadedError",
     "get_chat_provider",
     "get_embedding_provider",
+    "get_vision_provider",
 ]

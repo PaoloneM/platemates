@@ -178,7 +178,9 @@
     "newIngredient": "«{{name}}» non è nel catalogo",
     "create": "Crea",
     "similarMatch": "Abbinato a «{{match}}» (proposto: «{{name}}»): verifica",
-    "unresolved": "Alcuni ingredienti proposti non sono ancora nel catalogo: creali o scegline uno esistente."
+    "unresolved": "Alcuni ingredienti proposti non sono ancora nel catalogo: creali o scegline uno esistente.",
+    "sourcePhotos": "Foto originali",
+    "readFromPhoto": "Testo letto dalla foto"
   },
   "ingredient": {
     "newTitle": "Nuovo ingrediente",
@@ -205,13 +207,13 @@
       "tell": "Raccontami la ricetta come la racconteresti a un amico: ingredienti, dosi se le sai, come la prepari. Preparo io la bozza da controllare.",
       "search": "",
       "link": "Incollami il link della pagina con la ricetta: la leggo e preparo la bozza da controllare. Funziona anche incollando un link in «Raccontami».",
-      "photo": ""
+      "photo": "Mandami una foto della ricetta: una pagina di libro, un biglietto scritto a mano, uno screenshot. Se è su più pagine, manda le foto una dopo l'altra. Leggo il testo e preparo la bozza da controllare."
     },
     "placeholder": {
       "tell": "Es. «La pasta e ceci di mia nonna, per 4…»",
       "search": "",
       "link": "https://…",
-      "photo": ""
+      "photo": "Scrivi qualcosa se vuoi, poi premi la fotocamera"
     },
     "correctPlaceholder": "Correggi o aggiungi qualcosa…",
     "thinking": "Sto preparando la risposta… {{seconds}} s",
@@ -237,7 +239,10 @@
       "too_large": "La pagina è troppo grande da leggere.",
       "too_many_redirects": "Il link rimanda troppe volte ad altre pagine.",
       "no_content": "La pagina non contiene testo leggibile: forse viene generata da JavaScript, o è un video o un post social. Prova a incollarmi il testo della ricetta.",
-      "no_recipe": "Nella pagina non ho trovato una ricetta. Prova a incollarmi il testo della ricetta."
-    }
+      "no_recipe": "Nella pagina non ho trovato una ricetta. Prova a incollarmi il testo della ricetta.",
+      "no_text_in_photo": "Nella foto non riesco a leggere del testo. Prova con una foto più nitida e vicina, con buona luce."
+    },
+    "addPhoto": "Aggiungi una foto",
+    "photoUnreadable": "Non riesco ad aprire questa immagine. Prova con una foto JPEG o PNG."
   }
 }

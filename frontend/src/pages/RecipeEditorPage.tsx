@@ -227,6 +227,8 @@ export function RecipeEditorPage() {
   >(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  // Photos the draft was read from, shown beside it for comparison.
+  const [photos, setPhotos] = useState<AssistantSession['attachments']>([])
 
   useEffect(() => {
     if (!sessionId || editing) return
@@ -236,6 +238,7 @@ export function RecipeEditorPage() {
     ])
       .then(([session, all]) => {
         setForm(session.draft ? fromDraft(session, all) : { ...EMPTY, lines: [newLine()] })
+        setPhotos(session.attachments)
       })
       .catch(() => setErrors({ load: t('assistant.notFound') }))
   }, [sessionId, editing, t])
@@ -370,6 +373,34 @@ export function RecipeEditorPage() {
         </Alert>
       )}
       {errors.save && <Alert severity="error">{errors.save}</Alert>}
+
+      {photos.length > 0 && (
+        <Section title={t('editor.sourcePhotos')}>
+          <Stack spacing={2}>
+            {photos.map((photo) => {
+              const src = `/api/assistant/sessions/${sessionId}/attachments/${photo.id}/`
+              return (
+                <Stack key={photo.id} direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Box component="a" href={src} target="_blank" rel="noopener" sx={{ flex: 'none' }}>
+                    <Box component="img" src={src} alt={t('editor.sourcePhotos')}
+                      sx={{ width: { xs: '100%', sm: 220 }, borderRadius: 2, display: 'block' }} />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      {t('editor.readFromPhoto')}
+                    </Typography>
+                    <Typography variant="body2" component="pre"
+                      sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0, color: 'text.secondary',
+                        maxHeight: 260, overflow: 'auto' }}>
+                      {photo.transcription}
+                    </Typography>
+                  </Box>
+                </Stack>
+              )
+            })}
+          </Stack>
+        </Section>
+      )}
 
       <Section title={t('editor.about')}>
         <Grid container spacing={2}>

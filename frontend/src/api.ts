@@ -148,7 +148,14 @@ export type AssistantSession = {
   recipe: number | null
   draft: Draft | null
   matches: IngredientMatch[]
-  transcript: { role: 'user' | 'assistant'; text: string; draft?: boolean; error?: string }[]
+  attachments: { id: number; transcription: string }[]
+  transcript: {
+    role: 'user' | 'assistant'
+    text: string
+    draft?: boolean
+    error?: string
+    attachment?: number
+  }[]
 }
 
 export type BookEntry = {
@@ -205,4 +212,19 @@ export function loginUrl(options: { next?: string; idp?: IdentityProvider; signu
   if (options.idp) params.set('idp', options.idp)
   if (options.signup) params.set('signup', '1')
   return `/oidc/authenticate/?${params}`
+}
+
+/** POST multipart form data (files). The browser sets the multipart boundary itself. */
+export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
+  const response = await fetch(`/api${path}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: form,
+    headers: { 'X-CSRFToken': csrfToken(), 'Accept-Language': i18n.resolvedLanguage ?? 'it' },
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new ApiError(response.status, `POST ${path}: ${response.status}`, body)
+  }
+  return response.json()
 }

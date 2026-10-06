@@ -178,7 +178,9 @@
     "newIngredient": "“{{name}}” is not in the catalog",
     "create": "Create",
     "similarMatch": "Matched to “{{match}}” (proposed: “{{name}}”): check it",
-    "unresolved": "Some proposed ingredients are not in the catalog yet: create them or pick an existing one."
+    "unresolved": "Some proposed ingredients are not in the catalog yet: create them or pick an existing one.",
+    "sourcePhotos": "Original photos",
+    "readFromPhoto": "Text read from the photo"
   },
   "ingredient": {
     "newTitle": "New ingredient",
@@ -205,13 +207,13 @@
       "tell": "Tell me the recipe the way you would tell a friend: ingredients, amounts if you know them, how you make it. I will prepare a draft for you to check.",
       "search": "",
       "link": "Paste the link of the page with the recipe: I will read it and prepare a draft for you to check. Pasting a link in “Tell me the recipe” works too.",
-      "photo": ""
+      "photo": "Send me a photo of the recipe: a cookbook page, a handwritten card, a screenshot. If it spans several pages, send the photos one after the other. I will read the text and prepare a draft for you to check."
     },
     "placeholder": {
       "tell": "E.g. “My grandmother's pasta e ceci, for 4…”",
       "search": "",
       "link": "https://…",
-      "photo": ""
+      "photo": "Type something if you like, then tap the camera"
     },
     "correctPlaceholder": "Correct or add something…",
     "thinking": "Working on it… {{seconds}} s",
@@ -237,7 +239,10 @@
       "too_large": "The page is too large to read.",
       "too_many_redirects": "The link redirects too many times.",
       "no_content": "The page has no readable text: it may be built by JavaScript, or be a video or social post. Try pasting the recipe text instead.",
-      "no_recipe": "I found no recipe on the page. Try pasting the recipe text instead."
-    }
+      "no_recipe": "I found no recipe on the page. Try pasting the recipe text instead.",
+      "no_text_in_photo": "I cannot read any text in the photo. Try a sharper, closer photo in good light."
+    },
+    "addPhoto": "Add a photo",
+    "photoUnreadable": "I cannot open this image. Try a JPEG or PNG photo."
   }
 }

@@ -1,5 +1,6 @@
 import logging
 
+from django.http import HttpResponse
 from django.utils import translation
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
@@ -10,7 +11,7 @@ from apps.families.models import Membership
 from apps.recipes.models import Recipe
 
 from .agent import run_turn
-from .models import AssistantSession
+from .models import AssistantSession, Attachment
 from .serializers import AssistantSessionSerializer, MessageSerializer
 
 log = logging.getLogger(__name__)
@@ -39,8 +40,18 @@ class AssistantSessionViewSet(
             return Response({"detail": "This conversation is closed."}, status=409)
         message = MessageSerializer(data=request.data)
         message.is_valid(raise_exception=True)
+        photo = None
+        if image := message.validated_data.get("image"):
+            photo = Attachment.objects.create(
+                session=session, content_type=image.content_type, data=image.read()
+            )
         try:
-            run_turn(session, message.validated_data["text"], language=translation.get_language())
+            run_turn(
+                session,
+                message.validated_data.get("text", ""),
+                language=translation.get_language(),
+                photo=photo,
+            )
         except AIError as exc:
             log.warning("assistant turn failed: %s", exc)
             return Response(
@@ -48,6 +59,16 @@ class AssistantSessionViewSet(
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return Response(self.get_serializer(session).data)
+
+    @action(detail=True, methods=["get"], url_path=r"attachments/(?P<attachment_id>\d+)")
+    def attachment(self, request, pk=None, attachment_id=None):
+        """A photo sent in this conversation, for the review screen."""
+        photo = self.get_object().attachments.filter(pk=attachment_id).first()
+        if photo is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        response = HttpResponse(bytes(photo.data), content_type=photo.content_type)
+        response["Cache-Control"] = "private, max-age=86400"
+        return response
 
     @action(detail=True, methods=["post"])
     def close(self, request, pk=None):

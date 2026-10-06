@@ -48,7 +48,8 @@ export function AddRecipeFab() {
     { key: 'search', icon: <SearchIcon />, label: soon(t('assistant.mode.search')), disabled: true },
     { key: 'link', icon: <LinkIcon />, label: t('assistant.mode.link'),
       run: () => void startAssistant('link') },
-    { key: 'photo', icon: <PhotoIcon />, label: soon(t('assistant.mode.photo')), disabled: true },
+    { key: 'photo', icon: <PhotoIcon />, label: t('assistant.mode.photo'),
+      run: () => void startAssistant('photo') },
     { key: 'manual', icon: <EditIcon />, label: t('assistant.mode.manual'),
       run: () => navigate('/recipes/new') },
   ]

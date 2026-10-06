@@ -202,7 +202,7 @@ def test_conversation_through_the_api(api, family, fake_chat):
 
 def test_unavailable_modes_are_refused(api, family):
     response = api.post(
-        "/api/assistant/sessions/", {"family": family.pk, "mode": "photo"}, format="json"
+        "/api/assistant/sessions/", {"family": family.pk, "mode": "search"}, format="json"
     )
     assert response.status_code == 400
 

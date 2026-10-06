@@ -48,5 +48,12 @@ def get_chat_provider() -> ChatProvider:
 
 
 @lru_cache(maxsize=1)
+def get_vision_provider() -> ChatProvider:
+    """The chat provider, pointed at the model that reads images (`LLM_VISION_MODEL`)."""
+    config = settings.AI["CHAT"]
+    return _build(CHAT_PROVIDERS, {**config, "MODEL": config["VISION_MODEL"]}, "chat")
+
+
+@lru_cache(maxsize=1)
 def get_embedding_provider() -> EmbeddingProvider:
     return _build(EMBEDDING_PROVIDERS, settings.AI["EMBEDDINGS"], "embeddings")
