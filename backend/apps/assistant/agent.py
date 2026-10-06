@@ -47,8 +47,15 @@ _COMMON_RULES = """\
 something the user said; never contradict them.
 - Ingredient names: generic, singular, lowercase ("tomato", not "peeled tomatoes"; details go in \
 the note). Units: g, ml, pc (pieces), tt (to taste, with quantity null). Convert kg and l.
-- Fill category and season_months for each ingredient, and climate_months for the dish \
-(empty = all year), from general knowledge; the user will review them.
+- Fill category and season_months for each ingredient, and climate_months for the dish, from \
+general knowledge; the user will review them.
+- season_months: the months the ingredient is in season in Italy. Fresh vegetables, fruit and \
+most fish have a season: give it (e.g. leek: Sep-Apr, zucchini: May-Sep, basil: Jun-Sep). Use \
+an empty list for what is available all year regardless of season: pantry staples (pasta, rice, \
+flour, oil, salt, spices, sugar, dried legumes, eggs, milk, cheese, cured meats), potatoes, \
+onions, garlic, and evergreen herbs (rosemary, sage, bay leaf, thyme, parsley).
+- climate_months: the months the dish suits the weather (hot soups and oven dishes in the cold \
+months, cold salads in the warm ones); empty only if it suits any season.
 - Keep replies to one or two sentences in {language}: the draft is shown to the user \
 separately, do not repeat it in text.
 """
@@ -90,11 +97,18 @@ pelati" -> name "pomodoro", note "pelati"; "pecorino romano DOP grattugiato" -> 
 note "romano DOP, grattugiato"; "eggs" -> "uovo"; "parmesan" -> "parmigiano".
 - Notes: a few words at most (variety, cut, "grated"); never copy explanations or advice from \
 the page into them.
-- For every ingredient give its category and season_months (empty = all year).
+- For every ingredient give its category and season_months.
 - Units: g, ml, pc (pieces), tt (to taste, quantity null). Convert kg, l, cups, ounces, pounds \
 and spoons to g or ml (approximately) and keep the original measure in the note.
 - You may infer course, cuisine (in {language}), each ingredient's category and season_months, \
-and the dish's climate_months (empty = all year).
+and the dish's climate_months:
+- season_months: the months the ingredient is in season in Italy. Fresh vegetables, fruit and \
+most fish have a season: give it (e.g. leek: Sep-Apr, zucchini: May-Sep, basil: Jun-Sep). Use \
+an empty list for what is available all year regardless of season: pantry staples (pasta, rice, \
+flour, oil, salt, spices, sugar, dried legumes, eggs, milk, cheese, cured meats), potatoes, \
+onions, garlic, and evergreen herbs (rosemary, sage, bay leaf, thyme, parsley).
+- climate_months: the months the dish suits the weather (hot soups and oven dishes in the cold \
+months, cold salads in the warm ones); empty only if it suits any season.
 - If the text contains no recipe, return an empty title, no ingredients and no steps.
 """
 

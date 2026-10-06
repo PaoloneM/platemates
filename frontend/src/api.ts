@@ -98,6 +98,8 @@ export type RecipeSummary = {
   servings: number
   total_minutes: number | null
   season_months: number[]
+  // Ingredients and climate combined; empty = suitable all year.
+  suitable_months: number[]
   visibility: Visibility
 }
 

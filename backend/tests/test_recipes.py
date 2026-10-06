@@ -176,3 +176,18 @@ def test_catalogs_are_open_to_additions_but_only_staff_change_them(api, user, to
         ).status_code
         == 200
     )
+
+
+def test_book_summary_combines_ingredient_and_climate_seasons(api, family, tomato):
+    # Ingredients all year, climate only in the cold months: "in season" follows the climate.
+    soup = create(api, family, title="Vellutata", climate_months={"months": [10, 11, 12, 1, 2]})
+    summer = create(api, family, tomato, title="Pomodori", climate_months={"months": [8, 9, 10]})
+    anytime = create(api, family, title="Pane")
+    book = {
+        e["recipe_summary"]["title"]: e["recipe_summary"]["suitable_months"]
+        for e in api.get(f"/api/recipe-book/?family={family.pk}").json()["results"]
+    }
+    assert book["Vellutata"] == [1, 2, 10, 11, 12]
+    assert book["Pomodori"] == [8, 9]  # tomato season (6-9) within the climate (8-10)
+    assert book["Pane"] == []
+    assert soup and summer and anytime

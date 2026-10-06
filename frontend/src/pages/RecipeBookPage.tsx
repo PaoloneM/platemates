@@ -30,8 +30,9 @@ import { COURSES, useLabels } from '../labels'
 
 const CURRENT_MONTH = new Date().getMonth() + 1
 
-function inSeason(months: number[]) {
-  return months.length === 0 || months.includes(CURRENT_MONTH)
+/** Seasonal now: the recipe has a season at all, and the current month is in it. */
+function inSeasonNow(months: number[]) {
+  return months.length > 0 && months.includes(CURRENT_MONTH)
 }
 
 function RecipeCard({ entry }: { entry: BookEntry }) {
@@ -56,7 +57,7 @@ function RecipeCard({ entry }: { entry: BookEntry }) {
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
               <Chip size="small" label={labels.course(r.course)} />
               {r.cuisine_name && <Chip size="small" variant="outlined" label={r.cuisine_name} />}
-              {inSeason(r.season_months) && r.season_months.length > 0 && (
+              {inSeasonNow(r.suitable_months) && (
                 <Chip size="small" color="primary" variant="outlined" icon={<InSeasonIcon />}
                   label={t('book.inSeason')} />
               )}

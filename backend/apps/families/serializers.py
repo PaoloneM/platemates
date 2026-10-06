@@ -43,7 +43,14 @@ class RecipeSummarySerializer(serializers.Serializer):
     servings = serializers.IntegerField()
     total_minutes = serializers.IntegerField()
     season_months = serializers.ListField(child=serializers.IntegerField())
+    # Both seasonality levels combined (ingredients and climate): what "in season" means.
+    # Empty = suitable all year.
+    suitable_months = serializers.SerializerMethodField()
     visibility = serializers.CharField()
+
+    def get_suitable_months(self, recipe) -> list[int]:
+        months = recipe.suitable_months()
+        return [] if len(months) == 12 else sorted(months)
 
 
 class RecipeBookEntrySerializer(serializers.ModelSerializer):
