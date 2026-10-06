@@ -18,7 +18,7 @@ class Mode(models.TextChoices):
 
 # Modes whose backend exists. The others are listed in the UI as "coming soon": offering them
 # before their tools exist would let the LLM invent the content of pages or photos.
-AVAILABLE_MODES = {Mode.TELL, Mode.LINK, Mode.PHOTO}
+AVAILABLE_MODES = {Mode.TELL, Mode.LINK, Mode.PHOTO, Mode.SEARCH}
 
 
 class AssistantSession(models.Model):

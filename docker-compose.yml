@@ -3,9 +3,8 @@
 # The generative LLM is NOT part of this stack: it is an external OpenAI-compatible service
 # (Unsloth Studio on the host by default) reached through LLM_BASE_URL.
 #
-#   docker compose up -d db keycloak        # database + identity provider, for native development
+#   docker compose up -d db keycloak embeddings  # backing services, for native development
 #   docker compose up -d                    # everything
-#   docker compose --profile embeddings up  # also the bundled local embedding service
 
 name: mymenu
 
@@ -136,15 +135,42 @@ services:
     volumes:
       - ./secrets/tls:/etc/nginx/tls:ro
 
+  # Local multilingual embedding model (recipe similarity, "help me search"). Part of the default
+  # stack since the search mode needs it; the backend degrades gracefully when it is down.
   embeddings:
     build: ./services/embeddings
-    profiles: ["embeddings"]
     environment:
       EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
     volumes:
       - hf-cache:/root/.cache/huggingface
     ports:
       - "127.0.0.1:8100:8100"
+    healthcheck:
+      # Healthy once the model is loaded (the first start downloads it): /ready embeds a word.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/ready', timeout=60)"]
+      interval: 15s
+      timeout: 70s
+      retries: 20
+      start_period: 30s
+
+  # One-shot, idempotent: embeds recipes whose vector is missing or stale (e.g. saved while the
+  # embedding service was down, or after changing EMBEDDINGS_MODEL). Runs on every `up`.
+  embed-recipes:
+    image: mymenu-backend
+    pull_policy: never
+    command: ["python", "manage.py", "embed_recipes"]
+    restart: "no"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-mymenu}:${POSTGRES_PASSWORD:-mymenu}@db:5432/${POSTGRES_DB:-mymenu}
+      EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
+    depends_on:
+      embeddings:
+        condition: service_healthy
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:

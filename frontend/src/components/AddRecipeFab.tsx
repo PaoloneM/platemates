@@ -40,12 +40,12 @@ export function AddRecipeFab() {
     }
   }
 
-  const soon = (label: string) => `${label} · ${t('assistant.soon')}`
   // Listed top-down from the button: the first item sits closest to it.
   const items: Item[] = [
     { key: 'tell', icon: <ChatIcon />, label: t('assistant.mode.tell'), primary: true,
       run: () => void startAssistant('tell') },
-    { key: 'search', icon: <SearchIcon />, label: soon(t('assistant.mode.search')), disabled: true },
+    { key: 'search', icon: <SearchIcon />, label: t('assistant.mode.search'),
+      run: () => void startAssistant('search') },
     { key: 'link', icon: <LinkIcon />, label: t('assistant.mode.link'),
       run: () => void startAssistant('link') },
     { key: 'photo', icon: <PhotoIcon />, label: t('assistant.mode.photo'),

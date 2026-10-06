@@ -200,9 +200,9 @@ def test_conversation_through_the_api(api, family, fake_chat):
     assert second["matches"][2]["match"] is None
 
 
-def test_unavailable_modes_are_refused(api, family):
+def test_unknown_modes_are_refused(api, family):
     response = api.post(
-        "/api/assistant/sessions/", {"family": family.pk, "mode": "search"}, format="json"
+        "/api/assistant/sessions/", {"family": family.pk, "mode": "dance"}, format="json"
     )
     assert response.status_code == 400
 

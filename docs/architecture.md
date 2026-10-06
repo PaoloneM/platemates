@@ -119,8 +119,9 @@ readable and writable by any authenticated user for now.
 
 Built so far: MUI theme, recipe book (search, course filter, "in season" badge, ratings),
 recipe page (scaling by number of people, rating, add/remove from book), the recipe editor, the
-"+" FAB menu and the assistant in "tell me", "give me a link" and "photo" modes. "Help me search"
-is listed as "coming soon" (`AVAILABLE_MODES` in `apps/assistant/models.py`): offering a
+"+" FAB menu and the assistant in all four modes: "tell me", "help me search", "give me a link"
+and "photo". A mode is enabled (`AVAILABLE_MODES` in `apps/assistant/models.py`) only once its
+tools exist: offering a
 mode before its tools exist would let the LLM invent the content of pages or photos.
 
 **How the assistant works**
@@ -188,6 +189,29 @@ mode before its tools exist would let the LLM invent the content of pages or pho
 - All photos of a conversation are read together, so a recipe spanning pages is sent as several
   photos. Untested on real photos (blur, real handwriting).
 - Measured live: 10-25 s per photo.
+
+**Help me search** (`apps/assistant/search.py`, built 2026-10-06)
+
+- Each message in search mode is a search; earlier messages of the conversation are added as
+  context, so "with potatoes" refines the previous request. Picking a web result sends its URL:
+  the conversation becomes a link import (mode switches to `link`), and later messages correct
+  the draft.
+- **Local**: keyword matches first (every meaningful word, roughly stemmed, must appear in the
+  title or an ingredient: matching any word turned "un dolce al cioccolato" into a leek soup via
+  its "paprika dolce"), then embedding similarity from 0.4. Shown as "in your recipe book" or
+  "from other families" (shared recipes only; private ones never leave their family).
+- **Web**: the chat model first turns the request into 3 concrete dishes (about 1 s; vague
+  requests otherwise find only category and collection pages), then runs one web search per
+  dish through Unsloth Studio's built-in search, two at a time. A result is shown only if its
+  page exists, is public, and declares exactly one schema.org Recipe with ingredients and method;
+  its title is the page's own. Measured: 22-29 s, 4-6 results.
+- What was learned on the way (2026-10-06): asked for JSON, the model invented every URL without
+  searching; left free, it chained searches for 90-110 s and nearly filled the context; Studio's
+  search tool fails intermittently (the model then answers without links: retried once) and can
+  hang up to its 300 s default (capped at 15 s per call).
+- **Studio's server-side tools are restricted to `web_search`** (`ai/studio.py`, `SAFE_TOOLS`):
+  for local models Studio also offers `python`, `terminal` and `edit_file`, which run on the
+  host, and search prompts carry user text. Tool calls per message are capped too.
 
 
 - **UI library**: MUI (Material UI) with the app's own theme (colours as in `frontend/src/index.css`).
@@ -284,9 +308,15 @@ Verified live on 2026-10-05 against this project's adapter:
   index on an undimensioned column. At recipe-book scale exact search is fast enough; add a
   dimensioned, indexed column if that ever stops being true.
 - `content_hash` records which text was embedded, so stale vectors can be found after edits.
+- Recipes are embedded (`apps/recipes/embeddings.py`) from a short document: title, course,
+  cuisine, ingredient names, description, the start of the method. On every save, after the
+  transaction and best effort (a down embedding service never blocks a save); the one-shot
+  `embed-recipes` compose service (`manage.py embed_recipes`, idempotent) catches up on every
+  `up`. The embedding service is part of the default stack, with a readiness check that passes
+  once the model is loaded.
 
 ## Not built yet
 
 Menu generation engine (agentic, RAG), recipe discovery, embedding computation jobs,
-collaborative recommendation, a UI for creating invitations, the assistant's search mode,
-streaming replies, weekly menus and the shopping list UI.
+collaborative recommendation, a UI for creating invitations, streaming replies, weekly menus
+and the shopping list UI.

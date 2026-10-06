@@ -202,16 +202,15 @@
       "photo": "Upload or take a photo",
       "manual": "Write it yourself"
     },
-    "soon": "soon",
     "intro": {
       "tell": "Tell me the recipe the way you would tell a friend: ingredients, amounts if you know them, how you make it. I will prepare a draft for you to check.",
-      "search": "",
+      "search": "Tell me what you feel like: an ingredient, an occasion, a constraint (“a quick pumpkin pasta, for kids”). I search your recipe book, the other families' recipes and the web. You can then refine.",
       "link": "Paste the link of the page with the recipe: I will read it and prepare a draft for you to check. Pasting a link in “Tell me the recipe” works too.",
       "photo": "Send me a photo of the recipe: a cookbook page, a handwritten card, a screenshot. If it spans several pages, send the photos one after the other. I will read the text and prepare a draft for you to check."
     },
     "placeholder": {
       "tell": "E.g. “My grandmother's pasta e ceci, for 4…”",
-      "search": "",
+      "search": "E.g. “a baked fish main course”",
       "link": "https://…",
       "photo": "Type something if you like, then tap the camera"
     },
@@ -244,5 +243,19 @@
     },
     "addPhoto": "Add a photo",
     "photoUnreadable": "I cannot open this image. Try a JPEG or PNG photo."
+  },
+  "search": {
+    "inBook": "In your recipe book",
+    "fromFamilies": "From other families",
+    "fromWeb": "From the web",
+    "open": "Open",
+    "view": "View",
+    "import": "Import",
+    "nothing": "I found nothing. Try other words or the name of a dish.",
+    "notice": {
+      "web_search_unavailable": "Web search is not available with the configured model.",
+      "web_search_empty": "I found no single-recipe pages on the web. Try naming a specific dish.",
+      "web_search_failed": "The web search did not answer. Try again shortly."
+    }
   }
 }

@@ -162,6 +162,33 @@ def find_jsonld_recipe(page: str) -> dict | None:
     return None
 
 
+def count_jsonld_recipes(page: str) -> int:
+    """How many schema.org Recipe objects a page declares (collections declare many)."""
+    count = 0
+
+    def walk(node):
+        nonlocal count
+        if isinstance(node, list):
+            for item in node:
+                walk(item)
+        elif isinstance(node, dict):
+            kinds = node.get("@type")
+            if "Recipe" in (kinds if isinstance(kinds, list) else [kinds]):
+                count += 1
+            for value in node.values():
+                if isinstance(value, (list, dict)):
+                    walk(value)
+
+    for block in re.findall(
+        r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>", page, re.S | re.I
+    ):
+        try:
+            walk(json.loads(block.strip()))
+        except json.JSONDecodeError:
+            continue
+    return count
+
+
 def _find_recipe(node) -> dict | None:
     if isinstance(node, list):
         for item in node:

@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 
@@ -70,3 +72,18 @@ def test_unreachable_provider_reports_unhealthy_without_raising():
     with pytest.raises(AIUnavailableError):
         provider.chat([])
     assert provider.health()["ok"] is False
+
+
+def test_studio_tools_are_restricted_to_web_search():
+    bodies = []
+
+    def handler(request):
+        bodies.append(json.loads(request.read()))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    make(StudioChat, handler, enable_tools=True, max_tool_calls=2).chat([])
+    make(StudioChat, handler).chat([])
+    with_tools, without = bodies
+    assert with_tools["enabled_tools"] == ["web_search"]  # never python/terminal/edit_file
+    assert with_tools["max_tool_calls_per_message"] == 2
+    assert without["enable_tools"] is False and "enabled_tools" not in without

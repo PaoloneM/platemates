@@ -116,10 +116,10 @@ cd services/embeddings && uv run pytest
 cd frontend && npm run dev                              # SPA on :5173, proxies /api to :8000
 cd frontend && npm run build && npm run lint
 docker compose up -d --build                            # full stack on :8080
+cd backend && uv run python manage.py embed_recipes     # (re)compute missing or stale recipe embeddings
 python3 scripts/setup_lan_https.py                      # HTTPS on the home network (phones), see docs/operations.md
 python3 scripts/backup.py create                        # back up both databases + .env to backups/
 python3 scripts/backup.py restore backups/<file>.tar    # replace all data (takes a safety backup first)
-docker compose --profile embeddings up -d --build       # ... plus the embedding service
 ```
 
 ### Rules
@@ -131,6 +131,9 @@ docker compose --profile embeddings up -d --build       # ... plus the embedding
 - Application logic talks to AI only through `ai.get_chat_provider()` /
   `ai.get_embedding_provider()`; provider-specific code lives in `ai/` only
 - Embeddings are always stored with the model name that produced them
+- Unsloth Studio's server-side tools are enabled only through `StudioChat`, which restricts them
+  to `web_search` and caps tool calls: never send `enable_tools` with Studio's other tools
+  (`python`, `terminal`, `edit_file` run on the host)
 - The backend fetches user-given URLs only through `apps.assistant.web.fetch`, which refuses
   non-public addresses at every redirect: never fetch a user-supplied URL with a bare httpx call
 - An assistant mode is enabled (`AVAILABLE_MODES`) only once its tools exist: the LLM must never

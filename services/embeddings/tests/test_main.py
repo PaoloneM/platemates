@@ -35,3 +35,7 @@ def test_api_key_is_enforced_when_set(monkeypatch):
         "/v1/embeddings", json={"input": "x"}, headers={"Authorization": "Bearer secret"}
     )
     assert ok.status_code == 200
+
+
+def test_ready_means_the_model_answers():
+    assert client.get("/ready").json() == {"ok": True, "model": main.MODEL_NAME}

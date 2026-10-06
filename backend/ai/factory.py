@@ -55,5 +55,23 @@ def get_vision_provider() -> ChatProvider:
 
 
 @lru_cache(maxsize=1)
+def get_web_search_provider() -> ChatProvider | None:
+    """A chat provider whose model can search the web itself, or None if the provider can't.
+
+    Only Unsloth Studio has a built-in web search (its server-side tools, `enable_tools`).
+    """
+    config = settings.AI["CHAT"]
+    if config["PROVIDER"] != "unsloth_studio":
+        return None
+    return StudioChat(
+        base_url=config["BASE_URL"],
+        model=config["MODEL"],
+        api_key=config["API_KEY"],
+        timeout_seconds=config["TIMEOUT_SECONDS"],
+        enable_tools=True,
+    )
+
+
+@lru_cache(maxsize=1)
 def get_embedding_provider() -> EmbeddingProvider:
     return _build(EMBEDDING_PROVIDERS, settings.AI["EMBEDDINGS"], "embeddings")

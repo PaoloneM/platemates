@@ -140,6 +140,17 @@ export type MatchCandidate = {
 
 export type IngredientMatch = { match: number | null; exact: boolean; candidates: MatchCandidate[] }
 
+export type SearchResult =
+  | {
+      kind: 'book' | 'shared'
+      recipe: number
+      title: string
+      course: Course
+      total_minutes: number | null
+      similarity: number
+    }
+  | { kind: 'web'; url: string; site: string; title: string; servings: number | null; dish: string }
+
 export type AssistantSession = {
   id: number
   family: number
@@ -155,6 +166,8 @@ export type AssistantSession = {
     draft?: boolean
     error?: string
     attachment?: number
+    results?: SearchResult[]
+    notice?: string
   }[]
 }
 

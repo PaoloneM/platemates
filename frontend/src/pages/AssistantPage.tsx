@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
 import { api, ApiError, apiUpload, type AssistantSession } from '../api'
+import { SearchResults } from '../components/SearchResults'
 import { downscalePhoto } from '../images'
 
 function Bubble({ role, children }: { role: 'user' | 'assistant'; children: React.ReactNode }) {
@@ -155,7 +156,15 @@ export function AssistantPage() {
       <Stack spacing={1.5}>
         <Bubble role="assistant">{t(`assistant.intro.${session.mode}`)}</Bubble>
         {session.transcript.map((m, i) =>
-          // A photo sent alone is shown as is, without a bubble around it.
+          m.results ? (
+            <SearchResults
+              key={i}
+              results={m.results}
+              notice={m.notice}
+              disabled={waitingSince != null || !open}
+              onImport={(url) => void post({ text: url }, { text: url })}
+            />
+          ) : // A photo sent alone is shown as is, without a bubble around it.
           m.attachment != null && !m.text ? (
             <Box key={i} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Photo src={`/api/assistant/sessions/${session.id}/attachments/${m.attachment}/`} />

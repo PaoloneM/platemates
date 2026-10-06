@@ -60,6 +60,13 @@ def health() -> dict[str, object]:
     return {"ok": True, "model": MODEL_NAME}
 
 
+@app.get("/ready")
+def ready(encoder: Annotated[Encoder, Depends(get_encoder)]) -> dict[str, object]:
+    """Loads the model if needed and embeds one word: OK only once embeddings really work."""
+    encoder.encode(["ready"])
+    return {"ok": True, "model": MODEL_NAME}
+
+
 @app.get("/v1/models")
 def models() -> dict[str, object]:
     return {"object": "list", "data": [{"id": MODEL_NAME, "object": "model", "loaded": True}]}

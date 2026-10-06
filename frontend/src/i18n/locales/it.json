@@ -202,16 +202,15 @@
       "photo": "Carica o scatta una foto",
       "manual": "Scrivila tu"
     },
-    "soon": "presto",
     "intro": {
       "tell": "Raccontami la ricetta come la racconteresti a un amico: ingredienti, dosi se le sai, come la prepari. Preparo io la bozza da controllare.",
-      "search": "",
+      "search": "Dimmi cosa ti va: un ingrediente, un'occasione, un vincolo («un primo veloce con la zucca, per bambini»). Cerco nel vostro ricettario, tra le ricette delle altre famiglie e sul web. Puoi poi affinare la ricerca.",
       "link": "Incollami il link della pagina con la ricetta: la leggo e preparo la bozza da controllare. Funziona anche incollando un link in «Raccontami».",
       "photo": "Mandami una foto della ricetta: una pagina di libro, un biglietto scritto a mano, uno screenshot. Se è su più pagine, manda le foto una dopo l'altra. Leggo il testo e preparo la bozza da controllare."
     },
     "placeholder": {
       "tell": "Es. «La pasta e ceci di mia nonna, per 4…»",
-      "search": "",
+      "search": "Es. «un secondo di pesce al forno»",
       "link": "https://…",
       "photo": "Scrivi qualcosa se vuoi, poi premi la fotocamera"
     },
@@ -244,5 +243,19 @@
     },
     "addPhoto": "Aggiungi una foto",
     "photoUnreadable": "Non riesco ad aprire questa immagine. Prova con una foto JPEG o PNG."
+  },
+  "search": {
+    "inBook": "Nel vostro ricettario",
+    "fromFamilies": "Dalle altre famiglie",
+    "fromWeb": "Dal web",
+    "open": "Apri",
+    "view": "Vedi",
+    "import": "Importa",
+    "nothing": "Non ho trovato nulla. Prova con altre parole o con il nome di un piatto.",
+    "notice": {
+      "web_search_unavailable": "La ricerca sul web non è disponibile con il modello configurato.",
+      "web_search_empty": "Sul web non ho trovato pagine con una ricetta singola. Prova a nominare un piatto preciso.",
+      "web_search_failed": "La ricerca sul web non ha risposto. Riprova tra poco."
+    }
   }
 }

@@ -45,6 +45,11 @@ class AssistantSessionSerializer(serializers.ModelSerializer):
                     "text": message.get("content") or "",
                     "draft": bool(message.get("tool_calls")),
                 }
+                if "results" in message:
+                    entry["results"] = message["results"]
+                    entry["text"] = ""
+                if message.get("notice"):
+                    entry["notice"] = message["notice"]
                 if message.get("error"):
                     # The UI shows a translated explanation instead of the raw text.
                     entry["error"] = message["error"]

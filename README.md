@@ -104,7 +104,7 @@ Every step above can be re-run safely. Sign in once, then make yourself owner of
 family (access is invitation-only):
 `uv run python manage.py create_family "My family" --owner you@example.com --staff`.
 
-Or the whole stack in containers: `docker compose --profile embeddings up -d --build`, then
+Or the whole stack in containers: `docker compose up -d --build`, then
 http://localhost:8080. Architecture: `docs/architecture.md`; authentication and social login
 setup: `docs/authentication.md`; data, backups and moving the stack: `docs/operations.md`.
 

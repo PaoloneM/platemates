@@ -22,8 +22,9 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from ai import ChatProvider, get_chat_provider, get_vision_provider
+from ai import ChatProvider, get_chat_provider, get_vision_provider, get_web_search_provider
 
+from . import search
 from .draft import DRAFT_SCHEMA, normalize_draft
 from .models import AssistantSession, Attachment, Mode
 from .web import TEXT_BUDGET_CHARS, PageError, PageRecipe, find_url, read_recipe_page
@@ -176,6 +177,8 @@ def run_turn(
     read_page=read_recipe_page,
     photo: Attachment | None = None,
     vision: ChatProvider | None = None,
+    search_chat: ChatProvider | None = None,
+    verify_page=None,
 ) -> TurnResult:
     """Add the user's message, ask the model, record its answer. Saves the session."""
     chat = chat or get_chat_provider()
@@ -184,9 +187,23 @@ def run_turn(
         return _import_photo(
             session, text, photo, language_name, chat, vision or get_vision_provider()
         )
-    url = find_url(text) if session.mode in (Mode.TELL, Mode.LINK) else None
+    url = find_url(text)
     if url:
+        if session.mode == Mode.SEARCH:
+            # A result was picked (or a link pasted): from here on, this is a link import, and
+            # later messages correct the draft instead of searching again.
+            session.mode = Mode.LINK
+            session.save(update_fields=["mode"])
         return _import_link(session, text, url, language_name, chat, read_page)
+    if session.mode == Mode.SEARCH:
+        return _search(
+            session,
+            text,
+            language_name,
+            chat,
+            search_chat or get_web_search_provider(),
+            verify_page,
+        )
 
     system = SYSTEM_PROMPTS[session.mode].format(language=language_name)
     session.messages = [*session.messages, {"role": "user", "content": text.strip()}]
@@ -362,3 +379,25 @@ def _import_link(session, text, url, language_name, chat, read_page) -> TurnResu
     return _record_draft(
         session, draft, f"Draft imported from {page.url} and shown to the user for review."
     )
+
+
+def _search(session, text, language_name, chat, search_chat, verify_page) -> TurnResult:
+    query = search.search_query(session.messages, text)
+    session.messages = [*session.messages, {"role": "user", "content": text.strip()}]
+    found = search.local_results(session.user, session.family, query)
+    web, notice = search.web_results(
+        query, language_name, search_chat, chat, **({"verify": verify_page} if verify_page else {})
+    )
+    found += web
+    titles = "; ".join(r["title"] for r in found) or "nothing"
+    message = {
+        "role": "assistant",
+        # For the model, should the conversation continue: what was shown.
+        "content": f"Search results shown to the user: {titles}.",
+        "results": found,
+    }
+    if notice:
+        message["notice"] = notice
+    session.messages = [*session.messages, message]
+    session.save(update_fields=["messages", "updated_at"])
+    return TurnResult(reply="", draft_updated=False)
