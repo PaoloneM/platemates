@@ -45,6 +45,12 @@ def test_users_are_matched_by_subject_not_email(db):
     assert not backend.filter_users_by_claims({**CLAIMS, "sub": "different"}).exists()
 
 
+def test_user_data_comes_from_the_verified_id_token():
+    claims = {**CLAIMS, "iss": "https://phone-facing.example:8443/auth/realms/mymenu"}
+    # No call to Keycloak's userinfo endpoint, which rejects tokens issued for another address.
+    assert KeycloakBackend().get_userinfo("access", "id-token", claims) is claims
+
+
 def test_claims_without_email_are_refused():
     assert not KeycloakBackend().verify_claims({"sub": "x"})
 
@@ -67,7 +73,8 @@ def test_logout_also_ends_the_keycloak_session():
     request = RequestFactory().get("/oidc/logout/")
     request.session = {"oidc_id_token": "tok"}
     url = keycloak_logout_url(request)
-    assert url.startswith("http://localhost:8180/realms/mymenu/protocol/openid-connect/logout?")
+    # Relative: Keycloak is under /auth on the app's own origin, whatever address that is.
+    assert url.startswith("/auth/realms/mymenu/protocol/openid-connect/logout?")
     assert "id_token_hint=tok" in url
     assert "post_logout_redirect_uri=http%3A%2F%2Ftestserver%2F" in url
 

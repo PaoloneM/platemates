@@ -79,7 +79,7 @@ Full detail in `README.md`:
   `src/api.ts` is the only place that calls `fetch`; enum labels live in `src/labels.ts`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
 - `keycloak/`: Keycloak image (login theme, Apple provider)
-- `scripts/`: repository-level tooling (`init_env.py`, `backup.py`)
+- `scripts/`: repository-level tooling (`init_env.py`, `backup.py`, `setup_lan_https.py`)
 - `docs/architecture.md`: design decisions; update it when you change one
 - `docs/authentication.md`: login flow, invitations, provider setup
 - `docs/operations.md`: where data lives, backup/restore, moving to another machine
@@ -97,7 +97,8 @@ Full detail in `README.md`:
   `docker compose up -d db`
 - Signing in needs Keycloak running and configured: `docker compose up -d db keycloak`, then
   `uv run python manage.py setup_keycloak`. Use the app through the SPA's origin (`:5173` or
-  `:8080`), never directly on `:8000`: Keycloak only accepts those as redirect targets
+  `:8080`, or `:8443` over HTTPS from other devices), never directly on `:8000`: Keycloak is
+  served under `/auth` on that same origin, and only accepts those as redirect targets
 
 ### Commands
 
@@ -115,6 +116,7 @@ cd services/embeddings && uv run pytest
 cd frontend && npm run dev                              # SPA on :5173, proxies /api to :8000
 cd frontend && npm run build && npm run lint
 docker compose up -d --build                            # full stack on :8080
+python3 scripts/setup_lan_https.py                      # HTTPS on the home network (phones), see docs/operations.md
 python3 scripts/backup.py create                        # back up both databases + .env to backups/
 python3 scripts/backup.py restore backups/<file>.tar    # replace all data (takes a safety backup first)
 docker compose --profile embeddings up -d --build       # ... plus the embedding service
@@ -142,6 +144,8 @@ docker compose --profile embeddings up -d --build       # ... plus the embedding
 - Never run `docker compose down -v` (or remove `mymenu_pgdata`) without a fresh backup: it deletes
   both databases, Keycloak accounts included. `backups/` holds personal data: never commit it
 - Keycloak is configured only through `setup_keycloak` (from `.env`), never by hand in its console
+- Keycloak has no fixed hostname and lives under `/auth` on the app's origin: never hardcode a
+  Keycloak URL that the browser follows; browser-facing OIDC endpoints stay relative
 - The interface language is a per-user preference saved in the backend, not only in the browser
 - Users are matched on the OIDC `sub` claim, never on email; no OIDC token is ever sent to the
   browser

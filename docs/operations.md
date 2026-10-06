@@ -44,6 +44,35 @@ running and Python's standard library.
 To back up automatically, schedule `create --keep N` (cron on Linux/Raspberry Pi, launchd on
 macOS), from the repository root.
 
+## Using the app from a phone
+
+The Mac publishes the app on `http://localhost:8080` for itself only. Phones and tablets on the
+home network need HTTPS (Keycloak's login cookies require it outside localhost):
+
+```bash
+python3 scripts/setup_lan_https.py     # idempotent; needs `brew install mkcert`
+docker compose up -d --build frontend backend keycloak-setup
+```
+
+The script creates a certificate authority for this project (`secrets/tls/ca`, gitignored, not
+added to the Mac's keychain), a certificate for the Mac's `<name>.local` and LAN IP, and the nginx
+HTTPS server on port 8443; it adds those addresses to `.env`.
+
+On each phone or tablet, once, trust `secrets/tls/mymenu-local-ca.crt` (AirDrop it or email it):
+
+- **iPhone/iPad**: open it, then Settings > General > VPN & Device Management > install the
+  profile; then Settings > General > About > Certificate Trust Settings > enable full trust.
+- **Android**: Settings > Security > Encryption & credentials > Install a certificate > CA
+  certificate.
+
+Then open `https://<name>.local:8443` (or `https://<LAN IP>:8443`). The camera button of the
+recipe assistant opens the phone's camera directly.
+
+If the Mac's IP changes (DHCP), re-run the script and recreate the containers: the certificate
+is reissued, the authority stays the same, so phones need nothing new. Whoever has
+`secrets/tls/ca/rootCA-key.pem` can issue certificates your devices will trust: never share it,
+only the `.crt`.
+
 ## Moving to another machine
 
 1. On the old machine: `python3 scripts/backup.py create`.

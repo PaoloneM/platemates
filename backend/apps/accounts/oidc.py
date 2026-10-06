@@ -20,6 +20,17 @@ from .models import OIDCIdentity, UserProfile, supported_language
 
 
 class KeycloakBackend(OIDCAuthenticationBackend):
+    def get_userinfo(self, access_token, id_token, payload):
+        """Use the ID token's claims instead of calling Keycloak's userinfo endpoint.
+
+        Keycloak issues tokens for the address the browser used (`https://<lan host>:8443/auth`,
+        `http://localhost:8080/auth`, ...), while the backend calls it on its internal address,
+        and userinfo refuses a token issued for another address. The ID token was just received
+        from Keycloak and its signature verified (`verify_token`), and with the `email` and
+        `profile` scopes it carries everything needed: sub, email, names, locale.
+        """
+        return payload
+
     def verify_claims(self, claims) -> bool:
         return bool(claims.get("sub")) and bool(claims.get("email"))
 

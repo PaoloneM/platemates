@@ -10,12 +10,21 @@ invitation to a family.
 ```
 SPA "Continue with Google"
   └─► /oidc/authenticate/?next=/&lang=it&idp=google           Django (mozilla-django-oidc)
-        └─► Keycloak /realms/mymenu/.../auth?kc_idp_hint=google&ui_locales=it&code_challenge=...
+        └─► /auth/realms/mymenu/.../auth?kc_idp_hint=google&ui_locales=it&code_challenge=...
               └─► Google ──► Keycloak (links or creates the Keycloak account)
         ◄── /oidc/callback/?code=...                            Django exchanges the code (PKCE)
   ◄── session cookie, redirect to `next`                        SPA calls /api/me/
 ```
 
+- **Keycloak lives under `/auth` on the app's own origin** (nginx forwards it; so does the Vite
+  proxy in development) and has no fixed hostname: it builds its URLs from the forwarded
+  request. The URLs Django sends the browser to are relative (`/auth/...`), so login works from
+  whatever address the app is opened at: `http://localhost:8080` on the Mac,
+  `https://<name>.local:8443` or the LAN IP from a phone. One address, one certificate.
+- **User data comes from the ID token**, verified with Keycloak's signing keys, not from the
+  userinfo endpoint: Keycloak issues tokens for the address the browser used, and its userinfo
+  endpoint, called by the backend on the internal address, rejects them (found when first
+  logging in from a phone).
 - **No token reaches the browser.** Django runs the authorization code flow with PKCE and turns a
   successful login into an ordinary Django session; the SPA is authenticated by that cookie, like
   the admin. Only the ID token is kept, server-side in the session, as `id_token_hint` for logout.
@@ -72,8 +81,9 @@ line, including removing a Google/Microsoft/Apple provider whose credentials wer
 `keycloak-setup` compose service runs it on every `docker compose up`. Never configure the realm
 by hand in the Keycloak console: the next setup run would overwrite it.
 
-- Keycloak admin console: http://localhost:8180/admin/ (user `KEYCLOAK_ADMIN`, password
-  `KEYCLOAK_ADMIN_PASSWORD` from `.env`).
+- Keycloak admin console: http://localhost:8180/auth/admin/ on the Mac only (user
+  `KEYCLOAK_ADMIN`, password `KEYCLOAK_ADMIN_PASSWORD` from `.env`). nginx refuses `/auth/admin/`,
+  so it is not reachable through the app's address from other devices.
 - Keycloak keeps its data in its own database (`keycloak`) on the same PostgreSQL server. The
   one-shot `db-init` compose service creates it if missing, on every `up`, so fresh and existing
   volumes behave the same.
@@ -105,8 +115,8 @@ so the login screen shows the new button. Every provider needs this
 **redirect URI** registered on its side:
 
 ```
-${KEYCLOAK_PUBLIC_URL}/realms/mymenu/broker/<google|microsoft|apple>/endpoint
-e.g. http://localhost:8180/realms/mymenu/broker/google/endpoint
+<app URL>/auth/realms/mymenu/broker/<google|microsoft|apple>/endpoint
+e.g. http://localhost:8080/auth/realms/mymenu/broker/google/endpoint
 ```
 
 **Google**: Google Cloud Console → APIs & Services → Credentials → Create credentials → OAuth
@@ -138,26 +148,28 @@ With `SMTP_*` set, the realm enables password reset and email verification. With
 stay off: email/password accounts work, but a forgotten password can only be reset by an admin
 from the Keycloak console.
 
-## HTTP, HTTPS and other hosts
+## HTTP, HTTPS and other devices
 
 Keycloak's session cookies are `Secure`. Browsers accept them over plain HTTP **only on
-`localhost`**, which is why the default setup works locally. To use the app from another device
-(the Raspberry Pi on the home network, a cloud VM), serve both the app and Keycloak over HTTPS,
-e.g. behind Caddy or Traefik, then:
+`localhost`**: from any other device the app must be served over HTTPS with a certificate that
+device trusts.
 
-- set `KEYCLOAK_PUBLIC_URL` to Keycloak's https URL and add `KC_PROXY_HEADERS: xforwarded` to the
-  `keycloak` service;
-- add the app's https URL to `APP_PUBLIC_URLS`, `DJANGO_ALLOWED_HOSTS` and
-  `DJANGO_CSRF_TRUSTED_ORIGINS`;
-- re-run the setup, and update the redirect URIs registered with Google/Microsoft/Apple.
+- **Home network** (phones, tablets): `python3 scripts/setup_lan_https.py`, then trust the
+  generated certificate authority on each device once. See "Using the app from a phone" in
+  `docs/operations.md`.
+- **Elsewhere** (a cloud VM, the Raspberry Pi reachable from outside): put the app behind a TLS
+  reverse proxy or tunnel with a real certificate, add its URL to `APP_PUBLIC_URLS`,
+  `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`, re-run the setup and register the new
+  redirect URIs with Google/Microsoft/Apple. Nothing else changes: Keycloak takes its address
+  from the forwarded request.
 
 ### "Invalid parameter: redirect_uri"
 
 Keycloak shows this when the app was opened from a URL that is not in `APP_PUBLIC_URLS`. To the
 browser, `localhost` and `127.0.0.1` are different origins, so both are listed by default. For
-any other URL (a LAN IP, a domain), add it to `APP_PUBLIC_URLS` *and* to
-`DJANGO_CSRF_TRUSTED_ORIGINS` (otherwise logout fails the CSRF check), re-run the setup and
-recreate the backend.
+any other URL, add it to `APP_PUBLIC_URLS` *and* to `DJANGO_CSRF_TRUSTED_ORIGINS` (otherwise
+logout fails the CSRF check), re-run the setup and recreate the backend.
+`setup_lan_https.py` does this for the home network addresses.
 
 ## Local superusers
 

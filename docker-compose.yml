@@ -58,11 +58,12 @@ services:
       KC_DB_URL: jdbc:postgresql://db:5432/${KEYCLOAK_DB:-keycloak}
       KC_DB_USERNAME: ${POSTGRES_USER:-mymenu}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-mymenu}
-      # The URL browsers use. Tokens carry it as issuer, whichever route the backend calls.
-      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}
-      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
-      # Plain HTTP is acceptable on localhost only. Behind a TLS reverse proxy, set
-      # KEYCLOAK_PUBLIC_URL to the https URL and add KC_PROXY_HEADERS: xforwarded here.
+      # No fixed hostname: Keycloak builds its URLs from the request, as forwarded by nginx or the
+      # Vite proxy (X-Forwarded-Proto/Host). The app works from whatever address it is opened at
+      # (localhost on the Mac, the LAN name or IP from a phone), always under /auth on the app's
+      # origin. TLS is terminated by nginx; Keycloak itself speaks plain HTTP inside Docker.
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in .env}
@@ -73,7 +74,7 @@ services:
       - "127.0.0.1:8180:8080"
     healthcheck:
       # The image has no curl: speak HTTP to the management port through bash's /dev/tcp.
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /auth/health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -91,7 +92,7 @@ services:
       - path: .env
         required: false
     environment:
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
       DATABASE_URL: postgres://${POSTGRES_USER:-mymenu}:${POSTGRES_PASSWORD:-mymenu}@db:5432/${POSTGRES_DB:-mymenu}
     # APPLE_PRIVATE_KEY_FILE is relative to the repository root, which is / in the container.
     volumes:
@@ -111,7 +112,7 @@ services:
       # Inside a container, "127.0.0.1" is the container itself: reach the host instead.
       LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -127,7 +128,13 @@ services:
     depends_on:
       - backend
     ports:
+      # HTTP for the Mac itself.
       - "127.0.0.1:8080:80"
+      # HTTPS for the home network: active once scripts/setup_lan_https.py has run (otherwise
+      # nothing listens on it). See docs/operations.md.
+      - "${LAN_HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./secrets/tls:/etc/nginx/tls:ro
 
   embeddings:
     build: ./services/embeddings

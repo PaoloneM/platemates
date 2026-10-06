@@ -8,7 +8,7 @@ integration.
 ```
  browser ──► frontend (nginx: SPA + reverse proxy) ──► backend (Django + DRF) ──► PostgreSQL + pgvector
     │                                                     │
-    └──── login pages ──► Keycloak ◄──── OIDC ────────────┤
+    └── /auth (same origin) ──► Keycloak ◄── OIDC ────────┤
                                                           ├──► generative LLM   (OpenAI-compatible; Unsloth Studio on the host)
                                                           └──► embedding model  (OpenAI-compatible; services/embeddings by default)
 ```
@@ -18,7 +18,7 @@ integration.
 | `backend/` | Django project `config`, domain apps in `apps/`, AI adapters in `ai/` | `backend` container, or `uv run` natively |
 | `frontend/` | React + TypeScript SPA (Vite) | `frontend` container (nginx), or `npm run dev` |
 | `services/embeddings/` | OpenAI-compatible `/v1/embeddings` around sentence-transformers | `embeddings` container (compose profile), or `uv run uvicorn` |
-| `keycloak/` | Keycloak image: login theme `mymenu` + Apple provider extension | `keycloak` container; realm configured by `keycloak-setup` |
+| `keycloak/` | Keycloak image: login theme `mymenu` + Apple provider extension, served under `/auth` | `keycloak` container; realm configured by `keycloak-setup` |
 
 The frontend and backend always share one origin (Vite proxy in development, nginx in
 production), so the API uses Django session auth and CSRF without CORS. Both proxies must keep

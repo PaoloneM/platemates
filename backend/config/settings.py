@@ -36,6 +36,9 @@ if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off.")
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+# nginx terminates HTTPS (for devices on the home network) and says so in this header; the
+# backend port itself is published on 127.0.0.1 only, so the header cannot be forged from outside.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS",
     "http://localhost:5173,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:8080",
@@ -140,11 +143,13 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "mymenu")
-# Browsers are redirected to the public URL; the backend calls Keycloak on the internal one
-# (a container hostname under Docker Compose). Tokens carry the public URL as issuer either way.
-KEYCLOAK_PUBLIC_URL = os.getenv("KEYCLOAK_PUBLIC_URL", "http://localhost:8180").rstrip("/")
-KEYCLOAK_INTERNAL_URL = os.getenv("KEYCLOAK_INTERNAL_URL", KEYCLOAK_PUBLIC_URL).rstrip("/")
-_oidc_public = f"{KEYCLOAK_PUBLIC_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
+# Browsers reach Keycloak under /auth on the app's own origin (nginx or the Vite proxy forward
+# it), so the endpoints they are sent to are relative paths: login works from whatever address
+# the app was opened at (localhost, the LAN name or IP). The backend calls Keycloak directly on
+# the internal URL (a container hostname under Docker Compose).
+KEYCLOAK_PATH = "/auth"
+KEYCLOAK_INTERNAL_URL = os.getenv("KEYCLOAK_INTERNAL_URL", "http://localhost:8180/auth").rstrip("/")
+_oidc_browser = f"{KEYCLOAK_PATH}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
 _oidc_internal = f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
 
 OIDC_RP_CLIENT_ID = os.getenv("OIDC_RP_CLIENT_ID", "mymenu-backend")
@@ -152,8 +157,8 @@ OIDC_RP_CLIENT_SECRET = os.getenv("OIDC_RP_CLIENT_SECRET", "")
 OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_RP_SCOPES = "openid email profile"
 OIDC_USE_PKCE = True
-OIDC_OP_AUTHORIZATION_ENDPOINT = f"{_oidc_public}/auth"
-OIDC_OP_LOGOUT_ENDPOINT = f"{_oidc_public}/logout"
+OIDC_OP_AUTHORIZATION_ENDPOINT = f"{_oidc_browser}/auth"
+OIDC_OP_LOGOUT_ENDPOINT = f"{_oidc_browser}/logout"
 OIDC_OP_TOKEN_ENDPOINT = f"{_oidc_internal}/token"
 OIDC_OP_USER_ENDPOINT = f"{_oidc_internal}/userinfo"
 OIDC_OP_JWKS_ENDPOINT = f"{_oidc_internal}/certs"

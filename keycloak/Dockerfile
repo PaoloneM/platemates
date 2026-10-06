@@ -5,8 +5,11 @@ ARG KEYCLOAK_VERSION=26.8.0
 
 FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} AS builder
 
+# Served under /auth on the app's own origin (through nginx or the Vite proxy): one address and
+# one certificate for everything. A build-time option, hence here and not in docker-compose.
 ENV KC_DB=postgres \
-    KC_HEALTH_ENABLED=true
+    KC_HEALTH_ENABLED=true \
+    KC_HTTP_RELATIVE_PATH=/auth
 
 # Apple is not a built-in Keycloak provider. Community extension, pinned and checksum-verified
 # (sha256 of the release jar, itself checked against the release's published sha512):
