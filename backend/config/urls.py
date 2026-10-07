@@ -9,6 +9,8 @@ from apps.core.views import health
 from apps.menus.views import MealSlotViewSet, WeeklyMenuViewSet
 from apps.recipes.views import CuisineViewSet, RecipeViewSet
 from apps.teams.views import (
+    CalendarDayView,
+    CalendarView,
     MembershipViewSet,
     MemberViewSet,
     PreferenceViewSet,
@@ -37,5 +39,7 @@ urlpatterns = [
     path("oidc/", include("mozilla_django_oidc.urls")),
     path("api/me/", me),
     path("api/login-options/", login_options),
+    path("api/calendar/", CalendarView.as_view()),
+    path("api/calendar/<str:date>/", CalendarDayView.as_view()),
     path("api/", include(router.urls)),
 ]

@@ -114,6 +114,28 @@ export type Meal = 'breakfast' | 'lunch' | 'dinner'
 // many people at each meal. The typical week is Monday first.
 export type TypicalDay = { active: boolean } & Record<Meal, number>
 
+// A date of the team calendar: the typical week's counts (`usual`), what applies on that date
+// (`people`), and which meals differ from the typical week.
+export type CalendarDay = {
+  date: string
+  active: boolean
+  usual: Record<Meal, number>
+  people: Record<Meal, number>
+  overridden: Meal[]
+  note: string
+  // Planned meals only (lunch, dinner): breakfast is counted, not planned.
+  dishes: Partial<Record<Meal, CalendarDish[]>>
+}
+
+export type CalendarDish = { id: number; title: string; course: Course }
+
+// A change to a date; every part is optional. `dishes` replaces the listed meals' dishes.
+export type CalendarDayChange = {
+  people?: Partial<Record<Meal, number>>
+  note?: string
+  dishes?: Partial<Record<Meal, number[]>>
+}
+
 export type TeamProfile = {
   id: number
   name: string

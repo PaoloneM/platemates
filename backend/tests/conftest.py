@@ -52,3 +52,13 @@ def pasta_recipe(db):
     RecipeIngredient.objects.create(recipe=recipe, ingredient=tomato, quantity=Decimal("300"))
     RecipeIngredient.objects.create(recipe=recipe, ingredient=salt, unit=Unit.TO_TASTE)
     return recipe
+
+
+@pytest.fixture
+def member(team):
+    """A second user of the team, with the plain member role."""
+    user = get_user_model().objects.create_user("bob", email="bob@example.com", first_name="Bob")
+    membership = Membership.objects.create(user=user, team=team, role=Membership.Role.MEMBER)
+    client = APIClient()
+    client.force_authenticate(user)
+    return membership, client

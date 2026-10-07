@@ -46,6 +46,16 @@ export function useLabels() {
   }
 }
 
+/** "Sabato" and "10 ott" for a calendar date (YYYY-MM-DD). */
+export function useDayTitle(date: string) {
+  const { i18n } = useTranslation()
+  const labels = useLabels()
+  const [year, month, day] = date.split('-').map(Number)
+  const value = new Date(year, month - 1, day)
+  const dayMonth = new Intl.DateTimeFormat(i18n.resolvedLanguage, { day: 'numeric', month: 'short' }).format(value)
+  return { weekday: labels.weekday((value.getDay() + 6) % 7), dayMonth }
+}
+
 /** Short human description of a month set: "Estate", "Estate, autunno", "Mag-Ago", "Tutto l'anno". */
 export function useDescribeMonths() {
   const { t } = useTranslation()

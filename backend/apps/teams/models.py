@@ -66,6 +66,27 @@ class Team(models.Model):
         return int(day.get(meal, 0)) if day.get("active", True) else 0
 
 
+class CalendarDay(models.Model):
+    """A date that differs from the team's typical week: guests, someone away, a meal out.
+
+    Only the meals that differ are stored (`people`, meal -> count); the others follow the
+    typical week. A row with no overrides and no note has no reason to exist and is deleted.
+    """
+
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="calendar_days")
+    date = models.DateField()
+    people = models.JSONField(default=dict)
+    note = models.CharField(max_length=200, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["team", "date"]
+        constraints = [models.UniqueConstraint(fields=["team", "date"], name="unique_calendar_day")]
+
+    def __str__(self) -> str:
+        return f"{self.team} {self.date}: {self.people}"
+
+
 class Membership(models.Model):
     """Which application users may see and edit a team."""
 

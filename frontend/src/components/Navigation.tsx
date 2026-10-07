@@ -1,5 +1,5 @@
-import CalendarIcon from '@mui/icons-material/CalendarMonthOutlined'
-import CalendarActiveIcon from '@mui/icons-material/CalendarMonth'
+import MenuIcon from '@mui/icons-material/RestaurantMenuOutlined'
+import MenuActiveIcon from '@mui/icons-material/RestaurantMenu'
 import BookIcon from '@mui/icons-material/MenuBookOutlined'
 import BookActiveIcon from '@mui/icons-material/MenuBook'
 import { BottomNavigation, BottomNavigationAction, Box, ButtonBase, Paper, Typography } from '@mui/material'
@@ -26,8 +26,8 @@ function useDestinations(): Destination[] {
     {
       to: '/',
       label: t('nav.calendar'),
-      icon: <CalendarIcon />,
-      activeIcon: <CalendarActiveIcon />,
+      icon: <MenuIcon />,
+      activeIcon: <MenuActiveIcon />,
       owns: (path) => path === '/' || path.startsWith('/calendar'),
     },
     {

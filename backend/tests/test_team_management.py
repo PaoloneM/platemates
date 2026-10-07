@@ -5,17 +5,6 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Invitation
 from apps.teams.models import Member, Membership
 
-
-@pytest.fixture
-def member(team):
-    """A second user of the team, with the plain member role."""
-    user = get_user_model().objects.create_user("bob", email="bob@example.com", first_name="Bob")
-    membership = Membership.objects.create(user=user, team=team, role=Membership.Role.MEMBER)
-    client = APIClient()
-    client.force_authenticate(user)
-    return membership, client
-
-
 # -- team profile -----------------------------------------------------------------------------
 
 

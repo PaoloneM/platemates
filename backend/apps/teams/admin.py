@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Member, Membership, Preference, RecipeBookEntry, Team
+from .models import CalendarDay, Member, Membership, Preference, RecipeBookEntry, Team
 
 
 class MembershipInline(admin.TabularInline):
@@ -31,3 +31,10 @@ class RecipeBookEntryAdmin(admin.ModelAdmin):
     list_display = ["team", "recipe", "status", "rating"]
     list_filter = ["team", "status"]
     autocomplete_fields = ["recipe"]
+
+
+@admin.register(CalendarDay)
+class CalendarDayAdmin(admin.ModelAdmin):
+    list_display = ["team", "date", "people", "note"]
+    list_filter = ["team"]
+    date_hierarchy = "date"

@@ -1,6 +1,8 @@
 from rest_framework import serializers
 
-from .models import Meal, Member, Membership, Preference, RecipeBookEntry, Team
+from apps.recipes.models import Recipe
+
+from .models import PLANNED_MEALS, Meal, Member, Membership, Preference, RecipeBookEntry, Team
 
 MAX_PEOPLE = 50
 
@@ -124,3 +126,55 @@ class MembershipSerializer(serializers.ModelSerializer):
 
     def get_is_me(self, membership) -> bool:
         return membership.user_id == self.context["request"].user.pk
+
+
+class CalendarDishSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    course = serializers.CharField()
+
+
+class CalendarDaySerializer(serializers.Serializer):
+    """A date of the team calendar, as `apps.teams.calendar.Day`."""
+
+    date = serializers.DateField()
+    active = serializers.BooleanField()
+    usual = serializers.DictField(child=serializers.IntegerField())
+    people = serializers.DictField(child=serializers.IntegerField())
+    overridden = serializers.ListField(child=serializers.CharField())
+    note = serializers.CharField()
+    dishes = serializers.DictField(child=CalendarDishSerializer(many=True))
+
+
+class CalendarDayInputSerializer(serializers.Serializer):
+    """What an owner changes on a date; every part is optional and the rest is kept.
+
+    `people`: meal -> count. `note`: replaces the note. `dishes`: planned meal -> recipe ids,
+    in order, replacing that meal's dishes (`[]` clears it).
+    """
+
+    people = serializers.DictField(child=serializers.IntegerField(), required=False)
+    note = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    dishes = serializers.DictField(
+        child=serializers.ListField(child=serializers.IntegerField()), required=False
+    )
+
+    def validate_people(self, value):
+        if set(value) - set(Meal.values):
+            raise serializers.ValidationError(f"Meals are {', '.join(Meal.values)}.")
+        if any(not 0 <= count <= MAX_PEOPLE for count in value.values()):
+            raise serializers.ValidationError(f"0 to {MAX_PEOPLE} people.")
+        return value
+
+    def validate_note(self, value: str) -> str:
+        return " ".join(value.split())
+
+    def validate_dishes(self, value):
+        """Recipe ids become recipes the user can see; only planned meals have dishes."""
+        if set(value) - set(PLANNED_MEALS):
+            raise serializers.ValidationError(f"Dishes go to {', '.join(PLANNED_MEALS)}.")
+        wanted = {pk for ids in value.values() for pk in ids}
+        visible = Recipe.objects.visible_to(self.context["request"].user).in_bulk(wanted)
+        if missing := wanted - set(visible):
+            raise serializers.ValidationError(f"Unknown recipes: {sorted(missing)}.")
+        return {meal: [visible[pk] for pk in ids] for meal, ids in value.items()}

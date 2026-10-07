@@ -105,6 +105,7 @@ erDiagram
     MEAL_SLOT ||--o{ SLOT_DISH : "serves"
     RECIPE ||--o{ SLOT_DISH : "is served as"
     TEAM ||--o{ INVITATION : "issues"
+    TEAM ||--o{ CALENDAR_DAY : "has exceptions on"
     USER ||--o{ ASSISTANT_SESSION : "talks in"
     ASSISTANT_SESSION ||--o{ ATTACHMENT : "has photos"
 
@@ -193,14 +194,27 @@ ingredient never touches a recipe.
   and refreshes their embeddings.
   This is what makes collaborative recommendation possible ("teams like yours loved X"), and
   keeps discovery candidates separate from accepted recipes (`RecipeBookEntry.Status.CANDIDATE`).
-- **People per slot.** `MealSlot.people` is the source of truth. `Team.typical_week` only
-  prefills new slots (`WeeklyMenu.create_empty_slots`). `people = 0` means nobody eats at home,
-  and that slot adds nothing to the shopping list.
+- **People per slot.** The team calendar (typical week plus `CalendarDay` exceptions) says who
+  eats at home; `MealSlot.people` is its copy in the week's menu, prefilled by
+  `WeeklyMenu.create_empty_slots` and kept in step by `apps.teams.calendar.set_day`.
+  `people = 0` means nobody eats at home, and that slot adds nothing to the shopping list.
 - **Typical week** (decided with Paolo 2026-10-07). `Team.typical_week` is seven days, Monday
   first, each `{active, breakfast, lunch, dinner}`. A day turned off counts as 0 at every meal
   but keeps its numbers, so turning it back on restores them. It replaced the per-meal
   `default_people` (migration `families.0004` converted it: every day active, nobody at
-  breakfast). Date-specific exceptions (guests, someone away) are the next step.
+  breakfast).
+- **Calendar exceptions** (`CalendarDay`, `apps/teams/calendar.py`). A date that differs from
+  the typical week (guests, someone away, a meal out) stores only the meals that differ, plus an
+  optional note; a count equal to the typical week is not stored, and a row left with nothing is
+  deleted. An exception can open a day that is usually off. `calendar(team, start, days)` is the
+  single source of "who eats at home and what is planned" for the calendar screens and for new
+  menus (`WeeklyMenu.create_empty_slots`).
+- **One write path for a date** (`set_day`, `PUT /api/calendar/<date>/?team=`, owners only):
+  people at some meals, the note, the dishes of some planned meals, each optional and the rest
+  kept. Setting dishes creates the week's draft menu if there is none. Clearing a meal or a day
+  is people 0 plus no dishes; Undo is the client sending back what it had. `DELETE` brings
+  people and note back to the typical week and keeps the dishes. `GET /api/calendar/?team=&
+  start=&days=` is open to every member.
 - **Breakfast is counted, not planned** (decided with Paolo 2026-10-07). `Meal` includes
   breakfast so the calendar (and later the shopping list) knows who is at home, but the menu
   only gets slots for `PLANNED_MEALS` (lunch and dinner).
@@ -276,11 +290,17 @@ invitations.
 ### Navigation (decided with Paolo 2026-10-07)
 
 Material 3 adaptive navigation (`components/Navigation.tsx`): a navigation rail on tablets and
-desktops, a bottom navigation bar on phones, for the everyday destinations: **Calendar** (home,
+desktops, a bottom navigation bar on phones, for the everyday destinations: **Menu** (the weekly menu and calendar, home,
 `/`) and **Recipes** (`/recipes`); the shopping list joins them once it has a screen. The team
 page, the management section and the language stay in the user menu: they are visited rarely.
-The calendar shows one week at a time (`?week=<monday>`), people per meal from the typical
-week; owners reach the typical week from it (`/team#week`).
+The calendar is also the menu screen ("Menu della settimana"): one week at a time
+(`?week=<monday>`), moved by arrows; "Today" appears beside the arrow that leads back to the
+current week (its slot is reserved, so nothing shifts), and the week's dates open a month
+calendar (MUI X `DateCalendar`) to jump to any date. A row per day
+with a card per meal (people, dishes; exceptions in terracotta, nobody at home dimmed). The day's
+gear (or its date) opens the day settings, the bin clears the day or a single meal at once with
+Undo. A meal card opens the meal page (`/calendar/<date>/<meal>`): people, and the dishes picked
+from the recipe book until the menu generator proposes them. Members see everything read-only.
 
 ### Multi-team access
 

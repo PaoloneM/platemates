@@ -1,13 +1,20 @@
+import datetime as dt
+
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.recipes.models import Recipe, Visibility
 
+from .calendar import calendar, set_day
 from .models import Member, Membership, Preference, RecipeBookEntry, Team
-from .permissions import OwnerWritesMixin, TeamScopedMixin, require_owner
+from .permissions import OwnerWritesMixin, TeamScopedMixin, require_owner, user_teams
 from .serializers import (
+    CalendarDayInputSerializer,
+    CalendarDaySerializer,
     MemberSerializer,
     MembershipSerializer,
     PreferenceSerializer,
@@ -143,3 +150,58 @@ class RecipeBookEntryViewSet(TeamScopedMixin, viewsets.ModelViewSet):
             and not RecipeBookEntry.objects.filter(recipe=recipe).exists()
         ):
             recipe.delete()
+
+
+MAX_CALENDAR_DAYS = 62
+
+
+def _team_from_query(request) -> Team:
+    try:
+        team_id = int(request.query_params.get("team", ""))
+    except ValueError:
+        raise ValidationError({"team": "Which team?"}) from None
+    return get_object_or_404(user_teams(request.user), pk=team_id)
+
+
+def _date(value: str, name: str) -> dt.date:
+    try:
+        return dt.date.fromisoformat(value)
+    except ValueError:
+        raise ValidationError({name: "A date, YYYY-MM-DD."}) from None
+
+
+class CalendarView(APIView):
+    """`GET /api/calendar/?team=&start=&days=`: who eats at home on each date."""
+
+    def get(self, request):
+        team = _team_from_query(request)
+        start = _date(request.query_params.get("start", ""), "start")
+        try:
+            days = int(request.query_params.get("days", 7))
+        except ValueError:
+            days = 0
+        if not 1 <= days <= MAX_CALENDAR_DAYS:
+            raise ValidationError({"days": f"1 to {MAX_CALENDAR_DAYS}."})
+        return Response(CalendarDaySerializer(calendar(team, start, days), many=True).data)
+
+
+class CalendarDayView(APIView):
+    """`PUT /api/calendar/<date>/?team=` changes a date: people, note, dishes (owners only).
+    `DELETE` brings the people and note back to the typical week, keeping the dishes. Both
+    answer with the resulting day."""
+
+    def put(self, request, date):
+        team = _team_from_query(request)
+        require_owner(request.user, team)
+        day = _date(date, "date")
+        data = CalendarDayInputSerializer(data=request.data, context={"request": request})
+        data.is_valid(raise_exception=True)
+        return Response(CalendarDaySerializer(set_day(team, day, **data.validated_data)).data)
+
+    def delete(self, request, date):
+        team = _team_from_query(request)
+        require_owner(request.user, team)
+        day = _date(date, "date")
+        team.calendar_days.filter(date=day).delete()
+        usual = calendar(team, day, 1)[0].people
+        return Response(CalendarDaySerializer(set_day(team, day, people=usual)).data)

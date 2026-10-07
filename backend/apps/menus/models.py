@@ -6,14 +6,13 @@ optional ratings feeds the RAG context of future generations.
 
 from __future__ import annotations
 
-import datetime as dt
-
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from apps.recipes.models import Recipe
+from apps.teams.calendar import calendar
 from apps.teams.models import PLANNED_MEALS, Meal, Team
 
 
@@ -46,15 +45,11 @@ class WeeklyMenu(models.Model):
             raise ValidationError({"week_start": "A week starts on Monday."})
 
     def create_empty_slots(self) -> list[MealSlot]:
-        """Create the 14 planned slots, prefilled from the team's typical week."""
+        """Create the 14 planned slots, prefilled from the team calendar (typical week and
+        the exceptions on these dates)."""
         slots = [
-            MealSlot(
-                menu=self,
-                date=self.week_start + dt.timedelta(days=offset),
-                meal=meal,
-                people=self.team.usual_people(offset, meal),
-            )
-            for offset in range(7)
+            MealSlot(menu=self, date=day.date, meal=meal, people=day.people[meal])
+            for day in calendar(self.team, self.week_start, 7)
             for meal in PLANNED_MEALS
         ]
         return MealSlot.objects.bulk_create(slots)

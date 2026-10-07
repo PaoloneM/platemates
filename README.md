@@ -17,7 +17,7 @@ application.
 | **Recipe assistant**: add a recipe by telling it in your own words, by pasting a link, by taking a photo of a cookbook page or a handwritten card, or by asking it to search your recipes, other teams' recipes and the web; every draft is reviewed before saving | Built |
 | **Teams**: sign-in with email/password or Google, Microsoft, Apple (Keycloak); invitation-only access; interface in Italian and English, remembered per user | Built |
 | **Team management**: profile (weekday time limit, kitchen tools), people at the table with ages, users and roles, invitation links to copy or share | Built |
-| **Team calendar**: a typical week (which days, how many at breakfast, lunch and dinner), shown week by week | Built (exceptions on specific dates next) |
+| **Team calendar and menu screen**: a typical week (which days, how many at breakfast, lunch and dinner), exceptions on specific dates (guests, someone away), each meal's people and dishes, picked by hand from the recipe book for now | Built |
 | **Shared catalogs**: ~160 common ingredients with Italian seasonality, kitchen tools; management section to edit, merge duplicates, add new ones | Built |
 | **Operations**: one-command Docker Compose stack, HTTPS on the home network for phones, backups and restore, repeatable setup | Built |
 | **Weekly menu generation**: agentic, proactive, following composition rules (protein variety, cuisine variety, season) | Next |

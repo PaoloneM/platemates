@@ -11,6 +11,7 @@ import { InvitePage } from './pages/InvitePage'
 import { IngredientsPage } from './pages/manage/IngredientsPage'
 import { ManageLayout } from './pages/manage/ManageLayout'
 import { LoginPage } from './pages/LoginPage'
+import { MealPage } from './pages/MealPage'
 import { NoTeamPage } from './pages/NoTeamPage'
 import { RecipeBookPage } from './pages/RecipeBookPage'
 import { RecipeDetailPage } from './pages/RecipeDetailPage'
@@ -32,6 +33,7 @@ function Protected() {
       <AppShell>
         <Routes>
           <Route path="/" element={<CalendarPage />} />
+          <Route path="/calendar/:date/:meal" element={<MealPage />} />
           <Route path="/recipes" element={<RecipeBookPage />} />
           <Route path="/recipes/new" element={<RecipeEditorPage />} />
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
