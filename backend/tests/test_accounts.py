@@ -19,7 +19,7 @@ from apps.accounts.oidc import (
     KeycloakBackend,
     keycloak_logout_url,
 )
-from apps.families.models import Family, Membership
+from apps.teams.models import Membership, Team
 
 CLAIMS = {"sub": "abc-123", "email": "anna@example.com", "given_name": "Anna"}
 
@@ -33,6 +33,11 @@ def test_first_login_creates_a_user_linked_by_subject(db):
     assert user.email == "anna@example.com"
     assert user.first_name == "Anna"
     assert OIDCIdentity.objects.get(user=user).subject == "abc-123"
+
+
+def test_names_come_from_the_standard_claims(db):
+    user = KeycloakBackend().create_user({**CLAIMS, "family_name": "Rossi"})
+    assert (user.first_name, user.last_name) == ("Anna", "Rossi")
 
 
 def test_users_are_matched_by_subject_not_email(db):
@@ -89,10 +94,10 @@ def test_me_for_anonymous_visitors(db):
     assert "csrftoken" in response.cookies
 
 
-def test_me_lists_the_users_families(api, family):
+def test_me_lists_the_users_teams(api, team):
     data = api.get("/api/me/").json()
     assert data["authenticated"] is True
-    assert data["families"] == [{"id": family.pk, "name": family.name, "role": "owner"}]
+    assert data["teams"] == [{"id": team.pk, "name": team.name, "role": "owner"}]
 
 
 @override_settings(KEYCLOAK_IDENTITY_PROVIDERS={"google": True, "microsoft": False, "apple": True})
@@ -113,45 +118,45 @@ def invitee(db):
     return user, client
 
 
-def test_owner_invites_and_invitee_joins(api, family, invitee):
+def test_owner_invites_and_invitee_joins(api, team, invitee):
     user, client = invitee
-    created = api.post("/api/invitations/", {"family": family.pk, "note": "Bob"}, format="json")
+    created = api.post("/api/invitations/", {"team": team.pk, "note": "Bob"}, format="json")
     assert created.status_code == 201
     token = created.json()["token"]
 
     preview = client.get(f"/api/invitations/by-token/{token}/").json()
     assert preview == {
-        "family_name": family.name,
+        "team_name": team.name,
         "role": "member",
         "state": "pending",
         "expires_at": preview["expires_at"],
     }
     assert client.post(f"/api/invitations/by-token/{token}/").status_code == 200
-    assert Membership.objects.filter(user=user, family=family, role="member").exists()
+    assert Membership.objects.filter(user=user, team=team, role="member").exists()
     # Single use.
     assert client.post(f"/api/invitations/by-token/{token}/").status_code == 409
 
 
-def test_members_cannot_invite(family, invitee):
+def test_members_cannot_invite(team, invitee):
     user, client = invitee
-    Membership.objects.create(user=user, family=family, role=Membership.Role.MEMBER)
-    response = client.post("/api/invitations/", {"family": family.pk}, format="json")
+    Membership.objects.create(user=user, team=team, role=Membership.Role.MEMBER)
+    response = client.post("/api/invitations/", {"team": team.pk}, format="json")
     assert response.status_code == 400
 
 
-def test_cannot_invite_to_someone_elses_family(api, db):
-    other = Family.objects.create(name="Other")
-    assert api.post("/api/invitations/", {"family": other.pk}, format="json").status_code == 400
+def test_cannot_invite_to_someone_elses_team(api, db):
+    other = Team.objects.create(name="Other")
+    assert api.post("/api/invitations/", {"team": other.pk}, format="json").status_code == 400
 
 
-def test_expired_and_revoked_invitations_cannot_be_used(api, family, invitee):
+def test_expired_and_revoked_invitations_cannot_be_used(api, team, invitee):
     _, client = invitee
     expired = Invitation.objects.create(
-        family=family, expires_at=timezone.now() - dt.timedelta(minutes=1)
+        team=team, expires_at=timezone.now() - dt.timedelta(minutes=1)
     )
     assert client.post(f"/api/invitations/by-token/{expired.token}/").json()["state"] == "expired"
 
-    revoked = Invitation.objects.create(family=family)
+    revoked = Invitation.objects.create(team=team)
     assert api.delete(f"/api/invitations/{revoked.pk}/").status_code == 204
     assert client.post(f"/api/invitations/by-token/{revoked.token}/").json()["state"] == "revoked"
 
@@ -161,8 +166,8 @@ def test_unknown_token_is_404(invitee):
     assert client.get("/api/invitations/by-token/nope/").status_code == 404
 
 
-def test_invitation_tokens_of_other_families_are_not_listed(api, db):
-    Invitation.objects.create(family=Family.objects.create(name="Other"))
+def test_invitation_tokens_of_other_teams_are_not_listed(api, db):
+    Invitation.objects.create(team=Team.objects.create(name="Other"))
     assert api.get("/api/invitations/").json()["count"] == 0
 
 
@@ -249,13 +254,13 @@ def test_language_chosen_at_keycloak_is_adopted_on_first_login(db):
 # -- repeatable initialization ----------------------------------------------------------------
 
 
-def test_create_family_is_idempotent(db):
+def test_create_team_is_idempotent(db):
     from django.core.management import call_command
 
     get_user_model().objects.create_user("owner", email="owner@example.com")
     for _ in range(2):
-        call_command("create_family", "Rossi", owner="owner@example.com", staff=True)
-    assert Family.objects.filter(name="Rossi").count() == 1
+        call_command("create_team", "Rossi", owner="owner@example.com", staff=True)
+    assert Team.objects.filter(name="Rossi").count() == 1
     assert get_user_model().objects.get(username="owner").is_superuser
 
 

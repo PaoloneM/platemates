@@ -7,8 +7,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ai import AIError
-from apps.families.models import Membership
 from apps.recipes.models import Recipe
+from apps.teams.models import Membership
 
 from .agent import run_turn
 from .models import AssistantSession, Attachment
@@ -28,9 +28,9 @@ class AssistantSessionViewSet(
         return AssistantSession.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        family = serializer.validated_data["family"]
-        if not Membership.objects.filter(user=self.request.user, family=family).exists():
-            raise serializers.ValidationError({"family": "Not one of your families."})
+        team = serializer.validated_data["team"]
+        if not Membership.objects.filter(user=self.request.user, team=team).exists():
+            raise serializers.ValidationError({"team": "Not one of your teams."})
         serializer.save(user=self.request.user)
 
     @action(detail=True, methods=["post"])
@@ -76,7 +76,7 @@ class AssistantSessionViewSet(
         session = self.get_object()
         recipe_id = request.data.get("recipe")
         if recipe_id:
-            recipe = Recipe.objects.filter(pk=recipe_id, owner_family=session.family).first()
+            recipe = Recipe.objects.filter(pk=recipe_id, owner_team=session.team).first()
             if recipe is None:
                 raise serializers.ValidationError({"recipe": "Recipe not found."})
             session.recipe = recipe

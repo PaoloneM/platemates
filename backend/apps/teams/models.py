@@ -1,6 +1,6 @@
-"""Families: the parametric profile that every suggestion is computed against.
+"""Teams: the parametric profile that every suggestion is computed against.
 
-Nothing about a specific family is hardcoded anywhere else: people, ages, tastes, tools and the
+Nothing about a specific team is hardcoded anywhere else: people, ages, tastes, tools and the
 default number of diners per meal all live here and are editable at any time.
 """
 
@@ -22,26 +22,26 @@ class Meal(models.TextChoices):
 
 
 def default_people_per_meal() -> dict[str, int]:
-    """Initial prefill for new menu slots. Only a starting value, editable per family."""
+    """Initial prefill for new menu slots. Only a starting value, editable per team."""
     return {Meal.LUNCH: 2, Meal.DINNER: 3}
 
 
-class Family(models.Model):
+class Team(models.Model):
     name = models.CharField(max_length=120)
     users = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, through="Membership", related_name="families"
+        settings.AUTH_USER_MODEL, through="Membership", related_name="teams"
     )
-    tools = models.ManyToManyField(KitchenTool, blank=True, related_name="families")
+    tools = models.ManyToManyField(KitchenTool, blank=True, related_name="teams")
     # How many people a new slot is prefilled with, per meal. The slot's own count is what
     # matters; this is only the default it starts from.
     default_people = models.JSONField(default=default_people_per_meal)
-    # Ceiling on preparation + cooking time the family can sustain on an ordinary day.
+    # Ceiling on preparation + cooking time the team can sustain on an ordinary day.
     max_weekday_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
     notes = models.TextField(blank=True, help_text="Free-form context passed to the LLM.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name_plural = "families"
+        verbose_name_plural = "teams"
         ordering = ["name"]
 
     def __str__(self) -> str:
@@ -52,35 +52,35 @@ class Family(models.Model):
 
 
 class Membership(models.Model):
-    """Which application users may see and edit a family."""
+    """Which application users may see and edit a team."""
 
     class Role(models.TextChoices):
         OWNER = "owner", _("Owner")
         MEMBER = "member", _("Member")
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="memberships")
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="memberships")
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.MEMBER)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "family"], name="unique_membership")]
+        constraints = [models.UniqueConstraint(fields=["user", "team"], name="unique_membership")]
 
     def __str__(self) -> str:
-        return f"{self.user} in {self.family} ({self.role})"
+        return f"{self.user} in {self.team} ({self.role})"
 
 
-class FamilyMember(models.Model):
-    """A person who eats at the family table. Not necessarily an application user."""
+class Member(models.Model):
+    """A person who eats at the team table. Not necessarily an application user."""
 
-    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="members")
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="members")
     name = models.CharField(max_length=80, blank=True)
-    # Birth year rather than age: it does not go stale. Used for similarity between families.
+    # Birth year rather than age: it does not go stale. Used for similarity between teams.
     birth_year = models.PositiveSmallIntegerField(
         null=True, blank=True, validators=[MinValueValidator(1900), MaxValueValidator(2100)]
     )
 
     class Meta:
-        ordering = ["family", "birth_year"]
+        ordering = ["team", "birth_year"]
 
     def __str__(self) -> str:
         return self.name or f"member #{self.pk}"
@@ -95,10 +95,10 @@ class Preference(models.Model):
         DISLIKES = "dislikes", _("Dislikes")
         AVOIDS = "avoids", _("Never propose")
 
-    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="preferences")
-    # Null: the preference applies to the whole family.
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="preferences")
+    # Null: the preference applies to the whole team.
     member = models.ForeignKey(
-        FamilyMember, null=True, blank=True, on_delete=models.CASCADE, related_name="preferences"
+        Member, null=True, blank=True, on_delete=models.CASCADE, related_name="preferences"
     )
     kind = models.CharField(max_length=10, choices=Kind.choices)
     ingredient = models.ForeignKey(Ingredient, null=True, blank=True, on_delete=models.CASCADE)
@@ -123,7 +123,7 @@ class Preference(models.Model):
 
 
 class RecipeBookEntry(models.Model):
-    """A recipe as seen by one family: in its recipe book, or a candidate awaiting approval."""
+    """A recipe as seen by one team: in its recipe book, or a candidate awaiting approval."""
 
     class Status(models.TextChoices):
         # Proposed by discovery or by the menu engine; the user has not accepted it yet.
@@ -131,7 +131,7 @@ class RecipeBookEntry(models.Model):
         APPROVED = "approved", _("In the recipe book")
         REJECTED = "rejected", _("Rejected")
 
-    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="recipe_book")
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="recipe_book")
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="book_entries")
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.CANDIDATE)
     # Explicit and optional; the implicit signal comes from menu outcomes.
@@ -143,21 +143,19 @@ class RecipeBookEntry(models.Model):
 
     class Meta:
         verbose_name_plural = "recipe book entries"
-        constraints = [
-            models.UniqueConstraint(fields=["family", "recipe"], name="unique_book_entry")
-        ]
+        constraints = [models.UniqueConstraint(fields=["team", "recipe"], name="unique_book_entry")]
 
     def __str__(self) -> str:
-        return f"{self.family}: {self.recipe} ({self.status})"
+        return f"{self.team}: {self.recipe} ({self.status})"
 
 
-class FamilyEmbedding(models.Model):
-    """A family profile's vector, for collaborative recommendation. One per embedding model.
+class TeamEmbedding(models.Model):
+    """A team profile's vector, for collaborative recommendation. One per embedding model.
 
     Undimensioned for the same reason as `recipes.RecipeEmbedding`.
     """
 
-    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="embeddings")
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="embeddings")
     model = models.CharField(max_length=200)
     vector = VectorField()
     content_hash = models.CharField(max_length=64)
@@ -165,8 +163,8 @@ class FamilyEmbedding(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["family", "model"], name="unique_family_embedding")
+            models.UniqueConstraint(fields=["team", "model"], name="unique_team_embedding")
         ]
 
     def __str__(self) -> str:
-        return f"{self.family} [{self.model}]"
+        return f"{self.team} [{self.model}]"

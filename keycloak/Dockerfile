@@ -1,4 +1,4 @@
-# Keycloak with the Family Menu Planner login theme and the Apple identity provider.
+# Keycloak with the WeeklyMenu login theme and the Apple identity provider.
 # Multi-arch: the upstream image runs on arm64 (Mac, Raspberry Pi) and amd64.
 
 ARG KEYCLOAK_VERSION=26.8.0

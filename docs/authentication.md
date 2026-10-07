@@ -3,7 +3,7 @@
 Keycloak is the identity provider; Django is its OIDC client. Users sign in with email and
 password, or with Google, Microsoft or Apple, which Keycloak brokers. Access to the application
 is **invitation-only**: anyone can authenticate, but a user sees nothing until they accept an
-invitation to a family.
+invitation to a team.
 
 ## How a login works
 
@@ -52,22 +52,22 @@ SPA "Continue with Google"
 | Who | Can |
 |---|---|
 | Anyone | Create a Keycloak account and sign in |
-| Signed in, no family | See the "waiting for an invitation" screen, accept an invitation link |
-| Family member | Use the family's data |
-| Family owner | Also invite people (`POST /api/invitations/`) and revoke invitations |
-| Staff | Also create families |
+| Signed in, no team | See the "waiting for an invitation" screen, accept an invitation link |
+| Team member | Use the team's data |
+| Team owner | Also invite people (`POST /api/invitations/`) and revoke invitations |
+| Staff | Also create teams |
 
 An invitation is a single-use link, `/invite/<token>`, valid 14 days. Opened while signed out, it
 shows the login screen first and comes back to the invitation afterwards.
 
-**Bootstrap** (the first family has no owner to invite you):
+**Bootstrap** (the first team has no owner to invite you):
 
 ```bash
 # 1. Sign in once through the app, so your user exists.
-# 2. Create the family with yourself as owner (and staff, for the admin). Idempotent: running it
+# 2. Create the team with yourself as owner (and staff, for the admin). Idempotent: running it
 #    again with the same name and owner changes nothing.
-cd backend && uv run python manage.py create_family "Famiglia Rossi" --owner you@example.com --staff
-# In Docker:  docker compose exec backend python manage.py create_family ...
+cd backend && uv run python manage.py create_team "Famiglia Rossi" --owner you@example.com --staff
+# In Docker:  docker compose exec backend python manage.py create_team ...
 ```
 
 Until there is a UI for it, invitations are created from the admin (`/admin/accounts/invitation/`)

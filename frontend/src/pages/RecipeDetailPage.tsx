@@ -30,7 +30,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
 import { api, type KitchenTool, type Recipe, type RecipeLine } from '../api'
-import { useFamily } from '../family'
+import { useTeam } from '../team'
 import { formatQuantity, useDescribeMonths, useLabels } from '../labels'
 
 function LineText({ line, factor }: { line: RecipeLine; factor: number }) {
@@ -69,7 +69,7 @@ export function RecipeDetailPage() {
   const describeMonths = useDescribeMonths()
   const navigate = useNavigate()
   const { id } = useParams()
-  const { family } = useFamily()
+  const { team } = useTeam()
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [error, setError] = useState(false)
   const [people, setPeople] = useState<number | null>(null)
@@ -92,7 +92,7 @@ export function RecipeDetailPage() {
   if (error) return <Alert severity="error">{t('recipe.notFound')}</Alert>
   if (!recipe || people == null) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 6 }} />
 
-  const entry = recipe.book_entries.find((e) => e.family === family.id)
+  const entry = recipe.book_entries.find((e) => e.team === team.id)
   const tools = allTools.filter((tool) => recipe.tools.includes(tool.id))
   const factor = people / recipe.servings
   const suitable = recipe.season_months.months.length === 0
@@ -113,11 +113,11 @@ export function RecipeDetailPage() {
   async function addToBook() {
     const created = await api<{ id: number }>('/recipe-book/', {
       method: 'POST',
-      body: JSON.stringify({ family: family.id, recipe: recipe!.id, status: 'approved' }),
+      body: JSON.stringify({ team: team.id, recipe: recipe!.id, status: 'approved' }),
     })
     setRecipe((r) => r && {
       ...r,
-      book_entries: [...r.book_entries, { id: created.id, family: family.id, status: 'approved', rating: null }],
+      book_entries: [...r.book_entries, { id: created.id, team: team.id, status: 'approved', rating: null }],
     })
   }
 

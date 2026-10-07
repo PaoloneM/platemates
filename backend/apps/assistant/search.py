@@ -20,9 +20,9 @@ from urllib.parse import urlsplit
 from django.db.models import Q
 
 from ai import AIError, ChatProvider, get_chat_provider
-from apps.families.models import RecipeBookEntry
 from apps.recipes.embeddings import similar_recipes
 from apps.recipes.models import Recipe
+from apps.teams.models import RecipeBookEntry
 
 from .web import (
     URL_RE,
@@ -121,7 +121,7 @@ def keyword_matches(user, query: str) -> list[Recipe]:
     return list(recipes.distinct()[:MAX_LOCAL])
 
 
-def local_results(user, family, query: str) -> list[dict[str, Any]]:
+def local_results(user, team, query: str) -> list[dict[str, Any]]:
     """Keyword matches first, then semantically similar recipes."""
     matches = [(recipe, 1.0) for recipe in keyword_matches(user, query)]
     try:
@@ -135,9 +135,9 @@ def local_results(user, family, query: str) -> list[dict[str, Any]]:
         log.info("semantic search unavailable, keywords only: %s", exc)
     matches = matches[:MAX_LOCAL]
     in_book = set(
-        RecipeBookEntry.objects.filter(
-            family=family, recipe__in=[r for r, _ in matches]
-        ).values_list("recipe_id", flat=True)
+        RecipeBookEntry.objects.filter(team=team, recipe__in=[r for r, _ in matches]).values_list(
+            "recipe_id", flat=True
+        )
     )
     return [
         {

@@ -3,7 +3,7 @@
 ## Where the data lives
 
 All persistent data is in one Docker volume, `mymenu_pgdata`: the PostgreSQL server holding both
-the application database (`mymenu`: families, recipes, menus) and Keycloak's (`keycloak`:
+the application database (`mymenu`: teams, recipes, menus) and Keycloak's (`keycloak`:
 accounts, passwords, links to Google/Microsoft/Apple). The volume name is stable because
 `docker-compose.yml` fixes the project name (`name: mymenu`). `mymenu_hf-cache` only caches the
 embedding model and can always be re-downloaded.

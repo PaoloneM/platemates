@@ -19,14 +19,14 @@ export type Me =
         is_staff: boolean
         language: string | null
       }
-      families: { id: number; name: string; role: 'owner' | 'member' }[]
+      teams: { id: number; name: string; role: 'owner' | 'member' }[]
     }
 
 export type LoginOptions = { identity_providers: IdentityProvider[] }
 export type IdentityProvider = 'google' | 'microsoft' | 'apple'
 
 export type InvitationPreview = {
-  family_name: string
+  team_name: string
   role: 'owner' | 'member'
   state: 'pending' | 'accepted' | 'expired' | 'revoked'
   expires_at: string
@@ -67,7 +67,7 @@ export type RecipeLine = {
   note: string
 }
 
-export type BookEntryRef = { id: number; family: number; status: string; rating: number | null }
+export type BookEntryRef = { id: number; team: number; status: string; rating: number | null }
 
 export type Recipe = {
   id: number
@@ -86,7 +86,7 @@ export type Recipe = {
   climate_months: Seasonality
   source_url: string
   visibility: Visibility
-  owner_family: number | null
+  owner_team: number | null
   can_edit: boolean
   book_entries: BookEntryRef[]
   ingredients: RecipeLine[]
@@ -156,7 +156,7 @@ export type SearchResult =
 
 export type AssistantSession = {
   id: number
-  family: number
+  team: number
   mode: AssistantMode
   status: 'open' | 'saved' | 'abandoned'
   recipe: number | null
@@ -176,7 +176,7 @@ export type AssistantSession = {
 
 export type BookEntry = {
   id: number
-  family: number
+  team: number
   recipe: number
   recipe_summary: RecipeSummary
   status: 'candidate' | 'approved' | 'rejected'

@@ -7,7 +7,7 @@ import { useAuth } from '../auth/context'
 import { AuthLayout } from '../components/AuthLayout'
 import { LoginPage } from './LoginPage'
 
-/** `/invite/:token`: sign in first if needed, then show the family and accept. */
+/** `/invite/:token`: sign in first if needed, then show the team and accept. */
 export function InvitePage() {
   const { token = '' } = useParams()
   const { me } = useAuth()
@@ -50,7 +50,7 @@ function AcceptInvitation({ token }: { token: string }) {
   else
     body = (
       <>
-        <Typography>{t('invite.body', { family: invitation.family_name })}</Typography>
+        <Typography>{t('invite.body', { team: invitation.team_name })}</Typography>
         <Button variant="contained" size="large" fullWidth onClick={accept} disabled={busy}>
           {t('invite.accept')}
         </Button>

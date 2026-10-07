@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.core.provenance import Source
 from apps.core.serializers import SeasonalityField, UserDecisionSerializerMixin
-from apps.families.models import Family, Membership, RecipeBookEntry
+from apps.teams.models import Membership, RecipeBookEntry, Team
 
 from .embeddings import refresh_embedding
 from .models import Cuisine, Recipe, RecipeIngredient
@@ -49,12 +49,12 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
     )
     total_minutes = serializers.IntegerField(read_only=True)
     cuisine_name = serializers.CharField(source="cuisine.name", read_only=True, default=None)
-    # On create: the family that owns the recipe and gets it in its recipe book.
-    family = serializers.PrimaryKeyRelatedField(
-        queryset=Family.objects.all(), write_only=True, required=False
+    # On create: the team that owns the recipe and gets it in its recipe book.
+    team = serializers.PrimaryKeyRelatedField(
+        queryset=Team.objects.all(), write_only=True, required=False
     )
     can_edit = serializers.SerializerMethodField()
-    # How the requesting user's families relate to the recipe.
+    # How the requesting user's teams relate to the recipe.
     book_entries = serializers.SerializerMethodField()
 
     class Meta:
@@ -76,14 +76,14 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             "climate_months",
             "source_url",
             "visibility",
-            "owner_family",
-            "family",
+            "owner_team",
+            "team",
             "can_edit",
             "book_entries",
             "ingredients",
             "provenance",
         ]
-        read_only_fields = ["provenance", "owner_family"]
+        read_only_fields = ["provenance", "owner_team"]
         tracked_fields = ["course", "cuisine", "season_months", "climate_months", "tools"]
 
     def _user(self):
@@ -93,47 +93,46 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
         user = self._user()
         return (
             user.is_staff
-            or Membership.objects.filter(user=user, family_id=recipe.owner_family_id).exists()
+            or Membership.objects.filter(user=user, team_id=recipe.owner_team_id).exists()
         )
 
     def get_book_entries(self, recipe) -> list[dict]:
         entries = RecipeBookEntry.objects.filter(
-            recipe=recipe, family__memberships__user=self._user()
+            recipe=recipe, team__memberships__user=self._user()
         )
         return [
-            {"id": e.id, "family": e.family_id, "status": e.status, "rating": e.rating}
-            for e in entries
+            {"id": e.id, "team": e.team_id, "status": e.status, "rating": e.rating} for e in entries
         ]
 
     def validate_steps(self, steps):
         return [step.strip() for step in steps if step and step.strip()]
 
-    def validate_family(self, family):
-        if not Membership.objects.filter(user=self._user(), family=family).exists():
-            raise serializers.ValidationError("Not one of your families.")
-        return family
+    def validate_team(self, team):
+        if not Membership.objects.filter(user=self._user(), team=team).exists():
+            raise serializers.ValidationError("Not one of your teams.")
+        return team
 
     def validate(self, attrs):
-        if self.instance is None and "family" not in attrs:
-            raise serializers.ValidationError({"family": "Required when creating a recipe."})
+        if self.instance is None and "team" not in attrs:
+            raise serializers.ValidationError({"team": "Required when creating a recipe."})
         return attrs
 
     @transaction.atomic
     def create(self, validated_data):
-        family = validated_data.pop("family")
+        team = validated_data.pop("team")
         lines = validated_data.pop("ingredients", [])
-        validated_data["owner_family"] = family
+        validated_data["owner_team"] = team
         recipe = super().create(validated_data)
         self._replace_lines(recipe, lines)
         self._derive(recipe)
         RecipeBookEntry.objects.create(
-            family=family, recipe=recipe, status=RecipeBookEntry.Status.APPROVED
+            team=team, recipe=recipe, status=RecipeBookEntry.Status.APPROVED
         )
         return recipe
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        validated_data.pop("family", None)
+        validated_data.pop("team", None)
         lines = validated_data.pop("ingredients", None)
         recipe = super().update(instance, validated_data)
         if lines is not None:

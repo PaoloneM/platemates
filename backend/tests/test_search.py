@@ -8,9 +8,9 @@ from apps.assistant.agent import run_turn
 from apps.assistant.models import AssistantSession, Mode
 from apps.assistant.web import count_jsonld_recipes
 from apps.catalog.models import Ingredient
-from apps.families.models import Family, RecipeBookEntry
 from apps.recipes import embeddings
 from apps.recipes.models import Recipe, RecipeEmbedding, Visibility
+from apps.teams.models import RecipeBookEntry, Team
 
 # -- embeddings -------------------------------------------------------------------------------
 
@@ -43,16 +43,16 @@ def fake_embeddings(monkeypatch):
     return provider
 
 
-def recipe(family, title, *ingredients, visibility=Visibility.SHARED):
-    r = Recipe.objects.create(title=title, owner_family=family, visibility=visibility)
+def recipe(team, title, *ingredients, visibility=Visibility.SHARED):
+    r = Recipe.objects.create(title=title, owner_team=team, visibility=visibility)
     for name in ingredients:
         r.ingredients.create(ingredient=Ingredient.objects.get_or_create(name=name)[0])
-    RecipeBookEntry.objects.create(family=family, recipe=r, status="approved")
+    RecipeBookEntry.objects.create(team=team, recipe=r, status="approved")
     return r
 
 
-def test_recipes_are_reembedded_only_when_they_change(family, fake_embeddings):
-    soup = recipe(family, "Vellutata di zucca", "zucca")
+def test_recipes_are_reembedded_only_when_they_change(team, fake_embeddings):
+    soup = recipe(team, "Vellutata di zucca", "zucca")
     assert embeddings.refresh_embedding(soup)
     assert embeddings.refresh_embedding(soup)
     assert fake_embeddings.calls == 1  # unchanged document: skipped
@@ -63,22 +63,22 @@ def test_recipes_are_reembedded_only_when_they_change(family, fake_embeddings):
     assert RecipeEmbedding.objects.get(recipe=soup).model == "fake-embeddings"
 
 
-def test_a_down_embedding_service_never_breaks_saving(family):
-    soup = recipe(family, "Vellutata di zucca", "zucca")
+def test_a_down_embedding_service_never_breaks_saving(team):
+    soup = recipe(team, "Vellutata di zucca", "zucca")
     assert embeddings.refresh_embedding(soup, DownEmbeddings()) is False
     assert not RecipeEmbedding.objects.exists()
 
 
-def test_similar_recipes_respect_visibility(family, user, fake_embeddings):
-    other = Family.objects.create(name="Other")
-    pumpkin = recipe(family, "Risotto alla zucca", "zucca")
+def test_similar_recipes_respect_visibility(team, user, fake_embeddings):
+    other = Team.objects.create(name="Other")
+    pumpkin = recipe(team, "Risotto alla zucca", "zucca")
     secret = recipe(other, "Zucca segreta", "zucca", visibility=Visibility.PRIVATE)
-    recipe(family, "Torta", "dolce")
+    recipe(team, "Torta", "dolce")
     for r in Recipe.objects.all():
         embeddings.refresh_embedding(r)
     found = [r for r, _ in embeddings.similar_recipes(user, "qualcosa con la zucca")]
     assert pumpkin in found
-    assert secret not in found  # another family's private recipe
+    assert secret not in found  # another team's private recipe
 
 
 # -- local search -----------------------------------------------------------------------------
@@ -88,20 +88,20 @@ def test_keywords_are_rough_stems_without_filler():
     assert search.keywords("qualcosa con le patate e i porri") == ["patat", "porr"]
 
 
-def test_all_keywords_must_match(family, user, fake_embeddings):
-    recipe(family, "Vellutata di porri", "porro", "patata", "paprika dolce")
-    recipe(family, "Purè", "patata")
-    titles = lambda q: [r["title"] for r in search.local_results(user, family, q)]  # noqa: E731
+def test_all_keywords_must_match(team, user, fake_embeddings):
+    recipe(team, "Vellutata di porri", "porro", "patata", "paprika dolce")
+    recipe(team, "Purè", "patata")
+    titles = lambda q: [r["title"] for r in search.local_results(user, team, q)]  # noqa: E731
     assert titles("patate e porri")[0] == "Vellutata di porri"
     # "dolce" matches the paprika, but "cioccolato" matches nothing: no keyword match.
     assert "Vellutata di porri" not in titles("un dolce al cioccolato")
 
 
-def test_local_results_tell_book_from_shared(family, user, fake_embeddings):
-    other = Family.objects.create(name="Other")
-    mine = recipe(family, "Zucca al forno", "zucca")
+def test_local_results_tell_book_from_shared(team, user, fake_embeddings):
+    other = Team.objects.create(name="Other")
+    mine = recipe(team, "Zucca al forno", "zucca")
     theirs = recipe(other, "Zucca in agrodolce", "zucca")
-    kinds = {r["recipe"]: r["kind"] for r in search.local_results(user, family, "zucca")}
+    kinds = {r["recipe"]: r["kind"] for r in search.local_results(user, team, "zucca")}
     assert kinds == {mine.pk: "book", theirs.pk: "shared"}
 
 
@@ -193,12 +193,12 @@ def test_collection_pages_declare_several_recipes():
 
 
 @pytest.fixture
-def session(family, user):
-    return AssistantSession.objects.create(family=family, user=user, mode=Mode.SEARCH)
+def session(team, user):
+    return AssistantSession.objects.create(team=team, user=user, mode=Mode.SEARCH)
 
 
 def test_a_search_turn_records_results(session, fake_embeddings):
-    recipe(session.family, "Zucca al forno", "zucca")
+    recipe(session.team, "Zucca al forno", "zucca")
     for r in Recipe.objects.all():
         embeddings.refresh_embedding(r)
     chat = FakeChat(dishes("Risotto alla zucca"))

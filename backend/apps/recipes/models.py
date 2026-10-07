@@ -1,7 +1,7 @@
 """Recipes: structured, scalable, with two-level seasonality.
 
-A `Recipe` is shared across families; how a given family relates to it (in its recipe book or still
-a candidate, how much they like it) lives in `families.RecipeBookEntry`.
+A `Recipe` is shared across teams; how a given team relates to it (in its recipe book or still
+a candidate, how much they like it) lives in `teams.RecipeBookEntry`.
 """
 
 from __future__ import annotations
@@ -41,24 +41,24 @@ class Course(models.TextChoices):
 
 
 class Visibility(models.TextChoices):
-    # Visible to every family: feeds collaborative recommendation. The default.
-    SHARED = "shared", _("Shared with other families")
-    # Visible only to the owner family.
-    PRIVATE = "private", _("Private to the family")
+    # Visible to every team: feeds collaborative recommendation. The default.
+    SHARED = "shared", _("Shared with other teams")
+    # Visible only to the owner team.
+    PRIVATE = "private", _("Private to the team")
 
 
 class RecipeQuerySet(models.QuerySet):
     def visible_to(self, user) -> RecipeQuerySet:
-        """Shared recipes, plus the private ones of the user's families."""
+        """Shared recipes, plus the private ones of the user's teams."""
         return self.filter(
-            models.Q(visibility=Visibility.SHARED) | models.Q(owner_family__memberships__user=user)
+            models.Q(visibility=Visibility.SHARED) | models.Q(owner_team__memberships__user=user)
         ).distinct()
 
     def editable_by(self, user) -> RecipeQuerySet:
-        """Only the family that owns a recipe edits it; staff can edit everything."""
+        """Only the team that owns a recipe edits it; staff can edit everything."""
         if user.is_staff:
             return self
-        return self.filter(owner_family__memberships__user=user).distinct()
+        return self.filter(owner_team__memberships__user=user).distinct()
 
 
 class Recipe(ProvenanceMixin, models.Model):
@@ -66,9 +66,9 @@ class Recipe(ProvenanceMixin, models.Model):
     description = models.TextField(blank=True)
     # The method, one entry per step.
     steps = ArrayField(models.TextField(), default=list, blank=True)
-    # The family that created the recipe and may edit it. Null for recipes seeded by staff.
-    owner_family = models.ForeignKey(
-        "families.Family",
+    # The team that created the recipe and may edit it. Null for recipes seeded by staff.
+    owner_team = models.ForeignKey(
+        "families.Team",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

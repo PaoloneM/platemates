@@ -1,7 +1,7 @@
 """Shared catalogs: normalized ingredients and kitchen tools.
 
-These are global, not per family: one "tomato" for everyone is what makes recipes comparable across
-families and keeps the shopping list free of duplicates.
+These are global, not per team: one "tomato" for everyone is what makes recipes comparable across
+teams and keeps the shopping list free of duplicates.
 """
 
 from __future__ import annotations
@@ -94,7 +94,7 @@ class Ingredient(ProvenanceMixin, models.Model):
 
 
 class KitchenTool(models.Model):
-    """A piece of equipment a recipe may need and a family may own."""
+    """A piece of equipment a recipe may need and a team may own."""
 
     name = models.CharField(max_length=80, unique=True)
     # Stable code of the tools the app ships with ("conventional_oven"): the interface shows

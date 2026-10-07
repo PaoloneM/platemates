@@ -1,4 +1,4 @@
-# Family Menu Planner. Runs unchanged on an ARM64 Mac, a Raspberry Pi or an x86 cloud VM.
+# WeeklyMenu. Runs unchanged on an ARM64 Mac, a Raspberry Pi or an x86 cloud VM.
 #
 # The generative LLM is NOT part of this stack: it is an external OpenAI-compatible service
 # (Unsloth Studio on the host by default) reached through LLM_BASE_URL.

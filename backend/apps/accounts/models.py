@@ -1,7 +1,7 @@
-"""Who users are (an identity at Keycloak) and how they get into a family (an invitation).
+"""Who users are (an identity at Keycloak) and how they get into a team (an invitation).
 
 Access is invitation-only: anyone can authenticate at Keycloak, but a user sees nothing until they
-accept an invitation to a family. Families themselves are created by staff.
+accept an invitation to a team. Teams themselves are created by staff.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from apps.families.models import Family, Membership
+from apps.teams.models import Membership, Team
 
 INVITATION_VALIDITY = dt.timedelta(days=14)
 
@@ -76,7 +76,7 @@ def default_expiry() -> dt.datetime:
 
 
 class Invitation(models.Model):
-    """A single-use link that adds whoever accepts it to a family."""
+    """A single-use link that adds whoever accepts it to a team."""
 
     class State(models.TextChoices):
         PENDING = "pending", _("Pending")
@@ -84,7 +84,7 @@ class Invitation(models.Model):
         EXPIRED = "expired", _("Expired")
         REVOKED = "revoked", _("Revoked")
 
-    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="invitations")
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="invitations")
     token = models.CharField(max_length=64, unique=True, default=new_token, editable=False)
     role = models.CharField(
         max_length=10, choices=Membership.Role.choices, default=Membership.Role.MEMBER
@@ -110,7 +110,7 @@ class Invitation(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        return f"Invitation to {self.family} ({self.state})"
+        return f"Invitation to {self.team} ({self.state})"
 
     @property
     def state(self) -> str:
@@ -123,11 +123,11 @@ class Invitation(models.Model):
         return self.State.PENDING
 
     def accept(self, user) -> Membership:
-        """Add `user` to the family. Raises `ValueError` if the invitation is no longer usable."""
+        """Add `user` to the team. Raises `ValueError` if the invitation is no longer usable."""
         if self.state != self.State.PENDING:
             raise ValueError(f"Invitation is {self.state}.")
         membership, _created = Membership.objects.get_or_create(
-            user=user, family=self.family, defaults={"role": self.role}
+            user=user, team=self.team, defaults={"role": self.role}
         )
         self.accepted_at = timezone.now()
         self.accepted_by = user

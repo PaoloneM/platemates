@@ -115,12 +115,12 @@ def realm_representation(config: KeycloakConfig) -> dict[str, Any]:
     realm: dict[str, Any] = {
         "realm": config.realm,
         "enabled": True,
-        "displayName": "Family Menu Planner",
+        "displayName": "WeeklyMenu",
         "loginTheme": LOGIN_THEME,
         "internationalizationEnabled": True,
         "supportedLocales": SUPPORTED_LOCALES,
         "defaultLocale": DEFAULT_LOCALE,
-        # Anyone may create an account: getting into a family still takes an invitation, which
+        # Anyone may create an account: getting into a team still takes an invitation, which
         # the application enforces. Registration is what lets an invitee without a Google,
         # Microsoft or Apple account sign up with email and password.
         "registrationAllowed": True,
@@ -139,7 +139,7 @@ def realm_representation(config: KeycloakConfig) -> dict[str, Any]:
             "host": smtp.host,
             "port": smtp.port,
             "from": smtp.sender,
-            "fromDisplayName": "Family Menu Planner",
+            "fromDisplayName": "WeeklyMenu",
             "starttls": str(smtp.starttls).lower(),
             "auth": str(bool(smtp.user)).lower(),
             "user": smtp.user,
@@ -151,7 +151,7 @@ def realm_representation(config: KeycloakConfig) -> dict[str, Any]:
 def client_representation(config: KeycloakConfig) -> dict[str, Any]:
     return {
         "clientId": config.client_id,
-        "name": "Family Menu Planner backend",
+        "name": "WeeklyMenu backend",
         "protocol": "openid-connect",
         "enabled": True,
         "publicClient": False,

@@ -33,8 +33,8 @@ def merge_ingredients(source: Ingredient, target: Ingredient) -> dict[str, int]:
     A recipe that already uses both keeps the target's line; when both are measured in the same
     unit, the quantities are added up.
     """
-    from apps.families.models import Preference
     from apps.recipes.models import RecipeIngredient
+    from apps.teams.models import Preference
 
     if source.pk == target.pk:
         raise ValueError("An ingredient cannot be merged into itself.")

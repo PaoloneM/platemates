@@ -22,7 +22,7 @@ import { Link as RouterLink } from 'react-router'
 import { csrfToken } from '../api'
 import { useAuth } from '../auth/context'
 import { saveLanguage } from '../auth/language'
-import { useFamily } from '../family'
+import { useTeam } from '../team'
 import { supportedLanguages } from '../i18n'
 import { Logo } from './Logo'
 
@@ -91,12 +91,12 @@ function UserMenu() {
   )
 }
 
-function FamilySwitcher() {
-  const { family, families, select } = useFamily()
-  if (families.length < 2) {
+function TeamSwitcher() {
+  const { team, teams, select } = useTeam()
+  if (teams.length < 2) {
     return (
       <Typography variant="h3" component="span" noWrap>
-        {family.name}
+        {team.name}
       </Typography>
     )
   }
@@ -105,11 +105,11 @@ function FamilySwitcher() {
       size="small"
       variant="standard"
       disableUnderline
-      value={family.id}
+      value={team.id}
       onChange={(e) => select(Number(e.target.value))}
       sx={{ fontWeight: 600, fontSize: '1.1rem' }}
     >
-      {families.map((f) => (
+      {teams.map((f) => (
         <MenuItem key={f.id} value={f.id}>
           {f.name}
         </MenuItem>
@@ -127,7 +127,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Logo size={32} />
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <FamilySwitcher />
+            <TeamSwitcher />
           </Box>
           <UserMenu />
         </Toolbar>

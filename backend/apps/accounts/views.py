@@ -5,8 +5,8 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from apps.families.models import Membership
-from apps.families.permissions import FamilyScopedMixin
+from apps.teams.models import Membership
+from apps.teams.permissions import TeamScopedMixin
 
 from .models import Invitation, UserProfile, supported_language
 from .oidc import enabled_identity_providers
@@ -17,7 +17,7 @@ from .serializers import InvitationPreviewSerializer, InvitationSerializer
 @api_view(["GET", "PATCH"])
 @permission_classes([AllowAny])
 def me(request):
-    """Who is signed in, and into which families. Also sets the CSRF cookie the SPA needs.
+    """Who is signed in, and into which teams. Also sets the CSRF cookie the SPA needs.
 
     Answers 200 for anonymous visitors too (`authenticated: false`), so the SPA can tell "not
     signed in" from "something is broken". PATCH updates the user's preferences (`language`).
@@ -34,7 +34,7 @@ def me(request):
             raise serializers.ValidationError({"language": "Unsupported language."})
         profile.language = language
         profile.save(update_fields=["language"])
-    memberships = Membership.objects.filter(user=user).select_related("family")
+    memberships = Membership.objects.filter(user=user).select_related("team")
     return Response(
         {
             "authenticated": True,
@@ -46,9 +46,7 @@ def me(request):
                 "is_staff": user.is_staff,
                 "language": profile.language or None,
             },
-            "families": [
-                {"id": m.family_id, "name": m.family.name, "role": m.role} for m in memberships
-            ],
+            "teams": [{"id": m.team_id, "name": m.team.name, "role": m.role} for m in memberships],
         }
     )
 
@@ -61,36 +59,36 @@ def login_options(request):
 
 
 class InvitationViewSet(
-    FamilyScopedMixin,
+    TeamScopedMixin,
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Owners invite people to their family. Deleting an invitation revokes it."""
+    """Owners invite people to their team. Deleting an invitation revokes it."""
 
-    queryset = Invitation.objects.select_related("family")
+    queryset = Invitation.objects.select_related("team")
     serializer_class = InvitationSerializer
 
-    def check_family(self, family):
-        super().check_family(family)
+    def check_team(self, team):
+        super().check_team(team)
         if not Membership.objects.filter(
-            user=self.request.user, family=family, role=Membership.Role.OWNER
+            user=self.request.user, team=team, role=Membership.Role.OWNER
         ).exists():
-            raise serializers.ValidationError({"family": "Only owners can invite."})
+            raise serializers.ValidationError({"team": "Only owners can invite."})
 
     def perform_create(self, serializer):
-        self.check_family(serializer.validated_data["family"])
+        self.check_team(serializer.validated_data["team"])
         serializer.save(invited_by=self.request.user)
 
     def perform_destroy(self, instance):
-        self.check_family(instance.family)
+        self.check_team(instance.team)
         if instance.state == Invitation.State.PENDING:
             instance.revoked_at = timezone.now()
             instance.save(update_fields=["revoked_at"])
 
     def _by_token(self, token):
-        return Invitation.objects.select_related("family").filter(token=token or "").first()
+        return Invitation.objects.select_related("team").filter(token=token or "").first()
 
     @action(
         detail=False,
@@ -115,4 +113,4 @@ class InvitationViewSet(
             return Response(
                 {"detail": str(exc), "state": invitation.state}, status=status.HTTP_409_CONFLICT
             )
-        return Response({"family": membership.family_id, "role": membership.role})
+        return Response({"team": membership.team_id, "role": membership.role})

@@ -17,13 +17,13 @@ class SlotDishInline(admin.TabularInline):
 
 @admin.register(WeeklyMenu)
 class WeeklyMenuAdmin(admin.ModelAdmin):
-    list_display = ["family", "week_start", "status"]
-    list_filter = ["family", "status"]
+    list_display = ["team", "week_start", "status"]
+    list_filter = ["team", "status"]
     inlines = [MealSlotInline]
 
 
 @admin.register(MealSlot)
 class MealSlotAdmin(admin.ModelAdmin):
     list_display = ["menu", "date", "meal", "people", "outcome"]
-    list_filter = ["menu__family", "outcome"]
+    list_filter = ["menu__team", "outcome"]
     inlines = [SlotDishInline]

@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Menu di famiglia",
+    "title": "WeeklyMenu",
     "language": "Lingua"
   },
   "health": {
@@ -34,24 +34,19 @@
     "error": "Qualcosa è andato storto. Riprova."
   },
   "auth": {
-    "tagline": "Il menu della settimana e la lista della spesa, pensati per la tua famiglia.",
+    "tagline": "Il menu della settimana e la lista della spesa, per chi mangia insieme: famiglia, coinquilini, amici, squadra o ufficio.",
     "continueWith": "Continua con {{provider}}",
     "or": "oppure",
     "signInWithEmail": "Accedi con email e password",
     "createAccount": "Crea un account",
-    "invitationOnly": "L'accesso è su invito: dopo l'accesso potrai entrare nella famiglia che ti ha invitato.",
-    "invitedSignIn": "Sei stato invitato in una famiglia. Accedi o crea un account per accettare l'invito.",
+    "invitationOnly": "L'accesso è su invito: dopo l'accesso potrai entrare nel team che ti ha invitato.",
+    "invitedSignIn": "Sei stato invitato in un team. Accedi o crea un account per accettare l'invito.",
     "failed": "Accesso non riuscito. Riprova.",
     "logout": "Esci"
   },
-  "noFamily": {
-    "title": "Manca solo l'invito",
-    "body": "Hai effettuato l'accesso come {{email}}, ma il tuo account non fa ancora parte di nessuna famiglia.",
-    "hint": "Chiedi a chi gestisce la tua famiglia di inviarti un link di invito, poi aprilo da questo browser."
-  },
   "invite": {
     "title": "Invito",
-    "body": "Sei stato invitato a unirti alla famiglia «{{family}}».",
+    "body": "Sei stato invitato a unirti al team «{{team}}».",
     "accept": "Accetta e entra",
     "state": {
       "accepted": "Questo invito è già stato usato.",
@@ -135,7 +130,7 @@
     "addToBook": "Aggiungi al ricettario",
     "removeTitle": "Rimuovere la ricetta?",
     "removePrivate": "La ricetta è privata: rimuovendola dal ricettario verrà eliminata.",
-    "removeShared": "La ricetta resta disponibile alle altre famiglie, ma non sarà più nel vostro ricettario.",
+    "removeShared": "La ricetta resta disponibile agli altri team, ma non sarà più nel vostro ricettario.",
     "tools": "Attrezzi"
   },
   "editor": {
@@ -169,9 +164,8 @@
     "climateSeason": "Adatta al clima",
     "climateHint": "Quando il piatto è adatto al tempo che fa (una zuppa calda non è da agosto).",
     "sharing": "Condivisione",
-    "shareWithFamilies": "Condivisa con le altre famiglie",
-    "sharedHint": "Le altre famiglie potranno vederla e aggiungerla al loro ricettario; solo voi potrete modificarla.",
-    "privateHint": "Solo la vostra famiglia la vede.",
+    "sharedHint": "Gli altri team potranno vederla e aggiungerla al loro ricettario; solo voi potrete modificarla.",
+    "privateHint": "La vede solo il vostro team.",
     "source": "Link alla fonte",
     "required": "Obbligatorio",
     "fromAssistant": "Bozza preparata dall'assistente: controlla ingredienti, dosi e stagionalità prima di salvare.",
@@ -181,11 +175,12 @@
     "similarMatch": "Abbinato a «{{match}}» (proposto: «{{name}}»): verifica",
     "unresolved": "Alcuni ingredienti proposti non sono ancora nel catalogo: creali o scegline uno esistente.",
     "sourcePhotos": "Foto originali",
-    "readFromPhoto": "Testo letto dalla foto"
+    "readFromPhoto": "Testo letto dalla foto",
+    "shareWithTeams": "Condivisa con gli altri team"
   },
   "ingredient": {
     "newTitle": "Nuovo ingrediente",
-    "sharedHint": "Gli ingredienti sono comuni a tutte le famiglie: usa un nome semplice, al singolare.",
+    "sharedHint": "Gli ingredienti sono comuni a tutti i team: usa un nome semplice, al singolare.",
     "name": "Nome",
     "nameHint": "Es. pomodoro, non «pomodori maturi» (i dettagli vanno nella nota); le conserve sono a parte: «pomodoro pelato»",
     "category": "Categoria",
@@ -195,8 +190,8 @@
     "typeToSearch": "Scrivi per cercare",
     "suggested": "Categoria, unità e stagione sono suggerite dall'assistente: controllale.",
     "editTitle": "Modifica ingrediente",
-    "editHint_one": "Usato da {{count}} ricetta: le modifiche valgono per tutte le famiglie, e la stagione delle ricette verrà ricalcolata.",
-    "editHint_other": "Usato da {{count}} ricette: le modifiche valgono per tutte le famiglie, e la stagione delle ricette verrà ricalcolata.",
+    "editHint_one": "Usato da {{count}} ricetta: le modifiche valgono per tutti i team, e la stagione delle ricette verrà ricalcolata.",
+    "editHint_other": "Usato da {{count}} ricette: le modifiche valgono per tutti i team, e la stagione delle ricette verrà ricalcolata.",
     "aliases": "Sinonimi",
     "aliasesHint": "Altri nomi con cui viene scritto (plurale, varianti): premi Invio dopo ognuno",
     "exists": "Esiste già un ingrediente con questo nome o sinonimo."
@@ -211,7 +206,7 @@
     },
     "intro": {
       "tell": "Raccontami la ricetta come la racconteresti a un amico: ingredienti, dosi se le sai, come la prepari. Preparo io la bozza da controllare.",
-      "search": "Dimmi cosa ti va: un ingrediente, un'occasione, un vincolo («un primo veloce con la zucca, per bambini»). Cerco nel vostro ricettario, tra le ricette delle altre famiglie e sul web. Puoi poi affinare la ricerca.",
+      "search": "Dimmi cosa ti va: un ingrediente, un'occasione, un vincolo («un primo veloce con la zucca, per bambini»). Cerco nel vostro ricettario, tra le ricette degli altri team e sul web. Puoi poi affinare la ricerca.",
       "link": "Incollami il link della pagina con la ricetta: la leggo e preparo la bozza da controllare. Funziona anche incollando un link in «Raccontami».",
       "photo": "Mandami una foto della ricetta: una pagina di libro, un biglietto scritto a mano, uno screenshot. Se è su più pagine, manda le foto una dopo l'altra. Leggo il testo e preparo la bozza da controllare."
     },
@@ -253,7 +248,6 @@
   },
   "search": {
     "inBook": "Nel vostro ricettario",
-    "fromFamilies": "Dalle altre famiglie",
     "fromWeb": "Dal web",
     "open": "Apri",
     "view": "Vedi",
@@ -263,7 +257,8 @@
       "web_search_unavailable": "La ricerca sul web non è disponibile con il modello configurato.",
       "web_search_empty": "Sul web non ho trovato pagine con una ricetta singola. Prova a nominare un piatto preciso.",
       "web_search_failed": "La ricerca sul web non ha risposto. Riprova tra poco."
-    }
+    },
+    "fromTeams": "Dagli altri team"
   },
   "tool": {
     "air_fryer": "Friggitrice ad aria",
@@ -280,7 +275,7 @@
     "steam_oven": "Forno a vapore",
     "newTitle": "Nuovo attrezzo",
     "name": "Nome",
-    "sharedHint": "Gli attrezzi sono comuni a tutte le famiglie: usa un nome semplice.",
+    "sharedHint": "Gli attrezzi sono comuni a tutti i team: usa un nome semplice.",
     "heatsKitchen": "Scalda la cucina",
     "heatsKitchenHint": "Come il forno o la friggitrice: d'estate i menu ne terranno conto.",
     "addNamed": "Aggiungi «{{name}}» come nuovo attrezzo",
@@ -311,5 +306,10 @@
       "deleteHint": "L'ingrediente verrà tolto dal catalogo comune.",
       "inUse": "Non si può eliminare: è usato da queste ricette. Puoi unirlo a un altro ingrediente."
     }
+  },
+  "noTeam": {
+    "title": "Manca solo l'invito",
+    "body": "Hai effettuato l'accesso come {{email}}, ma il tuo account non fa ancora parte di nessun team.",
+    "hint": "Chiedi a chi gestisce il tuo team di inviarti un link di invito, poi aprilo da questo browser."
   }
 }

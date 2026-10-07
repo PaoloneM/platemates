@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useNavigate } from 'react-router'
 import { api, type BookEntry, type Paginated } from '../api'
 import { AddRecipeFab } from '../components/AddRecipeFab'
-import { useFamily } from '../family'
+import { useTeam } from '../team'
 import { COURSES, useLabels } from '../labels'
 
 const CURRENT_MONTH = new Date().getMonth() + 1
@@ -83,7 +83,7 @@ export function RecipeBookPage() {
   const { t } = useTranslation()
   const labels = useLabels()
   const navigate = useNavigate()
-  const { family } = useFamily()
+  const { team } = useTeam()
   const [search, setSearch] = useState('')
   const [course, setCourse] = useState<string | null>(null)
   const [entries, setEntries] = useState<BookEntry[] | null>(null)
@@ -91,7 +91,7 @@ export function RecipeBookPage() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    const params = new URLSearchParams({ family: String(family.id), status: 'approved' })
+    const params = new URLSearchParams({ team: String(team.id), status: 'approved' })
     if (search.trim()) params.set('search', search.trim())
     if (course) params.set('course', course)
     let cancelled = false
@@ -109,7 +109,7 @@ export function RecipeBookPage() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [family.id, search, course])
+  }, [team.id, search, course])
 
   async function loadMore() {
     if (!next) return

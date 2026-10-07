@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Family, FamilyMember, Membership, Preference, RecipeBookEntry
+from .models import Member, Membership, Preference, RecipeBookEntry, Team
 
 
 class MembershipInline(admin.TabularInline):
@@ -8,8 +8,8 @@ class MembershipInline(admin.TabularInline):
     extra = 0
 
 
-class FamilyMemberInline(admin.TabularInline):
-    model = FamilyMember
+class MemberInline(admin.TabularInline):
+    model = Member
     extra = 0
 
 
@@ -19,15 +19,15 @@ class PreferenceInline(admin.TabularInline):
     extra = 0
 
 
-@admin.register(Family)
-class FamilyAdmin(admin.ModelAdmin):
+@admin.register(Team)
+class TeamAdmin(admin.ModelAdmin):
     list_display = ["name", "created_at"]
     filter_horizontal = ["tools"]
-    inlines = [MembershipInline, FamilyMemberInline, PreferenceInline]
+    inlines = [MembershipInline, MemberInline, PreferenceInline]
 
 
 @admin.register(RecipeBookEntry)
 class RecipeBookEntryAdmin(admin.ModelAdmin):
-    list_display = ["family", "recipe", "status", "rating"]
-    list_filter = ["family", "status"]
+    list_display = ["team", "recipe", "status", "rating"]
+    list_filter = ["team", "status"]
     autocomplete_fields = ["recipe"]

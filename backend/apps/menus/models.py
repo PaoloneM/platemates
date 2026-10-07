@@ -13,8 +13,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from apps.families.models import Family, Meal
 from apps.recipes.models import Recipe
+from apps.teams.models import Meal, Team
 
 
 class WeeklyMenu(models.Model):
@@ -23,7 +23,7 @@ class WeeklyMenu(models.Model):
         APPROVED = "approved", _("Approved")
         ARCHIVED = "archived", _("Archived")
 
-    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="menus")
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="menus")
     # Always a Monday.
     week_start = models.DateField()
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
@@ -35,24 +35,24 @@ class WeeklyMenu(models.Model):
     class Meta:
         ordering = ["-week_start"]
         constraints = [
-            models.UniqueConstraint(fields=["family", "week_start"], name="unique_family_week")
+            models.UniqueConstraint(fields=["team", "week_start"], name="unique_team_week")
         ]
 
     def __str__(self) -> str:
-        return f"{self.family} - week of {self.week_start}"
+        return f"{self.team} - week of {self.week_start}"
 
     def clean(self) -> None:
         if self.week_start and self.week_start.weekday() != 0:
             raise ValidationError({"week_start": "A week starts on Monday."})
 
     def create_empty_slots(self) -> list[MealSlot]:
-        """Create the 14 slots, prefilled with the family's default number of diners."""
+        """Create the 14 slots, prefilled with the team's default number of diners."""
         slots = [
             MealSlot(
                 menu=self,
                 date=self.week_start + dt.timedelta(days=offset),
                 meal=meal,
-                people=self.family.default_people_for(meal),
+                people=self.team.default_people_for(meal),
             )
             for offset in range(7)
             for meal in Meal.values

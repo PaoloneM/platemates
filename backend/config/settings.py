@@ -1,8 +1,8 @@
-"""Django settings for the Family Menu Planner backend.
+"""Django settings for the WeeklyMenu backend.
 
 Every value that differs between deployments (local Mac, Raspberry Pi, cloud VM) comes from the
 environment, loaded from a gitignored `.env` at the repository root. Nothing here is specific to a
-family or to an LLM provider.
+team or to an LLM provider.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.catalog",
     "apps.recipes",
-    "apps.families",
+    "apps.teams",
     "apps.menus",
     "apps.assistant",
 ]

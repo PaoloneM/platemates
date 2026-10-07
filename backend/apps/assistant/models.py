@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from apps.families.models import Family
+from apps.teams.models import Team
 
 
 class Mode(models.TextChoices):
@@ -27,7 +27,7 @@ class AssistantSession(models.Model):
         SAVED = "saved", _("Saved as a recipe")
         ABANDONED = "abandoned", _("Abandoned")
 
-    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="assistant_sessions")
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="assistant_sessions")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="assistant_sessions"
     )

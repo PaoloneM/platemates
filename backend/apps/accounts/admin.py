@@ -12,8 +12,8 @@ class OIDCIdentityAdmin(admin.ModelAdmin):
 
 @admin.register(Invitation)
 class InvitationAdmin(admin.ModelAdmin):
-    list_display = ["family", "role", "note", "state", "created_at", "expires_at"]
-    list_filter = ["family"]
+    list_display = ["team", "role", "note", "state", "created_at", "expires_at"]
+    list_filter = ["team"]
     readonly_fields = ["token", "accepted_at", "accepted_by"]
 
 

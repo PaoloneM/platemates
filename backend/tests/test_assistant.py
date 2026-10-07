@@ -115,8 +115,8 @@ def test_matching_exact_alias_and_similar(db):
 
 
 @pytest.fixture
-def session(family, user):
-    return AssistantSession.objects.create(family=family, user=user)
+def session(team, user):
+    return AssistantSession.objects.create(team=team, user=user)
 
 
 def test_a_proposal_becomes_the_draft(session):
@@ -178,12 +178,10 @@ def fake_chat(monkeypatch):
     return install
 
 
-def test_conversation_through_the_api(api, family, fake_chat):
+def test_conversation_through_the_api(api, team, fake_chat):
     Ingredient.objects.create(name="uova")
     fake_chat(ChatResult(content="Quante persone?"), proposing(DRAFT))
-    created = api.post(
-        "/api/assistant/sessions/", {"family": family.pk, "mode": "tell"}, format="json"
-    )
+    created = api.post("/api/assistant/sessions/", {"team": team.pk, "mode": "tell"}, format="json")
     assert created.status_code == 201
     url = f"/api/assistant/sessions/{created.json()['id']}/"
 
@@ -200,33 +198,33 @@ def test_conversation_through_the_api(api, family, fake_chat):
     assert second["matches"][2]["match"] is None
 
 
-def test_unknown_modes_are_refused(api, family):
+def test_unknown_modes_are_refused(api, team):
     response = api.post(
-        "/api/assistant/sessions/", {"family": family.pk, "mode": "dance"}, format="json"
+        "/api/assistant/sessions/", {"team": team.pk, "mode": "dance"}, format="json"
     )
     assert response.status_code == 400
 
 
-def test_sessions_are_private_to_their_author(api, family, user):
-    session = AssistantSession.objects.create(family=family, user=user)
+def test_sessions_are_private_to_their_author(api, team, user):
+    session = AssistantSession.objects.create(team=team, user=user)
     other = get_user_model().objects.create_user("eve")
     client = APIClient()
     client.force_authenticate(other)
     assert client.get(f"/api/assistant/sessions/{session.pk}/").status_code == 404
 
 
-def test_model_outage_is_a_503(api, family, user, fake_chat):
+def test_model_outage_is_a_503(api, team, user, fake_chat):
     fake_chat(AIUnavailableError("down"))
-    session = AssistantSession.objects.create(family=family, user=user)
+    session = AssistantSession.objects.create(team=team, user=user)
     response = api.post(
         f"/api/assistant/sessions/{session.pk}/messages/", {"text": "x"}, format="json"
     )
     assert response.status_code == 503
 
 
-def test_closing_links_the_saved_recipe(api, family, user):
-    session = AssistantSession.objects.create(family=family, user=user)
-    recipe = Recipe.objects.create(title="x", owner_family=family)
+def test_closing_links_the_saved_recipe(api, team, user):
+    session = AssistantSession.objects.create(team=team, user=user)
+    recipe = Recipe.objects.create(title="x", owner_team=team)
     closed = api.post(
         f"/api/assistant/sessions/{session.pk}/close/", {"recipe": recipe.pk}, format="json"
     ).json()

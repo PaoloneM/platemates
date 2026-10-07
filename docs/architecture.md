@@ -5,19 +5,47 @@ integration.
 
 ## Components
 
-```
- browser ──► frontend (nginx: SPA + reverse proxy) ──► backend (Django + DRF) ──► PostgreSQL + pgvector
-    │                                                     │
-    └── /auth (same origin) ──► Keycloak ◄── OIDC ────────┤
-                                                          ├──► generative LLM   (OpenAI-compatible; Unsloth Studio on the host)
-                                                          └──► embedding model  (OpenAI-compatible; services/embeddings by default)
+```mermaid
+flowchart LR
+    user["Browser or phone"]
+
+    subgraph compose["Docker Compose (project mymenu)"]
+        nginx["frontend<br/>nginx: SPA + reverse proxy<br/>:80 = Mac :8080, :443 = LAN :8443"]
+        backend["backend<br/>Django + DRF, gunicorn"]
+        keycloak["keycloak<br/>/auth, theme mymenu"]
+        db[("db<br/>PostgreSQL 17 + pgvector<br/>databases mymenu, keycloak")]
+        embeddings["embeddings<br/>FastAPI + sentence-transformers"]
+        jobs["one-shot jobs<br/>db-init, keycloak-setup, embed-recipes"]
+    end
+
+    subgraph host["Host machine"]
+        studio["Unsloth Studio :8888<br/>chat, vision, web search"]
+    end
+
+    web[("Public recipe websites")]
+    idp["Google, Microsoft, Apple"]
+
+    user --> nginx
+    nginx -- "/api /oidc /admin /static" --> backend
+    nginx -- "/auth (admin console refused)" --> keycloak
+    backend -- "OIDC code exchange, keys" --> keycloak
+    backend --> db
+    keycloak --> db
+    backend -- "OpenAI-compatible chat" --> studio
+    backend -- "/v1/embeddings" --> embeddings
+    backend -- "link import and result checks,<br/>public addresses only" --> web
+    studio -- "web_search tool" --> web
+    keycloak -. "identity brokering" .-> idp
+    jobs -.-> db
+    jobs -.-> keycloak
+    jobs -.-> embeddings
 ```
 
 | Directory | What | Runs as |
 |---|---|---|
 | `backend/` | Django project `config`, domain apps in `apps/`, AI adapters in `ai/` | `backend` container, or `uv run` natively |
 | `frontend/` | React + TypeScript SPA (Vite) | `frontend` container (nginx), or `npm run dev` |
-| `services/embeddings/` | OpenAI-compatible `/v1/embeddings` around sentence-transformers | `embeddings` container (compose profile), or `uv run uvicorn` |
+| `services/embeddings/` | OpenAI-compatible `/v1/embeddings` around sentence-transformers | `embeddings` container, or `uv run uvicorn` |
 | `keycloak/` | Keycloak image: login theme `mymenu` + Apple provider extension, served under `/auth` | `keycloak` container; realm configured by `keycloak-setup` |
 
 The frontend and backend always share one origin (Vite proxy in development, nginx in
@@ -31,27 +59,100 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
 
 | App | Models | Notes |
 |---|---|---|
-| `catalog` | `Ingredient`, `KitchenTool` | Global, shared by every family. Ingredient names are normalized on save (lowercase, single spaces); variants go in `aliases`. |
+| `catalog` | `Ingredient`, `KitchenTool` | Global, shared by every team. Ingredient names are normalized on save (lowercase, single spaces); variants go in `aliases`. |
 | `recipes` | `Cuisine`, `Recipe`, `RecipeIngredient`, `RecipeEmbedding` | Recipes live in one common pool; quantities refer to `Recipe.servings` and scale linearly. The method is `Recipe.steps`, one entry per step. |
-| `families` | `Family`, `Membership`, `FamilyMember`, `Preference`, `RecipeBookEntry`, `FamilyEmbedding` | Everything family-specific. `RecipeBookEntry` is the per-family view of a recipe: candidate / approved / rejected, plus the explicit rating. |
+| `teams` | `Team`, `Membership`, `Member`, `Preference`, `RecipeBookEntry`, `TeamEmbedding` | Everything team-specific. `RecipeBookEntry` is the per-team view of a recipe: candidate / approved / rejected, plus the explicit rating. |
 | `menus` | `WeeklyMenu`, `MealSlot`, `SlotDish` | 7 days × {lunch, dinner}. Shopping list in `menus/shopping.py`, computed, never stored. |
 | `accounts` | `OIDCIdentity`, `Invitation` | OIDC backend and login view (`oidc.py`), Keycloak realm setup (`keycloak_admin.py`), `/api/me/`, invitations. |
 | `assistant` | `AssistantSession` | The recipe assistant: conversation turns (`agent.py`), the recipe draft shape shared by every mode (`draft.py`). |
 | `core` | none (abstract mixins and helpers) | Seasonality and provenance helpers, shared serializer mixin. |
 
+### Data model
+
+```mermaid
+erDiagram
+    USER ||--o{ MEMBERSHIP : "belongs to teams through"
+    TEAM ||--o{ MEMBERSHIP : "has"
+    TEAM ||--o{ MEMBER : "eats with"
+    TEAM ||--o{ PREFERENCE : "states"
+    INGREDIENT ||--o{ PREFERENCE : "about"
+    TEAM }o--o{ KITCHEN_TOOL : "owns"
+    TEAM ||--o{ RECIPE : "owns"
+    TEAM ||--o{ RECIPE_BOOK_ENTRY : "keeps"
+    RECIPE ||--o{ RECIPE_BOOK_ENTRY : "is kept in"
+    CUISINE |o--o{ RECIPE : "classifies"
+    RECIPE ||--o{ RECIPE_INGREDIENT : "lists"
+    INGREDIENT ||--o{ RECIPE_INGREDIENT : "is used in"
+    RECIPE }o--o{ KITCHEN_TOOL : "needs"
+    RECIPE ||--o{ RECIPE_EMBEDDING : "is embedded as"
+    TEAM ||--o{ WEEKLY_MENU : "plans"
+    WEEKLY_MENU ||--|{ MEAL_SLOT : "has 14"
+    MEAL_SLOT ||--o{ SLOT_DISH : "serves"
+    RECIPE ||--o{ SLOT_DISH : "is served as"
+    TEAM ||--o{ INVITATION : "issues"
+    USER ||--o{ ASSISTANT_SESSION : "talks in"
+    ASSISTANT_SESSION ||--o{ ATTACHMENT : "has photos"
+
+    TEAM {
+        string name
+        json default_people "per meal, prefills slots"
+        int max_weekday_minutes
+    }
+    RECIPE {
+        string title
+        string visibility "shared or private"
+        int servings "quantities refer to it"
+        int_array season_months "derived from ingredients"
+        int_array climate_months "suits the weather"
+        json provenance "who set each field"
+    }
+    RECIPE_INGREDIENT {
+        decimal quantity "null = to taste"
+        string unit "g ml pc tt"
+        bool optional
+    }
+    INGREDIENT {
+        string name "normalized, unique"
+        string_array aliases
+        string category
+        int_array season_months "empty = all year"
+    }
+    MEAL_SLOT {
+        date date
+        string meal "lunch or dinner"
+        int people "0 = nobody at home"
+        string outcome "implicit feedback"
+    }
+    RECIPE_EMBEDDING {
+        string model "vectors are per model"
+        vector vector "no fixed dimension"
+    }
+```
+
+Recipes and team preferences point to ingredients by id, never by name: renaming or merging an
+ingredient never touches a recipe.
+
 ### Decisions worth knowing
 
-- **Shared recipes, per-family recipe book** (confirmed by Paolo 2026-10-05). One `Recipe` row can be in many families' books.
-  A recipe has an **owner family** (the one that created it, the only one that can edit it;
+- **Team, not family** (2026-10-07): the app serves whoever shares meals (a family, a person
+  living alone, flatmates, friends, a sports team, an office). The model is `Team` (formerly
+  `Family`) and the API speaks of teams (`/api/teams/`, `team` fields). The Django app lives in
+  `apps/teams` but keeps its original label `families`, which keys the migration history and
+  the table names (`families_team`, `families_member`, ...); the rename migrations kept every
+  row. Technical identifiers that users never see (the Keycloak realm and theme `mymenu`, the
+  Compose project `mymenu` and its volume) were left as they are.
+
+- **Shared recipes, per-team recipe book** (confirmed by Paolo 2026-10-05). One `Recipe` row can be in many teams' books.
+  A recipe has an **owner team** (the one that created it, the only one that can edit it;
   staff can edit everything) and a **visibility**: `shared` (default, decided 2026-10-06) or
-  `private` (only the owner family sees it). `Recipe.objects.visible_to(user)` and
+  `private` (only the owner team sees it). `Recipe.objects.visible_to(user)` and
   `editable_by(user)` hold these rules. Creating a recipe through the API puts it in the
-  creating family's book. Other families add a shared recipe to their own book; the owner can
-  delete a recipe only while no other family keeps it. Removing a private recipe from the
+  creating team's book. Other teams add a shared recipe to their own book; the owner can
+  delete a recipe only while no other team keeps it. Removing a private recipe from the
   owner's book deletes it.
 - **Shared catalogs** (ingredients, cuisines, kitchen tools): any user may read and add
   entries, only staff may change or delete them (`CatalogPermission`), because an edit would
-  silently change other families' recipes. Ingredient search matches names and aliases.
+  silently change other teams' recipes. Ingredient search matches names and aliases.
   Ingredients and kitchen tools can be added from the recipe editor (no admin needed). The
   kitchen tools the app ships with carry a stable `code` and are shown translated
   (`tool.<code>` in the frontend locales); tools added by users have no code and are shown by
@@ -60,7 +161,7 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
   common ingredients in Italian (the first deployment's language) with category, unit, Italian
   seasonality and plural aliases. Idempotent and non-destructive: an entry is skipped when an
   ingredient already exists under its name or one of its aliases. Unlike shipped kitchen tools
-  they have no code: ingredient names are data, matched by the assistant in the family's
+  they have no code: ingredient names are data, matched by the assistant in the team's
   language. Database tests start from an empty catalog (`tests/conftest.py`); tests about the
   seed are marked `seeded`.
 - **Preserved forms are distinct ingredients** with no season ("pomodoro pelato", "passata di
@@ -75,9 +176,9 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
   are added up when a recipe had both, the duplicate's name becomes an alias). Changing an
   ingredient's season re-derives the season of the recipes using it (unless the user set it)
   and refreshes their embeddings.
-  This is what makes collaborative recommendation possible ("families like yours loved X"), and
+  This is what makes collaborative recommendation possible ("teams like yours loved X"), and
   keeps discovery candidates separate from accepted recipes (`RecipeBookEntry.Status.CANDIDATE`).
-- **People per slot.** `MealSlot.people` is the source of truth. `Family.default_people` only
+- **People per slot.** `MealSlot.people` is the source of truth. `Team.default_people` only
   prefills new slots (`WeeklyMenu.create_empty_slots`). `people = 0` means nobody eats at home,
   and that slot adds nothing to the shopping list.
 - **One or more dishes per slot** (confirmed by Paolo 2026-10-05). `SlotDish` allows e.g. a first course plus a side dish; most
@@ -130,12 +231,12 @@ Models carrying LLM-suggested or derived properties inherit `ProvenanceMixin`
 
 Never assign a tracked field directly from LLM output; always go through `propose`.
 
-### Multi-family access
+### Multi-team access
 
-A user sees only families they hold a `Membership` in, and gets one only by accepting an
-invitation (or by staff creating the family for them). Viewsets over family-owned data use
-`FamilyScopedMixin` (`apps/families/permissions.py`), which filters querysets and rejects writes
-pointing at somebody else's family. Global catalogs (ingredients, tools, cuisines, recipes) are
+A user sees only teams they hold a `Membership` in, and gets one only by accepting an
+invitation (or by staff creating the team for them). Viewsets over team-owned data use
+`TeamScopedMixin` (`apps/teams/permissions.py`), which filters querysets and rejects writes
+pointing at somebody else's team. Global catalogs (ingredients, tools, cuisines, recipes) are
 readable and writable by any authenticated user for now.
 
 ## Adding recipes (decided with Paolo 2026-10-06)
@@ -147,9 +248,34 @@ and "photo". A mode is enabled (`AVAILABLE_MODES` in `apps/assistant/models.py`)
 tools exist: offering a
 mode before its tools exist would let the LLM invent the content of pages or photos.
 
+```mermaid
+flowchart TD
+    fab["+ button"] --> tell["Tell me the recipe"]
+    fab --> link["Give me a link"]
+    fab --> photo["Upload or take a photo"]
+    fab --> search["Help me search"]
+    fab --> manual["Write it yourself"]
+
+    tell -- "chat model, propose_recipe tool" --> draft
+    link -- "fetch page, public only" --> page{"schema.org Recipe?"}
+    page -- "yes: facts kept verbatim" --> extract["extraction call<br/>JSON schema"]
+    page -- "no: visible text around quantities" --> extract
+    photo -- "vision model:<br/>literal transcription" --> extract
+    extract --> draft
+    search --> local["own and shared recipes:<br/>keywords + embeddings"]
+    search --> dishes["3 concrete dishes"] --> websearch["one web search per dish"] --> verify["open each page, keep<br/>single complete recipes"]
+    verify -- "Import" --> link
+    local -- "Open" --> recipe
+
+    draft["draft<br/>normalize_draft"] -- "corrections in chat" --> draft
+    draft --> review["review in the editor<br/>ingredients matched to the catalog"]
+    manual --> review
+    review -- "Save" --> recipe[("recipe + recipe book entry<br/>+ embedding")]
+```
+
 **How the assistant works**
 
-- An `AssistantSession` (family, user, mode) stores the exchange in OpenAI chat format, so a
+- An `AssistantSession` (team, user, mode) stores the exchange in OpenAI chat format, so a
   draft survives a page reload; only its author sees it.
 - Each turn (`apps/assistant/agent.py`) sends a mode-specific system prompt plus the history and
   one tool, `propose_recipe`, whose parameters are the draft schema (`draft.py`). The model
@@ -176,13 +302,13 @@ mode before its tools exist would let the LLM invent the content of pages or pho
   host resolves to must be global. `keycloak:8080`, `db`, `host.docker.internal`, LAN and
   loopback addresses are refused (verified from inside the backend container). The page is
   capped at 3 MB and must be HTML. A DNS answer changing between check and connection is not
-  covered; acceptable for a family app, revisit before exposing the app widely.
+  covered; acceptable for a team app, revisit before exposing the app widely.
 - Text for the model: schema.org `Recipe` data when present, else the visible text with block
   elements split into lines (minified pages are one line otherwise) and cut to a ~9k-character
   window around where quantities cluster.
 - A separate extraction call (`response_format` with the draft schema, temperature 0) structures
   the text. Ingredient names are always in the user's language, generic and singular, so they
-  match the family catalog (an English page still yields "uovo", "parmigiano"); title,
+  match the team catalog (an English page still yields "uovo", "parmigiano"); title,
   description and steps stay in the page's language. Cups, ounces and spoons become g/ml with
   the original measure in the note.
 - From structured data, title (site name stripped), servings, times and steps are kept
@@ -222,7 +348,7 @@ mode before its tools exist would let the LLM invent the content of pages or pho
 - **Local**: keyword matches first (every meaningful word, roughly stemmed, must appear in the
   title or an ingredient: matching any word turned "un dolce al cioccolato" into a leek soup via
   its "paprika dolce"), then embedding similarity from 0.4. Shown as "in your recipe book" or
-  "from other families" (shared recipes only; private ones never leave their family).
+  "from other teams" (shared recipes only; private ones never leave their team).
 - **Web**: the chat model first turns the request into 3 concrete dishes (about 1 s; vague
   requests otherwise find only category and collection pages), then runs one web search per
   dish through Unsloth Studio's built-in search, two at a time. A result is shown only if its
@@ -252,8 +378,8 @@ mode before its tools exist would let the LLM invent the content of pages or pho
 - **Every path ends in the same draft review** (which doubles as manual entry): everything the
   LLM proposed is editable and marked as suggested (provenance) until the user saves.
   Ingredients are matched to the catalog, or proposed as new with suggested category/season/unit.
-- **Visibility**: recipes are **shared by default** with other families (the collaborative
-  recommendation needs a common pool); a family can mark a recipe private.
+- **Visibility**: recipes are **shared by default** with other teams (the collaborative
+  recommendation needs a common pool); a team can mark a recipe private.
 
 **Link import** (no crawling, no per-site scrapers; it reads only the page the user gave):
 
@@ -325,7 +451,7 @@ Verified live on 2026-10-05 against this project's adapter:
 - Default: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (384 dimensions,
   multilingual, light enough for a Raspberry Pi), served by `services/embeddings`. Vectors are
   L2-normalized, so cosine similarity equals the inner product.
-- Embedding tables (`RecipeEmbedding`, `FamilyEmbedding`) store the **model name** with each
+- Embedding tables (`RecipeEmbedding`, `TeamEmbedding`) store the **model name** with each
   vector, and the vector column has **no fixed dimension**. Swapping model means recomputing the
   rows for the new model, with no migration. The trade-off is that pgvector cannot build an ANN
   index on an undimensioned column. At recipe-book scale exact search is fast enough; add a
@@ -340,11 +466,11 @@ Verified live on 2026-10-05 against this project's adapter:
 
 ## Future: translated ingredient names (recorded 2026-10-07)
 
-Ingredient names are stored in a single language (Italian, the first deployment's). A family
+Ingredient names are stored in a single language (Italian, the first deployment's). A team
 using the app in English would see Italian names, and its assistant would create English
 duplicates ("tomato" next to "pomodoro").
 
-What makes it tractable: recipes, family preferences and embeddings reference an ingredient by
+What makes it tractable: recipes, team preferences and embeddings reference an ingredient by
 its id (`RecipeIngredient.ingredient`, `Preference.ingredient` are foreign keys), never by name.
 The name is a display and matching attribute only, so translations can be added without touching
 any recipe. A possible shape:

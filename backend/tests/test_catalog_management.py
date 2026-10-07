@@ -5,8 +5,8 @@ import pytest
 from django.apps import apps as django_apps
 
 from apps.catalog.models import Ingredient
-from apps.families.models import Preference
 from apps.recipes.models import Recipe
+from apps.teams.models import Preference
 
 seed_migration = importlib.import_module("apps.catalog.migrations.0005_seed_common_ingredients")
 
@@ -18,8 +18,8 @@ def staff(api, user):
     return api
 
 
-def recipe_with(family, title, *lines):
-    recipe = Recipe.objects.create(title=title, owner_family=family)
+def recipe_with(team, title, *lines):
+    recipe = Recipe.objects.create(title=title, owner_team=team)
     for ingredient, quantity, unit in lines:
         recipe.ingredients.create(ingredient=ingredient, quantity=quantity, unit=unit)
     return recipe
@@ -50,11 +50,11 @@ def test_seeding_again_changes_nothing(db):
 # -- listing ----------------------------------------------------------------------------------
 
 
-def test_usage_counts_filters_and_ordering(staff, family):
+def test_usage_counts_filters_and_ordering(staff, team):
     tomato = Ingredient.objects.create(name="pomodoro", category="vegetable")
     Ingredient.objects.create(name="sale", category="condiment")
-    recipe_with(family, "A", (tomato, 100, "g"))
-    recipe_with(family, "B", (tomato, 100, "g"))
+    recipe_with(team, "A", (tomato, 100, "g"))
+    recipe_with(team, "B", (tomato, 100, "g"))
     rows = staff.get("/api/ingredients/?ordering=-usage").json()["results"]
     assert [(r["name"], r["usage_count"]) for r in rows] == [("pomodoro", 2), ("sale", 0)]
     only = staff.get("/api/ingredients/?category=condiment").json()["results"]
@@ -64,7 +64,7 @@ def test_usage_counts_filters_and_ordering(staff, family):
 # -- editing ----------------------------------------------------------------------------------
 
 
-def test_only_staff_can_change_merge_or_delete(api, family):
+def test_only_staff_can_change_merge_or_delete(api, team):
     a = Ingredient.objects.create(name="pomodori")
     b = Ingredient.objects.create(name="pomodoro")
     assert (
@@ -84,9 +84,9 @@ def test_names_clashing_with_an_alias_are_refused(staff):
     assert response.status_code == 400
 
 
-def test_changing_a_season_updates_the_recipes(staff, family):
+def test_changing_a_season_updates_the_recipes(staff, team):
     leek = Ingredient.objects.create(name="porro")
-    soup = recipe_with(family, "Vellutata", (leek, 300, "g"))
+    soup = recipe_with(team, "Vellutata", (leek, 300, "g"))
     soup.propose("season_months", soup.derive_season_months(), "derived")
     soup.save()
     staff.patch(
@@ -96,10 +96,10 @@ def test_changing_a_season_updates_the_recipes(staff, family):
     assert soup.season_months == [1, 2, 12]
 
 
-def test_used_ingredients_cannot_be_deleted(staff, family):
+def test_used_ingredients_cannot_be_deleted(staff, team):
     tomato = Ingredient.objects.create(name="pomodoro")
     unused = Ingredient.objects.create(name="tamarindo")
-    recipe_with(family, "Sugo", (tomato, 100, "g"))
+    recipe_with(team, "Sugo", (tomato, 100, "g"))
     blocked = staff.delete(f"/api/ingredients/{tomato.pk}/")
     assert blocked.status_code == 409 and blocked.json()["recipes"] == ["Sugo"]
     assert staff.delete(f"/api/ingredients/{unused.pk}/").status_code == 204
@@ -108,12 +108,12 @@ def test_used_ingredients_cannot_be_deleted(staff, family):
 # -- merging ----------------------------------------------------------------------------------
 
 
-def test_merge_moves_recipes_and_keeps_the_name_as_alias(staff, family):
+def test_merge_moves_recipes_and_keeps_the_name_as_alias(staff, team):
     dup = Ingredient.objects.create(name="pomodori", aliases=["pomodori maturi"])
     tomato = Ingredient.objects.create(name="pomodoro", season_months=[6, 7, 8])
-    sugo = recipe_with(family, "Sugo", (dup, 200, "g"))
-    both = recipe_with(family, "Doppio", (dup, 100, "g"), (tomato, 50, "g"))
-    Preference.objects.create(family=family, kind="likes", ingredient=dup)
+    sugo = recipe_with(team, "Sugo", (dup, 200, "g"))
+    both = recipe_with(team, "Doppio", (dup, 100, "g"), (tomato, 50, "g"))
+    Preference.objects.create(team=team, kind="likes", ingredient=dup)
 
     response = staff.post(f"/api/ingredients/{dup.pk}/merge/", {"into": tomato.pk}, format="json")
     assert response.status_code == 200

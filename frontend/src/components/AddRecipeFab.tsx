@@ -10,7 +10,7 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { api, type AssistantMode, type AssistantSession } from '../api'
-import { useFamily } from '../family'
+import { useTeam } from '../team'
 
 type Item = { key: string; icon: ReactNode; label: string; primary?: boolean; disabled?: boolean; run?: () => void }
 
@@ -23,7 +23,7 @@ type Item = { key: string; icon: ReactNode; label: string; primary?: boolean; di
 export function AddRecipeFab() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { family } = useFamily()
+  const { team } = useTeam()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -32,7 +32,7 @@ export function AddRecipeFab() {
     try {
       const session = await api<AssistantSession>('/assistant/sessions/', {
         method: 'POST',
-        body: JSON.stringify({ family: family.id, mode }),
+        body: JSON.stringify({ team: team.id, mode }),
       })
       navigate(`/assistant/${session.id}`)
     } finally {

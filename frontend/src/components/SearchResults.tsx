@@ -10,7 +10,7 @@ type Local = Extract<SearchResult, { kind: 'book' | 'shared' }>
 type Web = Extract<SearchResult, { kind: 'web' }>
 
 /**
- * Results of "help me search": the family's own recipes, shared ones from other families, and
+ * Results of "help me search": the team's own recipes, shared ones from other teams, and
  * recipe pages found on the web (each already checked to exist and hold one recipe).
  */
 export function SearchResults({
@@ -63,7 +63,7 @@ export function SearchResults({
     <Stack spacing={2}>
       {results.length === 0 && <Typography color="text.secondary">{t('search.nothing')}</Typography>}
       {local(book, t('search.inBook'))}
-      {local(shared, t('search.fromFamilies'))}
+      {local(shared, t('search.fromTeams'))}
       {web.length > 0 && (
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>

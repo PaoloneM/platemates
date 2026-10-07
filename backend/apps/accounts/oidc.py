@@ -51,6 +51,7 @@ class KeycloakBackend(OIDCAuthenticationBackend):
         # Keycloak is the source of truth for profile data; refresh it on every login.
         user.email = claims.get("email", user.email)
         user.first_name = claims.get("given_name", "")[:150]
+        # `family_name` is the standard OIDC claim for the surname (not a WeeklyMenu team).
         user.last_name = claims.get("family_name", "")[:150]
         user.save(update_fields=["email", "first_name", "last_name"])
         OIDCIdentity.objects.filter(user=user).update(last_login_at=timezone.now())

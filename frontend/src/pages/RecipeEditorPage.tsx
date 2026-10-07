@@ -45,7 +45,7 @@ import { IngredientDialog } from '../components/IngredientDialog'
 import { IngredientPicker, type PickedIngredient } from '../components/IngredientPicker'
 import { SeasonPicker } from '../components/SeasonPicker'
 import { ToolDialog } from '../components/ToolDialog'
-import { useFamily } from '../family'
+import { useTeam } from '../team'
 import { COURSES, UNITS, useDescribeMonths, useLabels } from '../labels'
 
 type Line = {
@@ -216,7 +216,7 @@ export function RecipeEditorPage() {
   const { id } = useParams()
   const [params] = useSearchParams()
   const sessionId = params.get('session')
-  const { family } = useFamily()
+  const { team } = useTeam()
   const editing = id != null
 
   // Editing or reviewing a draft: show a spinner until the data is loaded, rather than an empty
@@ -331,7 +331,7 @@ export function RecipeEditorPage() {
       }
       if (!f.seasonAuto) payload.season_months = { months: f.seasonMonths }
       else if (editing) payload.season_months = { auto: true }
-      if (!editing) payload.family = family.id
+      if (!editing) payload.team = team.id
 
       const saved = await api<Recipe>(editing ? `/recipes/${id}/` : '/recipes/', {
         method: editing ? 'PATCH' : 'POST',
@@ -673,7 +673,7 @@ export function RecipeEditorPage() {
               <Switch checked={form.visibility === 'shared'}
                 onChange={(e) => set('visibility', e.target.checked ? 'shared' : 'private')} />
             }
-            label={t('editor.shareWithFamilies')}
+            label={t('editor.shareWithTeams')}
           />
           <Typography variant="body2" color="text.secondary">
             {form.visibility === 'shared' ? t('editor.sharedHint') : t('editor.privateHint')}

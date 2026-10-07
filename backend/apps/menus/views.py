@@ -3,20 +3,20 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.families.permissions import FamilyScopedMixin
+from apps.teams.permissions import TeamScopedMixin
 
 from .models import MealSlot, WeeklyMenu
 from .serializers import MealSlotSerializer, WeeklyMenuSerializer
 from .shopping import build_shopping_list, group_by_category
 
 
-class WeeklyMenuViewSet(FamilyScopedMixin, viewsets.ModelViewSet):
+class WeeklyMenuViewSet(TeamScopedMixin, viewsets.ModelViewSet):
     queryset = WeeklyMenu.objects.prefetch_related("slots__slot_dishes")
     serializer_class = WeeklyMenuSerializer
 
     @transaction.atomic
     def perform_create(self, serializer):
-        self.check_family(serializer.validated_data["family"])
+        self.check_team(serializer.validated_data["team"])
         menu = serializer.save()
         menu.create_empty_slots()
 
@@ -27,7 +27,7 @@ class WeeklyMenuViewSet(FamilyScopedMixin, viewsets.ModelViewSet):
 
 
 class MealSlotViewSet(
-    FamilyScopedMixin,
+    TeamScopedMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.ListModelMixin,
@@ -37,4 +37,4 @@ class MealSlotViewSet(
 
     queryset = MealSlot.objects.prefetch_related("slot_dishes")
     serializer_class = MealSlotSerializer
-    family_lookup = "menu__family"
+    team_lookup = "menu__team"

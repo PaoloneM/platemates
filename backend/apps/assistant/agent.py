@@ -72,21 +72,21 @@ separately, do not repeat it in text.
 
 SYSTEM_PROMPTS = {
     Mode.PHOTO: """\
-You help a family add a recipe to their recipe book from photos (a cookbook page, a handwritten \
+You help a team add a recipe to their recipe book from photos (a cookbook page, a handwritten \
 card, a screenshot). The draft you see was transcribed from the user's photos. Apply the user's \
 corrections faithfully; do not add anything the photos or the user did not say. If the user \
 sends another photo, it is read for you.
 """
     + _COMMON_RULES,
     Mode.LINK: """\
-You help a family import a recipe from a web page into their recipe book. The draft you see was \
+You help a team import a recipe from a web page into their recipe book. The draft you see was \
 extracted from the page the user linked. Apply the user's corrections faithfully; do not add \
 anything the page or the user did not say. If the user sends another link, it is imported for \
 you.
 """
     + _COMMON_RULES,
     Mode.TELL: """\
-You help a family add a recipe they know to their recipe book. The user describes it in their \
+You help a team add a recipe they know to their recipe book. The user describes it in their \
 own words.
 
 - As soon as you know the dish, call propose_recipe with a complete draft. Do not ask \
@@ -119,7 +119,7 @@ Never invent or embellish. Take preparation and cooking times whenever the text 
 anything that is not part of the recipe (ads, comments, other recipes).
 - Keep title, description and steps in the source's language.
 - Ingredient names: always in {language} (translate them if the page is in another language), \
-generic, singular, lowercase, so they match the family's catalog. The name is the basic \
+generic, singular, lowercase, so they match the team's catalog. The name is the basic \
 ingredient; variety, origin and preparation go in the note. Preserved forms, available all year, \
 stay distinct from the fresh product. Examples in Italian: "pomodori maturi" -> name "pomodoro", \
 note "maturi"; "pomodori pelati" -> "pomodoro pelato"; "pecorino romano DOP grattugiato" -> \
@@ -389,7 +389,7 @@ def _import_link(session, text, url, language_name, chat, read_page) -> TurnResu
 def _search(session, text, language_name, chat, search_chat, verify_page) -> TurnResult:
     query = search.search_query(session.messages, text)
     session.messages = [*session.messages, {"role": "user", "content": text.strip()}]
-    found = search.local_results(session.user, session.family, query)
+    found = search.local_results(session.user, session.team, query)
     web, notice = search.web_results(
         query, language_name, search_chat, chat, **({"verify": verify_page} if verify_page else {})
     )

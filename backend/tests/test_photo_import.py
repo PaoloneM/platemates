@@ -43,8 +43,8 @@ class FakeChat:
 
 
 @pytest.fixture
-def session(family, user):
-    return AssistantSession.objects.create(family=family, user=user, mode=Mode.PHOTO)
+def session(team, user):
+    return AssistantSession.objects.create(team=team, user=user, mode=Mode.PHOTO)
 
 
 def photo_of(session):

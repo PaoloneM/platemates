@@ -2,21 +2,30 @@
 
 ## Project Context
 
-This is the **Family Menu Planner** project: a web application for managing the weekly family menu and the shopping list, driven by an LLM that acts in an agentic way. For the full purpose and the conceptual model (menu, recipe, ingredient catalog, family profile), see `README.md`.
+This is the **WeeklyMenu** project: a web application for the weekly menu and the shopping list
+of people who eat together (a **team**: a family, a person living alone, flatmates, friends, a
+sports team, an office), driven by an LLM that acts in an agentic way. For the full purpose and
+the conceptual model (team, menu, recipe, ingredient catalog), see `README.md`.
+
+"Team" is the product's word and the code's (`Team`, `/api/teams/`); it was "family" until
+2026-10-07. The Django app keeps its original label `families` and table prefix (see
+`docs/architecture.md`); never rename them.
 
 The functional and architectural design was defined in a planning session with the user (Paolo). This document guides operational development in Claude Code.
 
 ## Project Status
 
-**Scaffolding in place.** Data model, REST API, AI adapters, embedding service, a stub SPA and
-the Docker Compose stack exist and are tested. The menu generation engine, recipe discovery,
-embedding jobs and the real UI are not built yet. See `docs/architecture.md` for how the code maps
-onto the concepts, and for the design decisions taken so far.
+**Recipe book complete, menus next.** Built and in use: recipe book and editor, the recipe
+assistant in all four modes (tell, link, photo, search), sign-in with invitation-only teams,
+the management section for shared catalogs, phone access over HTTPS on the home network,
+backups. Not built yet: weekly menu generation, the shopping list screen, the team profile
+screen, feedback, collaborative recommendation. The README's status table is kept current;
+`docs/architecture.md` explains how the code maps onto the concepts and the decisions taken.
 
 ## Technology Stack
 
 - **Backend**: Python, **Django** + Django REST Framework
-  - Reasons: robust ORM for a highly relational data model (families, recipes, ingredients, menus), app-based structure (recipe book, menu/families, LLM integration), free admin panel
+  - Reasons: robust ORM for a highly relational data model (teams, recipes, ingredients, menus), app-based structure (recipe book, menu/teams, LLM integration), free admin panel
 - **Authentication**: **Keycloak** (email/password, Google, Microsoft, Apple) with Django as OIDC
   client and session cookies; invitation-only access. See `docs/authentication.md`
 - **Frontend**: **React** (SPA), decoupled from the backend via REST API
@@ -28,7 +37,7 @@ onto the concepts, and for the design decisions taken so far.
 - **Local generative LLM**: **Unsloth Studio** on the host (`http://127.0.0.1:8888`), as in Paolo's
   `spyone` project (`../spyone`); default model `unsloth/Qwen3.6-35B-A3B-MTP-GGUF`
 - **Embeddings**: **swappable** component behind a stable interface (OpenAI-compatible style)
-  - Starting point: local open-source model (sentence-transformers family, multilingual)
+  - Starting point: local open-source model (sentence-transformers, multilingual)
   - Open alternative: cloud API (e.g. Google Cloud) if quality justifies it; usage is occasional (only on new recipes/ingredients), so cost would be negligible
   - Write an adapter for the chosen provider; do not hardcode it
 - **Recipe discovery**: native web search capability of the LLM (no dedicated scraping at this stage).
@@ -40,16 +49,16 @@ onto the concepts, and for the design decisions taken so far.
 
 - The Django backend exposes REST APIs consumed by the React frontend
 - The generative LLM and the embedding component are **decoupled services**, reached by the backend through stable OpenAI-compatible-style interfaces, swappable without touching application logic
-- Relational data (recipes, ingredients, families, menus, feedback) and vector data (recipe and family-profile embeddings) coexist in PostgreSQL
+- Relational data (recipes, ingredients, teams, menus, feedback) and vector data (recipe and team-profile embeddings) coexist in PostgreSQL
 - The menu generation engine is agentic and uses **RAG** logic: it retrieves structured data and vector similarity results and passes them as context to the LLM. Feedback informs the context; it is **not** used for fine-tuning
-- Two levels of vector similarity: between recipes (variety and discovery) and between family profiles (collaborative recommendation)
+- Two levels of vector similarity: between recipes (variety and discovery) and between team profiles (collaborative recommendation)
 - Shopping list: in the first version it is a pure output generated from the menu; offline use on mobile is delegated to a possible integration with an existing app (API/MCP)
 
 ## Development Guiding Principles
 
-- **Parametricity**: no family data (people, ages, tastes, tools) hardcoded
-- **Multi-family from the data model**: even with a single real user at the start, the schema must not assume a single family
-- **People per slot**: the number of people is an attribute of each meal in the menu (default 2 at lunch, 3 at dinner, overridable, even 0), not of the family
+- **Parametricity**: no team data (people, ages, tastes, tools) hardcoded
+- **Multi-team from the data model**: even with a single real user at the start, the schema must not assume a single team
+- **People per slot**: the number of people is an attribute of each meal in the menu (default 2 at lunch, 3 at dinner, overridable, even 0), not of the team
 - **Responsive web interface**: desktop-first, mobile-ready in design
 - **Proactive LLM, not just reactive**: the engine actively proposes variety, including recipes not yet in the recipe book
 - **The user always has the final say**: every property derived or suggested by the LLM (seasonality, tags, cuisine, etc.) is editable and confirmable by the user, at recipe level or single-ingredient level
@@ -61,20 +70,20 @@ onto the concepts, and for the design decisions taken so far.
 Full detail in `README.md`:
 
 1. Structured recipe book (normalized ingredients, two-level seasonality, cuisine type, times, ratings)
-2. Parametric family profile
+2. Parametric team profile
 3. Weekly menu generation engine (agentic, proactive)
 4. Shopping list generation
 5. New recipe discovery
 6. Kitchen tool inventory
 7. Feedback and learning (implicit + explicit, via RAG)
-8. Collaborative recommendation between families
+8. Collaborative recommendation between teams
 
 ## Working Conventions for Claude Code
 
 ### Layout
 
 - `backend/`: Django project (`config/`), domain apps in `apps/` (`accounts`, `catalog`,
-  `recipes`, `families`, `menus`, `assistant`; `core` holds abstract mixins only), AI adapters in `ai/`, tests in `tests/`
+  `recipes`, `teams`, `menus`, `assistant`; `core` holds abstract mixins only), AI adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
   `src/api.ts` is the only place that calls `fetch`; enum labels live in `src/labels.ts`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
@@ -106,7 +115,7 @@ Full detail in `README.md`:
 python3 scripts/init_env.py                             # create/complete .env (idempotent)
 docker compose up -d db keycloak                        # database + identity provider, for native development
 cd backend && uv run python manage.py setup_keycloak    # configure the Keycloak realm from .env (idempotent)
-cd backend && uv run python manage.py create_family "Name" --owner you@example.com --staff  # bootstrap
+cd backend && uv run python manage.py create_team "Name" --owner you@example.com --staff  # bootstrap
 cd backend && uv run python manage.py migrate           # apply migrations
 cd backend && uv run python manage.py runserver         # API on :8000, admin on /admin/
 cd backend && uv run pytest                             # backend tests (needs the db running)
@@ -126,8 +135,8 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 
 - Every property the LLM suggests or the code derives goes through `ProvenanceMixin.propose`;
   never assign it directly. API writes are user decisions and are marked as such automatically
-- Family-owned data is reached only through `FamilyScopedMixin` querysets: a user never sees
-  another family's data
+- Team-owned data is reached only through `TeamScopedMixin` querysets: a user never sees
+  another team's data
 - Application logic talks to AI only through `ai.get_chat_provider()` /
   `ai.get_embedding_provider()`; provider-specific code lives in `ai/` only
 - Embeddings are always stored with the model name that produced them
@@ -142,7 +151,7 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   nothing it proposes is saved without the user
 - **Every initialization step must be idempotent** (safe to re-run, same result) and, where it
   mirrors configuration, convergent (re-running after a config change applies the change).
-  Today: `init_env.py`, migrations and seed data, `db-init`, `setup_keycloak`, `create_family`.
+  Today: `init_env.py`, migrations and seed data, `db-init`, `setup_keycloak`, `create_team`.
   Verify a new step by running it twice
 - Never run `docker compose down -v` (or remove `mymenu_pgdata`) without a fresh backup: it deletes
   both databases, Keycloak accounts included. `backups/` holds personal data: never commit it
@@ -163,7 +172,7 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   the fresh one, available all year; never fold them into the fresh product
 - Catalog entries the app ships with (kitchen tools) have a stable `code` and are translated in
   the UI; never show their stored English name to users. User-added entries have no code
-- Tests use synthetic data, never real family data
+- Tests use synthetic data, never real team data
 - Commit messages: imperative summary line, English; one logical change per commit
 
 ## Cross-References

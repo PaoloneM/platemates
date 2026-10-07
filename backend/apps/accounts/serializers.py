@@ -5,14 +5,14 @@ from .models import Invitation
 
 class InvitationSerializer(serializers.ModelSerializer):
     state = serializers.CharField(read_only=True)
-    family_name = serializers.CharField(source="family.name", read_only=True)
+    team_name = serializers.CharField(source="team.name", read_only=True)
 
     class Meta:
         model = Invitation
         fields = [
             "id",
-            "family",
-            "family_name",
+            "team",
+            "team_name",
             "token",
             "role",
             "note",
@@ -28,8 +28,8 @@ class InvitationPreviewSerializer(serializers.ModelSerializer):
     """What someone holding the link may see before accepting: no token, no other members."""
 
     state = serializers.CharField(read_only=True)
-    family_name = serializers.CharField(source="family.name", read_only=True)
+    team_name = serializers.CharField(source="team.name", read_only=True)
 
     class Meta:
         model = Invitation
-        fields = ["family_name", "role", "state", "expires_at"]
+        fields = ["team_name", "role", "state", "expires_at"]

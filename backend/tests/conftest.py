@@ -6,8 +6,8 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from apps.catalog.models import Ingredient, IngredientCategory, Unit
-from apps.families.models import Family, Membership
 from apps.recipes.models import Recipe, RecipeIngredient
+from apps.teams.models import Membership, Team
 
 MONDAY = dt.date(2026, 10, 5)
 
@@ -27,10 +27,10 @@ def user(db):
 
 
 @pytest.fixture
-def family(user):
-    family = Family.objects.create(name="Test family")
-    Membership.objects.create(user=user, family=family, role=Membership.Role.OWNER)
-    return family
+def team(user):
+    team = Team.objects.create(name="Test team")
+    Membership.objects.create(user=user, team=team, role=Membership.Role.OWNER)
+    return team
 
 
 @pytest.fixture

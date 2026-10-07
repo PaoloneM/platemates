@@ -52,7 +52,7 @@ class WeeklyMenuSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WeeklyMenu
-        fields = ["id", "family", "week_start", "status", "rationale", "slots"]
+        fields = ["id", "team", "week_start", "status", "rationale", "slots"]
 
     def validate_week_start(self, value):
         if value.weekday() != 0:

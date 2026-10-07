@@ -4,18 +4,18 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/context'
 import { AppShell } from './components/AppShell'
-import { FamilyProvider } from './family'
+import { TeamProvider } from './team'
 import { AssistantPage } from './pages/AssistantPage'
 import { InvitePage } from './pages/InvitePage'
 import { IngredientsPage } from './pages/manage/IngredientsPage'
 import { ManageLayout } from './pages/manage/ManageLayout'
 import { LoginPage } from './pages/LoginPage'
-import { NoFamilyPage } from './pages/NoFamilyPage'
+import { NoTeamPage } from './pages/NoTeamPage'
 import { RecipeBookPage } from './pages/RecipeBookPage'
 import { RecipeDetailPage } from './pages/RecipeDetailPage'
 import { RecipeEditorPage } from './pages/RecipeEditorPage'
 
-/** Everything except invitations requires a signed-in user who belongs to a family. */
+/** Everything except invitations requires a signed-in user who belongs to a team. */
 function Protected() {
   const { t } = useTranslation()
   const { me, error } = useAuth()
@@ -24,9 +24,9 @@ function Protected() {
   if (error) return <p>{t('health.unreachable', { error })}</p>
   if (!me) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 8 }} />
   if (!me.authenticated) return <LoginPage next={location.pathname + location.search} />
-  if (me.families.length === 0) return <NoFamilyPage />
+  if (me.teams.length === 0) return <NoTeamPage />
   return (
-    <FamilyProvider>
+    <TeamProvider>
       <AppShell>
         <Routes>
           <Route path="/" element={<RecipeBookPage />} />
@@ -39,7 +39,7 @@ function Protected() {
           <Route path="*" element={<RecipeBookPage />} />
         </Routes>
       </AppShell>
-    </FamilyProvider>
+    </TeamProvider>
   )
 }
 

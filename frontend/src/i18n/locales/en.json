@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Family Menu Planner",
+    "title": "WeeklyMenu",
     "language": "Language"
   },
   "health": {
@@ -34,24 +34,19 @@
     "error": "Something went wrong. Please try again."
   },
   "auth": {
-    "tagline": "The weekly menu and the shopping list, made for your family.",
+    "tagline": "The weekly menu and the shopping list, for people who eat together: family, flatmates, friends, a sports team or an office.",
     "continueWith": "Continue with {{provider}}",
     "or": "or",
     "signInWithEmail": "Sign in with email and password",
     "createAccount": "Create an account",
-    "invitationOnly": "Access is by invitation: once signed in, you can join the family that invited you.",
-    "invitedSignIn": "You have been invited to a family. Sign in or create an account to accept.",
+    "invitationOnly": "Access is by invitation: once signed in, you can join the team that invited you.",
+    "invitedSignIn": "You have been invited to a team. Sign in or create an account to accept.",
     "failed": "Sign-in failed. Please try again.",
     "logout": "Sign out"
   },
-  "noFamily": {
-    "title": "Just the invitation missing",
-    "body": "You are signed in as {{email}}, but your account is not part of any family yet.",
-    "hint": "Ask whoever manages your family to send you an invitation link, then open it in this browser."
-  },
   "invite": {
     "title": "Invitation",
-    "body": "You have been invited to join the “{{family}}” family.",
+    "body": "You have been invited to join the “{{team}}” team.",
     "accept": "Accept and join",
     "state": {
       "accepted": "This invitation has already been used.",
@@ -135,7 +130,7 @@
     "addToBook": "Add to recipe book",
     "removeTitle": "Remove the recipe?",
     "removePrivate": "This recipe is private: removing it from the recipe book deletes it.",
-    "removeShared": "The recipe stays available to other families, but will no longer be in your recipe book.",
+    "removeShared": "The recipe stays available to other teams, but will no longer be in your recipe book.",
     "tools": "Tools"
   },
   "editor": {
@@ -169,9 +164,8 @@
     "climateSeason": "Suits the weather",
     "climateHint": "When the dish suits the weather (a hot soup is not for August).",
     "sharing": "Sharing",
-    "shareWithFamilies": "Shared with other families",
-    "sharedHint": "Other families can see it and add it to their recipe book; only you can change it.",
-    "privateHint": "Only your family sees it.",
+    "sharedHint": "Other teams can see it and add it to their recipe book; only you can change it.",
+    "privateHint": "Only your team sees it.",
     "source": "Source link",
     "required": "Required",
     "fromAssistant": "Draft prepared by the assistant: check ingredients, amounts and seasonality before saving.",
@@ -181,11 +175,12 @@
     "similarMatch": "Matched to “{{match}}” (proposed: “{{name}}”): check it",
     "unresolved": "Some proposed ingredients are not in the catalog yet: create them or pick an existing one.",
     "sourcePhotos": "Original photos",
-    "readFromPhoto": "Text read from the photo"
+    "readFromPhoto": "Text read from the photo",
+    "shareWithTeams": "Shared with other teams"
   },
   "ingredient": {
     "newTitle": "New ingredient",
-    "sharedHint": "Ingredients are common to all families: use a simple, singular name.",
+    "sharedHint": "Ingredients are common to all teams: use a simple, singular name.",
     "name": "Name",
     "nameHint": "E.g. tomato, not “ripe tomatoes” (details go in the note); preserved forms are separate: “peeled tomato”",
     "category": "Category",
@@ -195,8 +190,8 @@
     "typeToSearch": "Type to search",
     "suggested": "Category, unit and season are suggested by the assistant: check them.",
     "editTitle": "Edit ingredient",
-    "editHint_one": "Used by {{count}} recipe: changes apply to every family, and recipe seasons will be recomputed.",
-    "editHint_other": "Used by {{count}} recipes: changes apply to every family, and recipe seasons will be recomputed.",
+    "editHint_one": "Used by {{count}} recipe: changes apply to every team, and recipe seasons will be recomputed.",
+    "editHint_other": "Used by {{count}} recipes: changes apply to every team, and recipe seasons will be recomputed.",
     "aliases": "Aliases",
     "aliasesHint": "Other ways it is written (plural, variants): press Enter after each",
     "exists": "An ingredient with this name or alias already exists."
@@ -211,7 +206,7 @@
     },
     "intro": {
       "tell": "Tell me the recipe the way you would tell a friend: ingredients, amounts if you know them, how you make it. I will prepare a draft for you to check.",
-      "search": "Tell me what you feel like: an ingredient, an occasion, a constraint (“a quick pumpkin pasta, for kids”). I search your recipe book, the other families' recipes and the web. You can then refine.",
+      "search": "Tell me what you feel like: an ingredient, an occasion, a constraint (“a quick pumpkin pasta, for kids”). I search your recipe book, the other teams' recipes and the web. You can then refine.",
       "link": "Paste the link of the page with the recipe: I will read it and prepare a draft for you to check. Pasting a link in “Tell me the recipe” works too.",
       "photo": "Send me a photo of the recipe: a cookbook page, a handwritten card, a screenshot. If it spans several pages, send the photos one after the other. I will read the text and prepare a draft for you to check."
     },
@@ -253,7 +248,6 @@
   },
   "search": {
     "inBook": "In your recipe book",
-    "fromFamilies": "From other families",
     "fromWeb": "From the web",
     "open": "Open",
     "view": "View",
@@ -263,7 +257,8 @@
       "web_search_unavailable": "Web search is not available with the configured model.",
       "web_search_empty": "I found no single-recipe pages on the web. Try naming a specific dish.",
       "web_search_failed": "The web search did not answer. Try again shortly."
-    }
+    },
+    "fromTeams": "From other teams"
   },
   "tool": {
     "air_fryer": "Air fryer",
@@ -280,7 +275,7 @@
     "steam_oven": "Steam oven",
     "newTitle": "New kitchen tool",
     "name": "Name",
-    "sharedHint": "Kitchen tools are common to all families: use a simple name.",
+    "sharedHint": "Kitchen tools are common to all teams: use a simple name.",
     "heatsKitchen": "Heats up the kitchen",
     "heatsKitchenHint": "Like an oven or a deep fryer: summer menus will take it into account.",
     "addNamed": "Add “{{name}}” as a new tool",
@@ -311,5 +306,10 @@
       "deleteHint": "The ingredient will be removed from the shared catalog.",
       "inUse": "It cannot be deleted: these recipes use it. You can merge it into another ingredient."
     }
+  },
+  "noTeam": {
+    "title": "Just the invitation missing",
+    "body": "You are signed in as {{email}}, but your account is not part of any team yet.",
+    "hint": "Ask whoever manages your team to send you an invitation link, then open it in this browser."
   }
 }

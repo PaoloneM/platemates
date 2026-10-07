@@ -16,7 +16,7 @@ class AssistantSessionSerializer(serializers.ModelSerializer):
         model = AssistantSession
         fields = [
             "id",
-            "family",
+            "team",
             "mode",
             "status",
             "recipe",

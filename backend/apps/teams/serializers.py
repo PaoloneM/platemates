@@ -1,26 +1,26 @@
 from rest_framework import serializers
 
-from .models import Family, FamilyMember, Preference, RecipeBookEntry
+from .models import Member, Preference, RecipeBookEntry, Team
 
 
-class FamilyMemberSerializer(serializers.ModelSerializer):
+class MemberSerializer(serializers.ModelSerializer):
     class Meta:
-        model = FamilyMember
-        fields = ["id", "family", "name", "birth_year"]
+        model = Member
+        fields = ["id", "team", "name", "birth_year"]
 
 
 class PreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Preference
-        fields = ["id", "family", "member", "kind", "ingredient", "cuisine", "note"]
+        fields = ["id", "team", "member", "kind", "ingredient", "cuisine", "note"]
 
 
-class FamilySerializer(serializers.ModelSerializer):
-    members = FamilyMemberSerializer(many=True, read_only=True)
+class TeamSerializer(serializers.ModelSerializer):
+    members = MemberSerializer(many=True, read_only=True)
     preferences = PreferenceSerializer(many=True, read_only=True)
 
     class Meta:
-        model = Family
+        model = Team
         fields = [
             "id",
             "name",
@@ -60,7 +60,7 @@ class RecipeBookEntrySerializer(serializers.ModelSerializer):
         model = RecipeBookEntry
         fields = [
             "id",
-            "family",
+            "team",
             "recipe",
             "recipe_summary",
             "status",

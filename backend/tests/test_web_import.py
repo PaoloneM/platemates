@@ -176,8 +176,8 @@ EXTRACTED = {
 
 
 @pytest.fixture
-def session(family, user):
-    return AssistantSession.objects.create(family=family, user=user, mode=Mode.LINK)
+def session(team, user):
+    return AssistantSession.objects.create(team=team, user=user, mode=Mode.LINK)
 
 
 def structured_page(url):

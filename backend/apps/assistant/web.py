@@ -92,7 +92,7 @@ def _check_public(url: str) -> None:
     The backend can reach the database, Keycloak, Unsloth Studio and the home network; a user
     pasting `http://keycloak:8080/...` or `http://192.168.1.1/` must not make it fetch them.
     Every address the name resolves to must be public. (A DNS answer changing between this check
-    and the connection is not covered; acceptable for a family app, revisit if exposed widely.)
+    and the connection is not covered; acceptable for a team app, revisit if exposed widely.)
     """
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https") or not parts.hostname:
