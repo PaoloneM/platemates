@@ -37,6 +37,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 # WhiteNoise complains when collectstatic has not run, which tests never need.
 filterwarnings = ["ignore:No directory at:UserWarning"]
+markers = ["seeded: keep the seeded ingredient catalog (see tests/conftest.py)"]
 
 [dependency-groups]
 dev = [

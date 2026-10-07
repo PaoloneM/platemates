@@ -52,15 +52,18 @@ PROPOSE_RECIPE = {
 _COMMON_RULES = """\
 - After every correction, call propose_recipe again with the whole updated draft. Never drop \
 something the user said; never contradict them.
-- Ingredient names: generic, singular, lowercase ("tomato", not "peeled tomatoes"; details go in \
-the note). Units: g, ml, pc (pieces), tt (to taste, with quantity null). Convert kg and l.
+- Ingredient names: generic, singular, lowercase ("tomato", not "ripe tomatoes"; details go in \
+the note). Preserved forms, available all year, stay distinct from the fresh product: \
+"pomodoro pelato", "passata di pomodoro", "pisello surgelato", "tonno in scatola". Units: g, \
+ml, pc (pieces), tt (to taste, with quantity null). Convert kg and l.
 - Fill category and season_months for each ingredient, and climate_months for the dish, from \
 general knowledge; the user will review them.
 - season_months: the months the ingredient is in season in Italy. Fresh vegetables, fruit and \
 most fish have a season: give it (e.g. leek: Sep-Apr, zucchini: May-Sep, basil: Jun-Sep). Use \
 an empty list for what is available all year regardless of season: pantry staples (pasta, rice, \
-flour, oil, salt, spices, sugar, dried legumes, eggs, milk, cheese, cured meats), potatoes, \
-onions, garlic, and evergreen herbs (rosemary, sage, bay leaf, thyme, parsley).
+flour, oil, salt, spices, sugar, dried legumes, eggs, milk, cheese, cured meats), canned, peeled, \
+frozen and dried products (peeled tomatoes, tomato purée, frozen peas), potatoes, onions, garlic, \
+and evergreen herbs (rosemary, sage, bay leaf, thyme, parsley).
 - climate_months: the months the dish suits the weather (hot soups and oven dishes in the cold \
 months, cold salads in the warm ones); empty only if it suits any season.
 - Keep replies to one or two sentences in {language}: the draft is shown to the user \
@@ -117,9 +120,10 @@ anything that is not part of the recipe (ads, comments, other recipes).
 - Keep title, description and steps in the source's language.
 - Ingredient names: always in {language} (translate them if the page is in another language), \
 generic, singular, lowercase, so they match the family's catalog. The name is the basic \
-ingredient; variety, origin and preparation go in the note. Examples in Italian: "pomodori \
-pelati" -> name "pomodoro", note "pelati"; "pecorino romano DOP grattugiato" -> "pecorino", \
-note "romano DOP, grattugiato"; "eggs" -> "uovo"; "parmesan" -> "parmigiano".
+ingredient; variety, origin and preparation go in the note. Preserved forms, available all year, \
+stay distinct from the fresh product. Examples in Italian: "pomodori maturi" -> name "pomodoro", \
+note "maturi"; "pomodori pelati" -> "pomodoro pelato"; "pecorino romano DOP grattugiato" -> \
+"pecorino", note "romano DOP, grattugiato"; "eggs" -> "uovo"; "parmesan" -> "parmigiano".
 - Notes: a few words at most (variety, cut, "grated"); never copy explanations or advice from \
 the page into them.
 - For every ingredient give its category and season_months.
@@ -130,8 +134,9 @@ and the dish's climate_months:
 - season_months: the months the ingredient is in season in Italy. Fresh vegetables, fruit and \
 most fish have a season: give it (e.g. leek: Sep-Apr, zucchini: May-Sep, basil: Jun-Sep). Use \
 an empty list for what is available all year regardless of season: pantry staples (pasta, rice, \
-flour, oil, salt, spices, sugar, dried legumes, eggs, milk, cheese, cured meats), potatoes, \
-onions, garlic, and evergreen herbs (rosemary, sage, bay leaf, thyme, parsley).
+flour, oil, salt, spices, sugar, dried legumes, eggs, milk, cheese, cured meats), canned, peeled, \
+frozen and dried products (peeled tomatoes, tomato purée, frozen peas), potatoes, onions, garlic, \
+and evergreen herbs (rosemary, sage, bay leaf, thyme, parsley).
 - climate_months: the months the dish suits the weather (hot soups and oven dishes in the cold \
 months, cold salads in the warm ones); empty only if it suits any season.
 - If the text contains no recipe, return an empty title, no ingredients and no steps.

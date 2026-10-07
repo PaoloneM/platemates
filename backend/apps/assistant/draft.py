@@ -37,8 +37,9 @@ DRAFT_SCHEMA: dict[str, Any] = {
                 "properties": {
                     "name": {
                         "type": "string",
-                        "description": "generic, singular, lowercase: 'tomato', not 'peeled "
-                        "tomatoes' (details go in note)",
+                        "description": "generic, singular, lowercase: 'tomato', not 'ripe "
+                        "tomatoes' (details go in note); preserved forms stay distinct: "
+                        "'peeled tomato', 'tomato purée'",
                     },
                     "quantity": {"type": ["number", "null"]},
                     "unit": {
@@ -91,6 +92,14 @@ _UNIT_ALIASES = {
 }
 _SCALE = {"kg": 1000, "l": 1000, "cl": 10}
 
+# Preserved products are available all year whatever their fresh counterpart's season. The model
+# keeps giving "pomodoro pelato" the tomato's summer even when told otherwise, so this is enforced.
+_PRESERVED = re.compile(
+    r"\b(pelat[oi]|passata|concentrato|surgelat[oi]|in scatola|sott'?olio|sott'?aceto|"
+    r"secc[oh]i?|essiccat[oi]|disidratat[oi]|canned|frozen|dried|tinned)\b",
+    re.IGNORECASE,
+)
+
 
 def _int(value, minimum: int = 0) -> int | None:
     try:
@@ -130,7 +139,7 @@ def _line(raw: dict[str, Any]) -> dict[str, Any] | None:
         "note": str(raw.get("note") or "").strip(),
         "optional": bool(raw.get("optional")),
         "category": category if category in IngredientCategory.values else "other",
-        "season_months": _months(raw.get("season_months")),
+        "season_months": [] if _PRESERVED.search(name) else _months(raw.get("season_months")),
     }
 
 

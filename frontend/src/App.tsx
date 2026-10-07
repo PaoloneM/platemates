@@ -1,12 +1,14 @@
 import { CircularProgress } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/context'
 import { AppShell } from './components/AppShell'
 import { FamilyProvider } from './family'
 import { AssistantPage } from './pages/AssistantPage'
 import { InvitePage } from './pages/InvitePage'
+import { IngredientsPage } from './pages/manage/IngredientsPage'
+import { ManageLayout } from './pages/manage/ManageLayout'
 import { LoginPage } from './pages/LoginPage'
 import { NoFamilyPage } from './pages/NoFamilyPage'
 import { RecipeBookPage } from './pages/RecipeBookPage'
@@ -32,6 +34,8 @@ function Protected() {
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
           <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />
           <Route path="/assistant/:id" element={<AssistantPage />} />
+          <Route path="/manage" element={<Navigate to="/manage/ingredients" replace />} />
+          <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
           <Route path="*" element={<RecipeBookPage />} />
         </Routes>
       </AppShell>

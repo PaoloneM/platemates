@@ -187,13 +187,19 @@
     "newTitle": "New ingredient",
     "sharedHint": "Ingredients are common to all families: use a simple, singular name.",
     "name": "Name",
-    "nameHint": "E.g. tomato, not “peeled tomatoes” (details go in the note)",
+    "nameHint": "E.g. tomato, not “ripe tomatoes” (details go in the note); preserved forms are separate: “peeled tomato”",
     "category": "Category",
     "unit": "Unit",
     "season": "Seasonality",
     "addNamed": "Add “{{name}}” as a new ingredient",
     "typeToSearch": "Type to search",
-    "suggested": "Category, unit and season are suggested by the assistant: check them."
+    "suggested": "Category, unit and season are suggested by the assistant: check them.",
+    "editTitle": "Edit ingredient",
+    "editHint_one": "Used by {{count}} recipe: changes apply to every family, and recipe seasons will be recomputed.",
+    "editHint_other": "Used by {{count}} recipes: changes apply to every family, and recipe seasons will be recomputed.",
+    "aliases": "Aliases",
+    "aliasesHint": "Other ways it is written (plural, variants): press Enter after each",
+    "exists": "An ingredient with this name or alias already exists."
   },
   "assistant": {
     "mode": {
@@ -279,5 +285,31 @@
     "heatsKitchenHint": "Like an oven or a deep fryer: summer menus will take it into account.",
     "addNamed": "Add “{{name}}” as a new tool",
     "exists": "A kitchen tool with this name already exists."
+  },
+  "manage": {
+    "title": "Management",
+    "section": {
+      "ingredients": "Ingredients"
+    },
+    "rows": "{{from}}–{{to}} of {{count}}",
+    "ingredients": {
+      "new": "New ingredient",
+      "search": "Search by name or alias",
+      "allCategories": "All categories",
+      "recipes": "Recipes",
+      "none": "No ingredients found.",
+      "merge": "Merge",
+      "mergeTitle": "Merge “{{name}}” into another ingredient",
+      "mergeInto": "Merge into",
+      "mergeHint_one": "Recipes using “{{name}}” ({{count}}) will use the chosen ingredient, and “{{name}}” becomes one of its aliases. Useful for duplicates.",
+      "mergeHint_other": "Recipes using “{{name}}” ({{count}}) will use the chosen ingredient, and “{{name}}” becomes one of its aliases. Useful for duplicates.",
+      "merged": "“{{name}}” merged into “{{target}}”",
+      "created": "“{{name}}” added",
+      "saved": "“{{name}}” saved",
+      "deleted": "“{{name}}” deleted",
+      "deleteTitle": "Delete “{{name}}”?",
+      "deleteHint": "The ingredient will be removed from the shared catalog.",
+      "inUse": "It cannot be deleted: these recipes use it. You can merge it into another ingredient."
+    }
   }
 }

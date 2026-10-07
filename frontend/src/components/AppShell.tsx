@@ -1,4 +1,5 @@
 import LogoutIcon from '@mui/icons-material/Logout'
+import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import TranslateIcon from '@mui/icons-material/Translate'
 import {
   AppBar,
@@ -66,6 +67,15 @@ function UserMenu() {
           </MenuItem>
         ))}
         <Divider />
+        {me.user.is_staff && (
+          <MenuItem component={RouterLink} to="/manage" onClick={() => setAnchor(null)}>
+            <ListItemIcon>
+              <SettingsIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t('manage.title')}</ListItemText>
+          </MenuItem>
+        )}
+        {me.user.is_staff && <Divider />}
         <MenuItem onClick={() => logoutForm.current?.submit()}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />

@@ -12,6 +12,15 @@ from apps.recipes.models import Recipe, RecipeIngredient
 MONDAY = dt.date(2026, 10, 5)
 
 
+@pytest.fixture(autouse=True)
+def empty_ingredient_catalog(request):
+    """Database tests start from an empty ingredient catalog, not the seeded one, so they can
+    create the ingredients they need. Tests about the seed opt out with @pytest.mark.seeded."""
+    if "db" in request.fixturenames and not request.node.get_closest_marker("seeded"):
+        request.getfixturevalue("db")  # autouse fixtures run first: make sure the db is set up
+        Ingredient.objects.all().delete()
+
+
 @pytest.fixture
 def user(db):
     return get_user_model().objects.create_user("alice", password="pw")

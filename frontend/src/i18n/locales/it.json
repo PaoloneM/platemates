@@ -187,13 +187,19 @@
     "newTitle": "Nuovo ingrediente",
     "sharedHint": "Gli ingredienti sono comuni a tutte le famiglie: usa un nome semplice, al singolare.",
     "name": "Nome",
-    "nameHint": "Es. pomodoro, non «pomodori pelati» (i dettagli vanno nella nota)",
+    "nameHint": "Es. pomodoro, non «pomodori maturi» (i dettagli vanno nella nota); le conserve sono a parte: «pomodoro pelato»",
     "category": "Categoria",
     "unit": "Unità",
     "season": "Stagionalità",
     "addNamed": "Aggiungi «{{name}}» come nuovo ingrediente",
     "typeToSearch": "Scrivi per cercare",
-    "suggested": "Categoria, unità e stagione sono suggerite dall'assistente: controllale."
+    "suggested": "Categoria, unità e stagione sono suggerite dall'assistente: controllale.",
+    "editTitle": "Modifica ingrediente",
+    "editHint_one": "Usato da {{count}} ricetta: le modifiche valgono per tutte le famiglie, e la stagione delle ricette verrà ricalcolata.",
+    "editHint_other": "Usato da {{count}} ricette: le modifiche valgono per tutte le famiglie, e la stagione delle ricette verrà ricalcolata.",
+    "aliases": "Sinonimi",
+    "aliasesHint": "Altri nomi con cui viene scritto (plurale, varianti): premi Invio dopo ognuno",
+    "exists": "Esiste già un ingrediente con questo nome o sinonimo."
   },
   "assistant": {
     "mode": {
@@ -279,5 +285,31 @@
     "heatsKitchenHint": "Come il forno o la friggitrice: d'estate i menu ne terranno conto.",
     "addNamed": "Aggiungi «{{name}}» come nuovo attrezzo",
     "exists": "Esiste già un attrezzo con questo nome."
+  },
+  "manage": {
+    "title": "Gestione",
+    "section": {
+      "ingredients": "Ingredienti"
+    },
+    "rows": "{{from}}–{{to}} di {{count}}",
+    "ingredients": {
+      "new": "Nuovo ingrediente",
+      "search": "Cerca per nome o sinonimo",
+      "allCategories": "Tutte le categorie",
+      "recipes": "Ricette",
+      "none": "Nessun ingrediente trovato.",
+      "merge": "Unisci",
+      "mergeTitle": "Unisci «{{name}}» a un altro ingrediente",
+      "mergeInto": "Unisci a",
+      "mergeHint_one": "Le ricette che usano «{{name}}» ({{count}}) useranno l'ingrediente scelto, e «{{name}}» ne diventerà un sinonimo. Utile per i doppioni.",
+      "mergeHint_other": "Le ricette che usano «{{name}}» ({{count}}) useranno l'ingrediente scelto, e «{{name}}» ne diventerà un sinonimo. Utile per i doppioni.",
+      "merged": "«{{name}}» unito a «{{target}}»",
+      "created": "«{{name}}» aggiunto",
+      "saved": "«{{name}}» salvato",
+      "deleted": "«{{name}}» eliminato",
+      "deleteTitle": "Eliminare «{{name}}»?",
+      "deleteHint": "L'ingrediente verrà tolto dal catalogo comune.",
+      "inUse": "Non si può eliminare: è usato da queste ricette. Puoi unirlo a un altro ingrediente."
+    }
   }
 }

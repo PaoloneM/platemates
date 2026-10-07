@@ -56,6 +56,25 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
   kitchen tools the app ships with carry a stable `code` and are shown translated
   (`tool.<code>` in the frontend locales); tools added by users have no code and are shown by
   the name they were given. Tool names are unique regardless of case.
+- **Seeded ingredient catalog** (`catalog/migrations/0005_seed_common_ingredients.py`): about 160
+  common ingredients in Italian (the first deployment's language) with category, unit, Italian
+  seasonality and plural aliases. Idempotent and non-destructive: an entry is skipped when an
+  ingredient already exists under its name or one of its aliases. Unlike shipped kitchen tools
+  they have no code: ingredient names are data, matched by the assistant in the family's
+  language. Database tests start from an empty catalog (`tests/conftest.py`); tests about the
+  seed are marked `seeded`.
+- **Preserved forms are distinct ingredients** with no season ("pomodoro pelato", "passata di
+  pomodoro", "pisello surgelato", "tonno in scatola"): folding them into the fresh product would
+  make a winter sauce of peeled tomatoes "in season" only in summer. The assistant's prompts say
+  so, and `normalize_draft` forces an all-year season on names that denote a preserved product,
+  because the model kept proposing the fresh product's season anyway.
+- **Management section** (frontend `/manage`, staff only, from the user menu): one page per
+  shared catalog, starting with ingredients: search, category filter, sorting by usage, editing
+  (name, aliases, category, unit, season), deleting unused ones, and merging duplicates
+  (`catalog/services.py`: recipe lines and preferences move to the target, same-unit quantities
+  are added up when a recipe had both, the duplicate's name becomes an alias). Changing an
+  ingredient's season re-derives the season of the recipes using it (unless the user set it)
+  and refreshes their embeddings.
   This is what makes collaborative recommendation possible ("families like yours loved X"), and
   keeps discovery candidates separate from accepted recipes (`RecipeBookEntry.Status.CANDIDATE`).
 - **People per slot.** `MealSlot.people` is the source of truth. `Family.default_people` only

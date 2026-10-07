@@ -16,7 +16,7 @@ from apps.menus.views import MealSlotViewSet, WeeklyMenuViewSet
 from apps.recipes.views import CuisineViewSet, RecipeViewSet
 
 router = DefaultRouter()
-router.register("ingredients", IngredientViewSet)
+router.register("ingredients", IngredientViewSet, basename="ingredient")
 router.register("kitchen-tools", KitchenToolViewSet)
 router.register("cuisines", CuisineViewSet)
 router.register("recipes", RecipeViewSet, basename="recipe")

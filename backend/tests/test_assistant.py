@@ -235,3 +235,29 @@ def test_closing_links_the_saved_recipe(api, family, user):
         f"/api/assistant/sessions/{session.pk}/messages/", {"text": "x"}, format="json"
     )
     assert again.status_code == 409
+
+
+def test_preserved_products_are_all_year_whatever_the_model_says():
+    draft = normalize_draft(
+        {
+            "title": "Sugo",
+            "servings": 4,
+            "steps": [],
+            "ingredients": [
+                {
+                    "name": "pomodoro pelato",
+                    "quantity": 400,
+                    "unit": "g",
+                    "season_months": [6, 7, 8],
+                },
+                {
+                    "name": "pisello surgelato",
+                    "quantity": 200,
+                    "unit": "g",
+                    "season_months": [4, 5],
+                },
+                {"name": "pomodoro", "quantity": 400, "unit": "g", "season_months": [6, 7, 8]},
+            ],
+        }
+    )
+    assert [i["season_months"] for i in draft["ingredients"]] == [[], [], [6, 7, 8]]

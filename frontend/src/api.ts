@@ -46,6 +46,8 @@ export type Ingredient = {
   category: string
   default_unit: Unit
   season_months: Seasonality
+  // Recipes using it.
+  usage_count: number
   provenance: Record<string, Source>
 }
 
