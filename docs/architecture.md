@@ -338,6 +338,27 @@ Verified live on 2026-10-05 against this project's adapter:
   `up`. The embedding service is part of the default stack, with a readiness check that passes
   once the model is loaded.
 
+## Future: translated ingredient names (recorded 2026-10-07)
+
+Ingredient names are stored in a single language (Italian, the first deployment's). A family
+using the app in English would see Italian names, and its assistant would create English
+duplicates ("tomato" next to "pomodoro").
+
+What makes it tractable: recipes, family preferences and embeddings reference an ingredient by
+its id (`RecipeIngredient.ingredient`, `Preference.ingredient` are foreign keys), never by name.
+The name is a display and matching attribute only, so translations can be added without touching
+any recipe. A possible shape:
+
+- per-language names and aliases on the ingredient (e.g. `names: {"it": "pomodoro", "en":
+  "tomato"}`, `aliases: {"it": [...], "en": [...]}`), the current `name` becoming the canonical
+  key; the UI shows the name in the interface language, falling back to the canonical one;
+- matching (`catalog/matching.py`) and search look at the names and aliases of every language,
+  so an English recipe matches the existing "pomodoro";
+- the assistant keeps writing ingredient names in the user's language, and a new ingredient gets
+  its other-language names proposed by the LLM, to be confirmed in the management section like
+  any other suggestion (provenance);
+- the seeded catalog gains English names in a data migration.
+
 ## Not built yet
 
 Menu generation engine (agentic, RAG), recipe discovery, embedding computation jobs,

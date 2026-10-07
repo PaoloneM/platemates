@@ -85,6 +85,8 @@ Nutritional and variety guidelines that frame the LLM's choices, based on common
 - Dedicated recipe scraping, only if the LLM's native web search proves insufficient
 - Possible targeted fine-tuning (e.g. on the embedding component), to be evaluated during development
 - Semantic enrichment of recipes via a general-purpose online LLM before computing the embedding
+- Translated ingredient names, so families using different languages share one catalog (see
+  "Future: translated ingredient names" in `docs/architecture.md`)
 
 ## Development
 
