@@ -51,12 +51,14 @@ home network need HTTPS (Keycloak's login cookies require it outside localhost):
 
 ```bash
 python3 scripts/setup_lan_https.py     # idempotent; needs `brew install mkcert`
-docker compose up -d --build frontend backend keycloak-setup
+docker compose up -d backend keycloak-setup   # Traefik reloads the certificate by itself
 ```
 
 The script creates a certificate authority for this project (`secrets/tls/ca`, gitignored, not
-added to the Mac's keychain), a certificate for the Mac's `<name>.local` and LAN IP, and the nginx
-HTTPS server on port 8443; it adds those addresses to `.env`.
+added to the Mac's keychain), a certificate for the Mac's `<name>.local` and LAN IP, and the
+Traefik configuration that serves it on port 8443 (`secrets/tls/tls.yml`); it adds those
+addresses to `.env`. Until it has run, port 8443 answers with Traefik's own self-signed
+certificate.
 
 On each phone or tablet, once, trust `secrets/tls/mymenu-local-ca.crt` (AirDrop it or email it):
 
@@ -72,6 +74,15 @@ If the Mac's IP changes (DHCP), re-run the script and recreate the containers: t
 is reissued, the authority stays the same, so phones need nothing new. Whoever has
 `secrets/tls/ca/rootCA-key.pem` can issue certificates your devices will trust: never share it,
 only the `.crt`.
+
+## Exposing the app beyond the home network
+
+Traefik discovers containers through the Docker socket, mounted read-only. Read access to the
+Docker API still reveals every container's configuration, environment variables included. That
+is acceptable on a home machine; before exposing Traefik to the internet, put a socket proxy in
+between (e.g. `tecnativa/docker-socket-proxy`, allowing only container listing) and point
+Traefik's Docker provider at it. With a public domain, Traefik can also obtain Let's Encrypt
+certificates itself (an ACME resolver on the `websecure` entry point) instead of the mkcert one.
 
 ## Moving to another machine
 

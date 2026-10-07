@@ -57,10 +57,10 @@ services:
       KC_DB_URL: jdbc:postgresql://db:5432/${KEYCLOAK_DB:-keycloak}
       KC_DB_USERNAME: ${POSTGRES_USER:-mymenu}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-mymenu}
-      # No fixed hostname: Keycloak builds its URLs from the request, as forwarded by nginx or the
+      # No fixed hostname: Keycloak builds its URLs from the request, as forwarded by Traefik or the
       # Vite proxy (X-Forwarded-Proto/Host). The app works from whatever address it is opened at
       # (localhost on the Mac, the LAN name or IP from a phone), always under /auth on the app's
-      # origin. TLS is terminated by nginx; Keycloak itself speaks plain HTTP inside Docker.
+      # origin. TLS is terminated by Traefik; Keycloak itself speaks plain HTTP inside Docker.
       KC_HOSTNAME_STRICT: "false"
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
@@ -70,7 +70,28 @@ services:
       db-init:
         condition: service_completed_successfully
     ports:
+      # Direct access on the Mac only, e.g. the admin console: http://localhost:8180/auth/admin/
       - "127.0.0.1:8180:8080"
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.keycloak.loadbalancer.server.port=8080
+      - traefik.http.routers.keycloak.rule=PathPrefix(`/auth`)
+      - traefik.http.routers.keycloak.entrypoints=web
+      - traefik.http.routers.keycloak-tls.rule=PathPrefix(`/auth`)
+      - traefik.http.routers.keycloak-tls.entrypoints=websecure
+      - traefik.http.routers.keycloak-tls.tls=true
+      # The admin console is not served through the app's address (use :8180 on the Mac).
+      # Traefik has no "deny" middleware: an allow-list nobody matches answers 403 to all.
+      - traefik.http.middlewares.deny-all.ipallowlist.sourcerange=255.255.255.255/32
+      - traefik.http.routers.keycloak-admin.rule=PathPrefix(`/auth/admin`)
+      - traefik.http.routers.keycloak-admin.entrypoints=web
+      - traefik.http.routers.keycloak-admin.middlewares=deny-all
+      - traefik.http.routers.keycloak-admin.service=keycloak
+      - traefik.http.routers.keycloak-admin-tls.rule=PathPrefix(`/auth/admin`)
+      - traefik.http.routers.keycloak-admin-tls.entrypoints=websecure
+      - traefik.http.routers.keycloak-admin-tls.tls=true
+      - traefik.http.routers.keycloak-admin-tls.middlewares=deny-all
+      - traefik.http.routers.keycloak-admin-tls.service=keycloak
     healthcheck:
       # The image has no curl: speak HTTP to the management port through bash's /dev/tcp.
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /auth/health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
@@ -121,19 +142,59 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.backend.loadbalancer.server.port=8000
+      - "traefik.http.routers.backend.rule=PathPrefix(`/api`) || PathPrefix(`/oidc`) || PathPrefix(`/admin`) || PathPrefix(`/static`)"
+      - traefik.http.routers.backend.entrypoints=web
+      - "traefik.http.routers.backend-tls.rule=PathPrefix(`/api`) || PathPrefix(`/oidc`) || PathPrefix(`/admin`) || PathPrefix(`/static`)"
+      - traefik.http.routers.backend-tls.entrypoints=websecure
+      - traefik.http.routers.backend-tls.tls=true
 
-  frontend:
-    build: ./frontend
-    depends_on:
-      - backend
+  # Entry point: routes /api, /oidc, /admin, /static to the backend, /auth to Keycloak and the
+  # rest to the SPA, from the labels on those services. Terminates HTTPS for the home network
+  # with the certificate made by scripts/setup_lan_https.py (secrets/tls). Picks up containers
+  # as they are created or recreated.
+  traefik:
+    image: traefik:v3.7
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      # TLS certificate for the LAN, written by scripts/setup_lan_https.py.
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --ping=true
+      - --log.level=WARN
     ports:
       # HTTP for the Mac itself.
       - "127.0.0.1:8080:80"
-      # HTTPS for the home network: active once scripts/setup_lan_https.py has run (otherwise
-      # nothing listens on it). See docs/operations.md.
+      # HTTPS for the home network (a self-signed certificate until setup_lan_https.py has run).
       - "${LAN_HTTPS_PORT:-8443}:443"
     volumes:
-      - ./secrets/tls:/etc/nginx/tls:ro
+      # Read-only, to discover containers and their labels. On a machine exposed to the
+      # internet, put a socket proxy in between (see docs/operations.md).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./secrets/tls:/etc/traefik/dynamic:ro
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The built React SPA, served as static files (nginx, no proxying).
+  frontend:
+    build: ./frontend
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.frontend.loadbalancer.server.port=80
+      # Everything else; Traefik tries longer (more specific) rules first.
+      - traefik.http.routers.frontend.rule=PathPrefix(`/`)
+      - traefik.http.routers.frontend.entrypoints=web
+      - traefik.http.routers.frontend-tls.rule=PathPrefix(`/`)
+      - traefik.http.routers.frontend-tls.entrypoints=websecure
+      - traefik.http.routers.frontend-tls.tls=true
 
   # Local multilingual embedding model (recipe similarity, "help me search"). Part of the default
   # stack since the search mode needs it; the backend degrades gracefully when it is down.

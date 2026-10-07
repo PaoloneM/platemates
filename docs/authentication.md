@@ -16,7 +16,7 @@ SPA "Continue with Google"
   ◄── session cookie, redirect to `next`                        SPA calls /api/me/
 ```
 
-- **Keycloak lives under `/auth` on the app's own origin** (nginx forwards it; so does the Vite
+- **Keycloak lives under `/auth` on the app's own origin** (Traefik forwards it; so does the Vite
   proxy in development) and has no fixed hostname: it builds its URLs from the forwarded
   request. The URLs Django sends the browser to are relative (`/auth/...`), so login works from
   whatever address the app is opened at: `http://localhost:8080` on the Mac,
@@ -82,7 +82,7 @@ line, including removing a Google/Microsoft/Apple provider whose credentials wer
 by hand in the Keycloak console: the next setup run would overwrite it.
 
 - Keycloak admin console: http://localhost:8180/auth/admin/ on the Mac only (user
-  `KEYCLOAK_ADMIN`, password `KEYCLOAK_ADMIN_PASSWORD` from `.env`). nginx refuses `/auth/admin/`,
+  `KEYCLOAK_ADMIN`, password `KEYCLOAK_ADMIN_PASSWORD` from `.env`). Traefik refuses `/auth/admin/`,
   so it is not reachable through the app's address from other devices.
 - Keycloak keeps its data in its own database (`keycloak`) on the same PostgreSQL server. The
   one-shot `db-init` compose service creates it if missing, on every `up`, so fresh and existing

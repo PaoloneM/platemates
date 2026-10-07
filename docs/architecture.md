@@ -10,7 +10,8 @@ flowchart LR
     user["Browser or phone"]
 
     subgraph compose["Docker Compose (project mymenu)"]
-        nginx["frontend<br/>nginx: SPA + reverse proxy<br/>:80 = Mac :8080, :443 = LAN :8443"]
+        traefik["traefik<br/>entry point, routing from labels<br/>:80 = Mac :8080, :443 = LAN :8443"]
+        spa["frontend<br/>nginx serving the built SPA"]
         backend["backend<br/>Django + DRF, gunicorn"]
         keycloak["keycloak<br/>/auth, theme mymenu"]
         db[("db<br/>PostgreSQL 17 + pgvector<br/>databases mymenu, keycloak")]
@@ -25,9 +26,10 @@ flowchart LR
     web[("Public recipe websites")]
     idp["Google, Microsoft, Apple"]
 
-    user --> nginx
-    nginx -- "/api /oidc /admin /static" --> backend
-    nginx -- "/auth (admin console refused)" --> keycloak
+    user --> traefik
+    traefik -- "/" --> spa
+    traefik -- "/api /oidc /admin /static" --> backend
+    traefik -- "/auth (admin console refused)" --> keycloak
     backend -- "OIDC code exchange, keys" --> keycloak
     backend --> db
     keycloak --> db
@@ -44,13 +46,26 @@ flowchart LR
 | Directory | What | Runs as |
 |---|---|---|
 | `backend/` | Django project `config`, domain apps in `apps/`, AI adapters in `ai/` | `backend` container, or `uv run` natively |
-| `frontend/` | React + TypeScript SPA (Vite) | `frontend` container (nginx), or `npm run dev` |
+| `frontend/` | React + TypeScript SPA (Vite) | `frontend` container (nginx, static files only), or `npm run dev` |
 | `services/embeddings/` | OpenAI-compatible `/v1/embeddings` around sentence-transformers | `embeddings` container, or `uv run uvicorn` |
 | `keycloak/` | Keycloak image: login theme `mymenu` + Apple provider extension, served under `/auth` | `keycloak` container; realm configured by `keycloak-setup` |
 
-The frontend and backend always share one origin (Vite proxy in development, nginx in
-production), so the API uses Django session auth and CSRF without CORS. Both proxies must keep
-the original `Host` header: Django builds the OIDC callback URL from it.
+The frontend and backend always share one origin (Vite proxy in development, Traefik in the
+stack), so the API uses Django session auth and CSRF without CORS. Both proxies must keep the
+original `Host` header: Django builds the OIDC callback URL from it, Keycloak its own URLs.
+
+**Traefik is the entry point** (decided 2026-10-07, replacing nginx as reverse proxy): routing
+is declared as labels next to each service in `docker-compose.yml` (`/api /oidc /admin /static`
+to the backend, `/auth` to Keycloak, the rest to the SPA; Traefik tries longer rules first), and
+it follows containers as they are recreated, which nginx needed a DNS workaround for. Each route
+has two routers, one per entry point (`web` plain HTTP, `websecure` TLS), because a Traefik
+router either requires TLS or not. Keycloak's admin console is refused with an IP allow-list
+nobody matches (Traefik has no deny middleware). The LAN certificate comes from the file
+provider (`secrets/tls/tls.yml`, written by `scripts/setup_lan_https.py`) and is reloaded
+without a restart; Let's Encrypt can be enabled the same way once the app has a public domain.
+Traefik does not serve files, so the SPA stays in a small nginx container that only serves the
+build. Traefik reads the Docker socket read-only to discover containers; on a machine exposed to
+the internet, put a socket proxy in between (`docs/operations.md`).
 
 **Authentication** is Keycloak (email/password, Google, Microsoft, Apple) with Django as OIDC
 client, and access is invitation-only. Full design and setup: `docs/authentication.md`.
@@ -327,7 +342,7 @@ flowchart TD
   main action); on phones it opens the back camera. The browser downscales to 1280 px JPEG before
   upload (`frontend/src/images.ts`): a 3300x4200 photo became 73 KB, about 1,500 tokens for the
   vision model. The backend accepts only JPEG/PNG/WebP, checked by their bytes, up to 10 MB
-  (nginx allows 12 MB).
+  (Traefik sets no body limit).
 - Photos are stored in the database (`Attachment`), so they are in the backups, are shown beside
   the draft in the review screen, and are visible only to the conversation's author.
 - Two steps, as decided: a strictly literal transcription by the vision model (`LLM_VISION_MODEL`,

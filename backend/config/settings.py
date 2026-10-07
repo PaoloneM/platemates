@@ -36,7 +36,7 @@ if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off.")
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
-# nginx terminates HTTPS (for devices on the home network) and says so in this header; the
+# Traefik terminates HTTPS (for devices on the home network) and says so in this header; the
 # backend port itself is published on 127.0.0.1 only, so the header cannot be forged from outside.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 CSRF_TRUSTED_ORIGINS = env_list(
@@ -143,7 +143,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "mymenu")
-# Browsers reach Keycloak under /auth on the app's own origin (nginx or the Vite proxy forward
+# Browsers reach Keycloak under /auth on the app's own origin (Traefik or the Vite proxy forward
 # it), so the endpoints they are sent to are relative paths: login works from whatever address
 # the app was opened at (localhost, the LAN name or IP). The backend calls Keycloak directly on
 # the internal URL (a container hostname under Docker Compose).

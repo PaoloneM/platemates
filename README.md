@@ -31,7 +31,8 @@ flowchart LR
     user["Browser or phone"]
 
     subgraph compose["Docker Compose"]
-        nginx["frontend<br/>nginx + React SPA"]
+        traefik["Traefik<br/>routing, HTTPS"]
+        spa["frontend<br/>React SPA"]
         backend["backend<br/>Django REST"]
         keycloak["Keycloak<br/>sign-in, under /auth"]
         db[("PostgreSQL<br/>+ pgvector")]
@@ -45,9 +46,10 @@ flowchart LR
     web[("Recipe websites")]
     idp["Google, Microsoft, Apple"]
 
-    user -- "HTTP :8080 on the Mac<br/>HTTPS :8443 on the LAN" --> nginx
-    nginx -- "/api /oidc /admin" --> backend
-    nginx -- "/auth" --> keycloak
+    user -- "HTTP :8080 on the Mac<br/>HTTPS :8443 on the LAN" --> traefik
+    traefik -- "/" --> spa
+    traefik -- "/api /oidc /admin" --> backend
+    traefik -- "/auth" --> keycloak
     backend -- "OIDC" --> keycloak
     backend --> db
     keycloak --> db

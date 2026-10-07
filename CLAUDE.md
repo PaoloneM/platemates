@@ -156,6 +156,8 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - Never run `docker compose down -v` (or remove `mymenu_pgdata`) without a fresh backup: it deletes
   both databases, Keycloak accounts included. `backups/` holds personal data: never commit it
 - Keycloak is configured only through `setup_keycloak` (from `.env`), never by hand in its console
+- Routing lives in Traefik labels on each service in `docker-compose.yml`, one router per entry
+  point (`web`, and `websecure` with `tls=true`); the `frontend` container only serves files
 - Keycloak has no fixed hostname and lives under `/auth` on the app's origin: never hardcode a
   Keycloak URL that the browser follows; browser-facing OIDC endpoints stay relative
 - The interface language is a per-user preference saved in the backend, not only in the browser
