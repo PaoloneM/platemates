@@ -311,5 +311,76 @@
     "title": "Manca solo l'invito",
     "body": "Hai effettuato l'accesso come {{email}}, ma il tuo account non fa ancora parte di nessun team.",
     "hint": "Chiedi a chi gestisce il tuo team di inviarti un link di invito, poi aprilo da questo browser."
+  },
+  "team": {
+    "menu": "Il tuo team",
+    "memberNotice": "Solo i proprietari del team possono modificare queste impostazioni.",
+    "role": {
+      "owner": "Proprietario",
+      "member": "Membro"
+    },
+    "profile": {
+      "title": "Profilo",
+      "hint": "Questi dati guidano le proposte di menu.",
+      "name": "Nome del team",
+      "lunch": "Persone a pranzo",
+      "dinner": "Persone a cena",
+      "maxMinutes": "Tempo massimo nei giorni feriali",
+      "maxMinutesHint": "Preparazione + cottura sostenibile in una giornata normale",
+      "tools": "Attrezzi disponibili",
+      "toolsHint": "Le ricette che richiedono altri attrezzi non verranno proposte",
+      "invalid": "Controlla i valori: le persone vanno da 0 a 50.",
+      "saved": "Profilo salvato"
+    },
+    "people": {
+      "title": "Persone a tavola",
+      "hint": "Chi mangia di solito con voi, anche senza un account (es. i bambini). L'età serve a confrontare team simili.",
+      "add": "Aggiungi persona",
+      "edit": "Modifica persona",
+      "name": "Nome",
+      "birthYear": "Anno di nascita",
+      "birthYearHint": "Facoltativo",
+      "none": "Nessuna persona indicata.",
+      "unnamed": "Senza nome",
+      "age_one": "{{count}} anno ({{year}})",
+      "age_other": "{{count}} anni ({{year}})"
+    },
+    "users": {
+      "title": "Utenti e ruoli",
+      "hint": "Chi accede all'app per questo team. I proprietari gestiscono il team; i membri usano ricettario e menu.",
+      "you": "tu",
+      "leave": "Lascia il team",
+      "remove": "Rimuovi",
+      "leaveTitle": "Lasciare «{{team}}»?",
+      "leaveHint": "Non vedrai più il ricettario e i menu di questo team. Per rientrare servirà un nuovo invito.",
+      "removeTitle": "Rimuovere {{name}}?",
+      "removeHint": "Non avrà più accesso al team. Per rientrare servirà un nuovo invito.",
+      "lastOwner": "Il team deve avere almeno un proprietario: nomina prima qualcun altro."
+    },
+    "invites": {
+      "title": "Inviti",
+      "hint": "Crea un link e mandalo a chi vuoi far entrare: vale una volta sola, per 14 giorni.",
+      "memberHint": "Gli inviti li creano i proprietari del team.",
+      "note": "Per chi è",
+      "notePlaceholder": "Es. Marta",
+      "role": "Ruolo",
+      "create": "Crea invito",
+      "created": "Invito creato: manda questo link.",
+      "copy": "Copia il link",
+      "copied": "Link copiato",
+      "share": "Condividi",
+      "revoke": "Annulla l'invito",
+      "none": "Nessun invito.",
+      "untitled": "Invito",
+      "shareText": "Unisciti al team «{{team}}» su WeeklyMenu",
+      "createdOn": "Creato il {{date}}, valido fino al {{until}}",
+      "acceptedBy": "Accettato da {{name}} il {{date}}",
+      "state": {
+        "pending": "In attesa",
+        "accepted": "Accettato",
+        "expired": "Scaduto",
+        "revoked": "Annullato"
+      }
+    }
   }
 }

@@ -136,7 +136,8 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - Every property the LLM suggests or the code derives goes through `ProvenanceMixin.propose`;
   never assign it directly. API writes are user decisions and are marked as such automatically
 - Team-owned data is reached only through `TeamScopedMixin` querysets: a user never sees
-  another team's data
+  another team's data. Writes that change the team itself (profile, people, roles, invitations)
+  go through `OwnerWritesMixin` / `require_owner`
 - Application logic talks to AI only through `ai.get_chat_provider()` /
   `ai.get_embedding_provider()`; provider-specific code lives in `ai/` only
 - Embeddings are always stored with the model name that produced them

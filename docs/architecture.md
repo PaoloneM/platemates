@@ -246,6 +246,25 @@ Models carrying LLM-suggested or derived properties inherit `ProvenanceMixin`
 
 Never assign a tracked field directly from LLM output; always go through `propose`.
 
+### Team management (built 2026-10-07)
+
+The team page (`/team`, from the user menu or the team name in the top bar) covers the profile
+(name, default diners per meal, weekday time limit, kitchen tools), the people at the table
+(`Member`: name and birth year, no account needed), users and roles (`Membership`), and
+invitations.
+
+- **Owners manage, members read** (`OwnerWritesMixin`, `require_owner` in
+  `apps/teams/permissions.py`): profile, people, roles and invitations are changed by owners;
+  every member sees them and can leave. Invitation tokens are only ever sent to owners: the token
+  *is* the invitation. Before this, any member could change the team and read every link.
+- **A team always keeps an owner**: the last owner can neither step down nor leave
+  (`MembershipViewSet`); someone else must be made owner first.
+- **Teams are not deleted from the app**: it would take every member's recipe book and menus
+  with it. New teams are still created by staff (`create_team`), access being invitation-only.
+- **Invitations**: a single-use link valid 14 days, copied or shared through the phone's share
+  sheet (Web Share API), listed with who created it and who accepted it. No email yet (needs SMTP).
+- Tastes (`Preference`) have no screen yet: they come with the menu engine that uses them.
+
 ### Multi-team access
 
 A user sees only teams they hold a `Membership` in, and gets one only by accepting an

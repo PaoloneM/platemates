@@ -67,7 +67,14 @@ class InvitationViewSet(
 ):
     """Owners invite people to their team. Deleting an invitation revokes it."""
 
-    queryset = Invitation.objects.select_related("team")
+    queryset = Invitation.objects.select_related("team", "invited_by", "accepted_by")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if team := self.request.query_params.get("team"):
+            queryset = queryset.filter(team_id=team)
+        return queryset
+
     serializer_class = InvitationSerializer
 
     def check_team(self, team):

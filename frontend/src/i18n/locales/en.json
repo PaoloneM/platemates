@@ -311,5 +311,76 @@
     "title": "Just the invitation missing",
     "body": "You are signed in as {{email}}, but your account is not part of any team yet.",
     "hint": "Ask whoever manages your team to send you an invitation link, then open it in this browser."
+  },
+  "team": {
+    "menu": "Your team",
+    "memberNotice": "Only the team's owners can change these settings.",
+    "role": {
+      "owner": "Owner",
+      "member": "Member"
+    },
+    "profile": {
+      "title": "Profile",
+      "hint": "These guide the menu suggestions.",
+      "name": "Team name",
+      "lunch": "People at lunch",
+      "dinner": "People at dinner",
+      "maxMinutes": "Weekday time limit",
+      "maxMinutesHint": "Preparation + cooking you can manage on an ordinary day",
+      "tools": "Kitchen tools available",
+      "toolsHint": "Recipes needing other tools will not be suggested",
+      "invalid": "Check the values: people go from 0 to 50.",
+      "saved": "Profile saved"
+    },
+    "people": {
+      "title": "People at the table",
+      "hint": "Who usually eats with you, even without an account (e.g. children). Ages help compare similar teams.",
+      "add": "Add person",
+      "edit": "Edit person",
+      "name": "Name",
+      "birthYear": "Year of birth",
+      "birthYearHint": "Optional",
+      "none": "Nobody listed yet.",
+      "unnamed": "Unnamed",
+      "age_one": "{{count}} year old ({{year}})",
+      "age_other": "{{count}} years old ({{year}})"
+    },
+    "users": {
+      "title": "Users and roles",
+      "hint": "Who uses the app for this team. Owners manage the team; members use the recipe book and menus.",
+      "you": "you",
+      "leave": "Leave the team",
+      "remove": "Remove",
+      "leaveTitle": "Leave “{{team}}”?",
+      "leaveHint": "You will no longer see this team's recipe book and menus. Coming back takes a new invitation.",
+      "removeTitle": "Remove {{name}}?",
+      "removeHint": "They will lose access to the team. Coming back takes a new invitation.",
+      "lastOwner": "A team needs at least one owner: make someone else owner first."
+    },
+    "invites": {
+      "title": "Invitations",
+      "hint": "Create a link and send it to whoever should join: it works once, for 14 days.",
+      "memberHint": "Invitations are created by the team's owners.",
+      "note": "Who it is for",
+      "notePlaceholder": "E.g. Marta",
+      "role": "Role",
+      "create": "Create invitation",
+      "created": "Invitation created: send this link.",
+      "copy": "Copy the link",
+      "copied": "Link copied",
+      "share": "Share",
+      "revoke": "Cancel the invitation",
+      "none": "No invitations.",
+      "untitled": "Invitation",
+      "shareText": "Join the “{{team}}” team on WeeklyMenu",
+      "createdOn": "Created {{date}}, valid until {{until}}",
+      "acceptedBy": "Accepted by {{name}} on {{date}}",
+      "state": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "expired": "Expired",
+        "revoked": "Cancelled"
+      }
+    }
   }
 }

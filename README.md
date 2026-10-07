@@ -16,11 +16,12 @@ application.
 | **Recipe book**: structured recipes, ingredients scaled to the number of people, two-level seasonality, cuisine, tools, ratings, private or shared with other teams | Built |
 | **Recipe assistant**: add a recipe by telling it in your own words, by pasting a link, by taking a photo of a cookbook page or a handwritten card, or by asking it to search your recipes, other teams' recipes and the web; every draft is reviewed before saving | Built |
 | **Teams**: sign-in with email/password or Google, Microsoft, Apple (Keycloak); invitation-only access; interface in Italian and English, remembered per user | Built |
+| **Team management**: profile (diners per meal, weekday time limit, kitchen tools), people at the table with ages, users and roles, invitation links to copy or share | Built |
 | **Shared catalogs**: ~160 common ingredients with Italian seasonality, kitchen tools; management section to edit, merge duplicates, add new ones | Built |
 | **Operations**: one-command Docker Compose stack, HTTPS on the home network for phones, backups and restore, repeatable setup | Built |
 | **Weekly menu generation**: agentic, proactive, following composition rules (protein variety, cuisine variety, season) | Next |
 | **Shopping list**: aggregated from the menu by supermarket aisle (the computation exists, the screen does not) | Planned |
-| **Team profile**: people, ages, tastes, kitchen tools, default diners per meal | Planned (data model ready) |
+| **Tastes**: likes, dislikes and never-propose, per team or per person | Planned (data model ready) |
 | **Feedback and learning**: what was actually eaten, optional ratings, fed back as context (RAG) | Planned |
 | **Collaborative recommendation**: similar teams' favourites inform suggestions | Planned |
 

@@ -14,6 +14,7 @@ import { NoTeamPage } from './pages/NoTeamPage'
 import { RecipeBookPage } from './pages/RecipeBookPage'
 import { RecipeDetailPage } from './pages/RecipeDetailPage'
 import { RecipeEditorPage } from './pages/RecipeEditorPage'
+import { TeamPage } from './pages/TeamPage'
 
 /** Everything except invitations requires a signed-in user who belongs to a team. */
 function Protected() {
@@ -34,6 +35,7 @@ function Protected() {
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
           <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />
           <Route path="/assistant/:id" element={<AssistantPage />} />
+          <Route path="/team" element={<TeamPage />} />
           <Route path="/manage" element={<Navigate to="/manage/ingredients" replace />} />
           <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
           <Route path="*" element={<RecipeBookPage />} />

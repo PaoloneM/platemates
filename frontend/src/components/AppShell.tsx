@@ -1,3 +1,4 @@
+import GroupsIcon from '@mui/icons-material/GroupsOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import TranslateIcon from '@mui/icons-material/Translate'
@@ -67,6 +68,12 @@ function UserMenu() {
           </MenuItem>
         ))}
         <Divider />
+        <MenuItem component={RouterLink} to="/team" onClick={() => setAnchor(null)}>
+          <ListItemIcon>
+            <GroupsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t('team.menu')}</ListItemText>
+        </MenuItem>
         {me.user.is_staff && (
           <MenuItem component={RouterLink} to="/manage" onClick={() => setAnchor(null)}>
             <ListItemIcon>
@@ -95,7 +102,8 @@ function TeamSwitcher() {
   const { team, teams, select } = useTeam()
   if (teams.length < 2) {
     return (
-      <Typography variant="h3" component="span" noWrap>
+      <Typography variant="h3" component={RouterLink} to="/team" noWrap
+        sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
         {team.name}
       </Typography>
     )

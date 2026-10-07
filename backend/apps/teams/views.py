@@ -1,20 +1,31 @@
 from django.db import transaction
-from rest_framework import viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
 
 from apps.recipes.models import Recipe, Visibility
 
 from .models import Member, Membership, Preference, RecipeBookEntry, Team
-from .permissions import TeamScopedMixin
+from .permissions import OwnerWritesMixin, TeamScopedMixin, require_owner
 from .serializers import (
     MemberSerializer,
+    MembershipSerializer,
     PreferenceSerializer,
     RecipeBookEntrySerializer,
     TeamSerializer,
 )
 
 
-class TeamViewSet(viewsets.ModelViewSet):
+class TeamViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """The user's teams. Owners change a team's profile; there is no deleting a team from the
+    app (it would take every member's recipe book and menus with it)."""
+
     serializer_class = TeamSerializer
 
     def get_queryset(self):
@@ -29,8 +40,61 @@ class TeamViewSet(viewsets.ModelViewSet):
         team = serializer.save()
         Membership.objects.create(user=self.request.user, team=team, role=Membership.Role.OWNER)
 
+    def perform_update(self, serializer):
+        require_owner(self.request.user, serializer.instance)
+        serializer.save()
 
-class MemberViewSet(TeamScopedMixin, viewsets.ModelViewSet):
+
+class MembershipViewSet(
+    TeamScopedMixin,
+    mixins.ListModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Users with access to a team (`?team=`). Owners change roles and remove users; anyone can
+    remove themselves (leave). A team always keeps at least one owner."""
+
+    queryset = Membership.objects.select_related("user").order_by("user__first_name", "user__email")
+    serializer_class = MembershipSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if team := self.request.query_params.get("team"):
+            queryset = queryset.filter(team_id=team)
+        return queryset
+
+    def _last_owner(self, membership: Membership) -> bool:
+        return (
+            membership.role == Membership.Role.OWNER
+            and not Membership.objects.filter(team=membership.team, role=Membership.Role.OWNER)
+            .exclude(pk=membership.pk)
+            .exists()
+        )
+
+    def perform_update(self, serializer):
+        membership = serializer.instance
+        require_owner(self.request.user, membership.team)
+        if serializer.validated_data.get("role") == Membership.Role.MEMBER and self._last_owner(
+            membership
+        ):
+            raise ValidationError({"role": "A team needs at least one owner."})
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        membership = self.get_object()
+        if membership.user_id != request.user.pk:
+            require_owner(request.user, membership.team)
+        if self._last_owner(membership):
+            return Response(
+                {"detail": "A team needs at least one owner: make someone else owner first."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        membership.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MemberViewSet(OwnerWritesMixin, viewsets.ModelViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
 

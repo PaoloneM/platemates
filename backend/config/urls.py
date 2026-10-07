@@ -9,6 +9,7 @@ from apps.core.views import health
 from apps.menus.views import MealSlotViewSet, WeeklyMenuViewSet
 from apps.recipes.views import CuisineViewSet, RecipeViewSet
 from apps.teams.views import (
+    MembershipViewSet,
     MemberViewSet,
     PreferenceViewSet,
     RecipeBookEntryViewSet,
@@ -22,6 +23,7 @@ router.register("cuisines", CuisineViewSet)
 router.register("recipes", RecipeViewSet, basename="recipe")
 router.register("teams", TeamViewSet, basename="team")
 router.register("members", MemberViewSet)
+router.register("memberships", MembershipViewSet)
 router.register("preferences", PreferenceViewSet)
 router.register("recipe-book", RecipeBookEntryViewSet)
 router.register("menus", WeeklyMenuViewSet)

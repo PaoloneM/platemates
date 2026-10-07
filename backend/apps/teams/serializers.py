@@ -1,6 +1,8 @@
 from rest_framework import serializers
 
-from .models import Member, Preference, RecipeBookEntry, Team
+from .models import Meal, Member, Membership, Preference, RecipeBookEntry, Team
+
+MAX_DEFAULT_PEOPLE = 50
 
 
 class MemberSerializer(serializers.ModelSerializer):
@@ -18,6 +20,30 @@ class PreferenceSerializer(serializers.ModelSerializer):
 class TeamSerializer(serializers.ModelSerializer):
     members = MemberSerializer(many=True, read_only=True)
     preferences = PreferenceSerializer(many=True, read_only=True)
+    # The requesting user's role: the interface shows owners the editing controls.
+    my_role = serializers.SerializerMethodField()
+
+    def get_my_role(self, team) -> str | None:
+        membership = team.memberships.filter(user=self.context["request"].user).first()
+        return membership.role if membership else None
+
+    def validate_name(self, name: str) -> str:
+        name = " ".join(name.split())
+        if not name:
+            raise serializers.ValidationError("A team needs a name.")
+        return name
+
+    def validate_default_people(self, value):
+        """One count per meal, 0 (nobody usually at home) to MAX_DEFAULT_PEOPLE."""
+        if not isinstance(value, dict) or set(value) - set(Meal.values):
+            raise serializers.ValidationError(f"Expected counts for {', '.join(Meal.values)}.")
+        cleaned = {}
+        for meal in Meal.values:
+            count = value.get(meal, 0)
+            if not isinstance(count, int) or not 0 <= count <= MAX_DEFAULT_PEOPLE:
+                raise serializers.ValidationError(f"{meal}: 0 to {MAX_DEFAULT_PEOPLE} people.")
+            cleaned[meal] = count
+        return cleaned
 
     class Meta:
         model = Team
@@ -30,6 +56,7 @@ class TeamSerializer(serializers.ModelSerializer):
             "notes",
             "members",
             "preferences",
+            "my_role",
         ]
 
 
@@ -68,3 +95,25 @@ class RecipeBookEntrySerializer(serializers.ModelSerializer):
             "notes",
             "added_at",
         ]
+
+
+class MembershipSerializer(serializers.ModelSerializer):
+    """A user with access to the team, and their role."""
+
+    name = serializers.SerializerMethodField()
+    email = serializers.EmailField(source="user.email", read_only=True)
+    is_me = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Membership
+        fields = ["id", "team", "name", "email", "role", "is_me"]
+        read_only_fields = ["team"]
+
+    def get_name(self, membership) -> str:
+        user = membership.user
+        return (
+            " ".join(filter(None, [user.first_name, user.last_name])) or user.email or user.username
+        )
+
+    def get_is_me(self, membership) -> bool:
+        return membership.user_id == self.context["request"].user.pk

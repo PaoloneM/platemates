@@ -106,6 +106,46 @@ export type RecipeSummary = {
   visibility: Visibility
 }
 
+export type Role = 'owner' | 'member'
+
+export type TeamProfile = {
+  id: number
+  name: string
+  tools: number[]
+  default_people: { lunch: number; dinner: number }
+  max_weekday_minutes: number | null
+  notes: string
+  members: Person[]
+  my_role: Role | null
+}
+
+// Someone who eats at the team's table; not necessarily an app user.
+export type Person = { id: number; team: number; name: string; birth_year: number | null }
+
+// An app user with access to the team.
+export type TeamMembership = {
+  id: number
+  team: number
+  name: string
+  email: string
+  role: Role
+  is_me: boolean
+}
+
+export type Invitation = {
+  id: number
+  team: number
+  token?: string // owners only
+  role: Role
+  note: string
+  state: 'pending' | 'accepted' | 'expired' | 'revoked'
+  created_at: string
+  expires_at: string
+  accepted_at: string | null
+  invited_by_name: string | null
+  accepted_by_name: string | null
+}
+
 export type AssistantMode = 'tell' | 'search' | 'link' | 'photo'
 
 export type DraftLine = {
