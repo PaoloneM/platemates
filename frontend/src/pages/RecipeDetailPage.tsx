@@ -124,13 +124,13 @@ export function RecipeDetailPage() {
   async function removeFromBook() {
     if (!entry) return
     await api(`/recipe-book/${entry.id}/`, { method: 'DELETE' })
-    navigate('/', { replace: true })
+    navigate('/recipes', { replace: true })
   }
 
   return (
     <Stack spacing={3}>
       <Box>
-        <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />}>
+        <Button component={RouterLink} to="/recipes" startIcon={<ArrowBackIcon />}>
           {t('book.title')}
         </Button>
       </Box>

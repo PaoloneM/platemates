@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import type { Course, Season, Unit } from './api'
+import type { Course, Meal, Season, Unit } from './api'
 
 // Stable codes from the API, translated for display. Kept in one place so every screen
 // names things the same way.
 export const COURSES: Course[] = ['first', 'main', 'single', 'side', 'starter', 'dessert']
 export const UNITS: Unit[] = ['g', 'ml', 'pc', 'tt']
+export const MEALS: Meal[] = ['breakfast', 'lunch', 'dinner']
 export const SEASONS: Season[] = ['winter', 'spring', 'summer', 'autumn']
 export const SEASON_MONTHS: Record<Season, number[]> = {
   winter: [12, 1, 2],
@@ -18,10 +19,16 @@ export const INGREDIENT_CATEGORIES = [
   'other',
 ]
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
 export function useLabels() {
   const { t, i18n } = useTranslation()
   const monthFormat = new Intl.DateTimeFormat(i18n.resolvedLanguage, { month: 'short' })
   const monthLong = new Intl.DateTimeFormat(i18n.resolvedLanguage, { month: 'long' })
+  const weekdayFormat = new Intl.DateTimeFormat(i18n.resolvedLanguage, { weekday: 'long' })
+  const weekdayShort = new Intl.DateTimeFormat(i18n.resolvedLanguage, { weekday: 'short' })
+  // 2026-10-05 is a Monday: weekday 0 is Monday, as in the API.
+  const weekdayDate = (d: number) => new Date(2026, 9, 5 + d)
   return {
     course: (c: string) => t(`course.${c}`),
     unit: (u: string) => t(`unit.${u}`),
@@ -32,6 +39,10 @@ export function useLabels() {
       tool.code ? t(`tool.${tool.code}`, { defaultValue: tool.name }) : tool.name,
     month: (m: number) => monthFormat.format(new Date(2026, m - 1, 1)),
     monthLong: (m: number) => monthLong.format(new Date(2026, m - 1, 1)),
+    meal: (m: Meal) => t(`meal.${m}`),
+    // Italian weekday names are lowercase; they head rows and cards here.
+    weekday: (d: number) => capitalize(weekdayFormat.format(weekdayDate(d))),
+    weekdayShort: (d: number) => capitalize(weekdayShort.format(weekdayDate(d))),
   }
 }
 

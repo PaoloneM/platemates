@@ -110,7 +110,7 @@ erDiagram
 
     TEAM {
         string name
-        json default_people "per meal, prefills slots"
+        json typical_week "7 days: active, people per meal"
         int max_weekday_minutes
     }
     RECIPE {
@@ -193,9 +193,17 @@ ingredient never touches a recipe.
   and refreshes their embeddings.
   This is what makes collaborative recommendation possible ("teams like yours loved X"), and
   keeps discovery candidates separate from accepted recipes (`RecipeBookEntry.Status.CANDIDATE`).
-- **People per slot.** `MealSlot.people` is the source of truth. `Team.default_people` only
+- **People per slot.** `MealSlot.people` is the source of truth. `Team.typical_week` only
   prefills new slots (`WeeklyMenu.create_empty_slots`). `people = 0` means nobody eats at home,
   and that slot adds nothing to the shopping list.
+- **Typical week** (decided with Paolo 2026-10-07). `Team.typical_week` is seven days, Monday
+  first, each `{active, breakfast, lunch, dinner}`. A day turned off counts as 0 at every meal
+  but keeps its numbers, so turning it back on restores them. It replaced the per-meal
+  `default_people` (migration `families.0004` converted it: every day active, nobody at
+  breakfast). Date-specific exceptions (guests, someone away) are the next step.
+- **Breakfast is counted, not planned** (decided with Paolo 2026-10-07). `Meal` includes
+  breakfast so the calendar (and later the shopping list) knows who is at home, but the menu
+  only gets slots for `PLANNED_MEALS` (lunch and dinner).
 - **One or more dishes per slot** (confirmed by Paolo 2026-10-05). `SlotDish` allows e.g. a first course plus a side dish; most
   slots will have one.
 - **Implicit feedback lives on the slot.** `MealSlot.outcome` (planned / followed / replaced /
@@ -249,7 +257,7 @@ Never assign a tracked field directly from LLM output; always go through `propos
 ### Team management (built 2026-10-07)
 
 The team page (`/team`, from the user menu or the team name in the top bar) covers the profile
-(name, default diners per meal, weekday time limit, kitchen tools), the people at the table
+(name, weekday time limit, kitchen tools), the typical week, the people at the table
 (`Member`: name and birth year, no account needed), users and roles (`Membership`), and
 invitations.
 
@@ -264,6 +272,15 @@ invitations.
 - **Invitations**: a single-use link valid 14 days, copied or shared through the phone's share
   sheet (Web Share API), listed with who created it and who accepted it. No email yet (needs SMTP).
 - Tastes (`Preference`) have no screen yet: they come with the menu engine that uses them.
+
+### Navigation (decided with Paolo 2026-10-07)
+
+Material 3 adaptive navigation (`components/Navigation.tsx`): a navigation rail on tablets and
+desktops, a bottom navigation bar on phones, for the everyday destinations: **Calendar** (home,
+`/`) and **Recipes** (`/recipes`); the shopping list joins them once it has a screen. The team
+page, the management section and the language stay in the user menu: they are visited rarely.
+The calendar shows one week at a time (`?week=<monday>`), people per meal from the typical
+week; owners reach the typical week from it (`/team#week`).
 
 ### Multi-team access
 

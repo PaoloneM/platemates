@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from .models import Meal, Member, Membership, Preference, RecipeBookEntry, Team
 
-MAX_DEFAULT_PEOPLE = 50
+MAX_PEOPLE = 50
 
 
 class MemberSerializer(serializers.ModelSerializer):
@@ -33,16 +33,23 @@ class TeamSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A team needs a name.")
         return name
 
-    def validate_default_people(self, value):
-        """One count per meal, 0 (nobody usually at home) to MAX_DEFAULT_PEOPLE."""
-        if not isinstance(value, dict) or set(value) - set(Meal.values):
-            raise serializers.ValidationError(f"Expected counts for {', '.join(Meal.values)}.")
-        cleaned = {}
-        for meal in Meal.values:
-            count = value.get(meal, 0)
-            if not isinstance(count, int) or not 0 <= count <= MAX_DEFAULT_PEOPLE:
-                raise serializers.ValidationError(f"{meal}: 0 to {MAX_DEFAULT_PEOPLE} people.")
-            cleaned[meal] = count
+    def validate_typical_week(self, value):
+        """Seven days, Monday first: `active`, and 0 to MAX_PEOPLE people for each meal."""
+        if not isinstance(value, list) or len(value) != 7:
+            raise serializers.ValidationError("Expected seven days, Monday first.")
+        cleaned = []
+        for day in value:
+            if not isinstance(day, dict) or set(day) - {"active", *Meal.values}:
+                raise serializers.ValidationError(f"Each day: active, {', '.join(Meal.values)}.")
+            if not isinstance(day.get("active", True), bool):
+                raise serializers.ValidationError("active: true or false.")
+            counts = {}
+            for meal in Meal.values:
+                count = day.get(meal, 0)
+                if type(count) is not int or not 0 <= count <= MAX_PEOPLE:
+                    raise serializers.ValidationError(f"{meal}: 0 to {MAX_PEOPLE} people.")
+                counts[meal] = count
+            cleaned.append({"active": day.get("active", True), **counts})
         return cleaned
 
     class Meta:
@@ -51,7 +58,7 @@ class TeamSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "tools",
-            "default_people",
+            "typical_week",
             "max_weekday_minutes",
             "notes",
             "members",

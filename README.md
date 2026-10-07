@@ -16,7 +16,8 @@ application.
 | **Recipe book**: structured recipes, ingredients scaled to the number of people, two-level seasonality, cuisine, tools, ratings, private or shared with other teams | Built |
 | **Recipe assistant**: add a recipe by telling it in your own words, by pasting a link, by taking a photo of a cookbook page or a handwritten card, or by asking it to search your recipes, other teams' recipes and the web; every draft is reviewed before saving | Built |
 | **Teams**: sign-in with email/password or Google, Microsoft, Apple (Keycloak); invitation-only access; interface in Italian and English, remembered per user | Built |
-| **Team management**: profile (diners per meal, weekday time limit, kitchen tools), people at the table with ages, users and roles, invitation links to copy or share | Built |
+| **Team management**: profile (weekday time limit, kitchen tools), people at the table with ages, users and roles, invitation links to copy or share | Built |
+| **Team calendar**: a typical week (which days, how many at breakfast, lunch and dinner), shown week by week | Built (exceptions on specific dates next) |
 | **Shared catalogs**: ~160 common ingredients with Italian seasonality, kitchen tools; management section to edit, merge duplicates, add new ones | Built |
 | **Operations**: one-command Docker Compose stack, HTTPS on the home network for phones, backups and restore, repeatable setup | Built |
 | **Weekly menu generation**: agentic, proactive, following composition rules (protein variety, cuisine variety, season) | Next |
@@ -72,10 +73,10 @@ Details, decisions and what was learned on the way: [docs/architecture.md](docs/
 
 ## Conceptual model
 
-- **Team**: whoever shares meals. Its profile (people and ages, tastes, kitchen tools, how many
-  usually eat at lunch and dinner) is parametric: nothing about a specific team is hardcoded.
+- **Team**: whoever shares meals. Its profile (people and ages, tastes, kitchen tools, a
+  typical week of who usually eats at breakfast, lunch and dinner) is parametric: nothing about a specific team is hardcoded.
   Users join a team by invitation.
-- **Weekly menu**: 7 days × lunch and dinner. Each meal has its own number of diners (guests,
+- **Weekly menu**: 7 days × lunch and dinner (breakfast is counted, not planned). Each meal has its own number of diners (guests,
   someone away, a skipped meal = 0), and ingredient quantities scale to it.
 - **Recipe**: structured ingredients for a base number of people, method, times, cuisine,
   required tools, the team's rating. Recipes live in a common pool: each team keeps its own

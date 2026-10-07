@@ -108,11 +108,17 @@ export type RecipeSummary = {
 
 export type Role = 'owner' | 'member'
 
+export type Meal = 'breakfast' | 'lunch' | 'dinner'
+
+// One day of the team's typical week: whether the team eats together at all that day, and how
+// many people at each meal. The typical week is Monday first.
+export type TypicalDay = { active: boolean } & Record<Meal, number>
+
 export type TeamProfile = {
   id: number
   name: string
   tools: number[]
-  default_people: { lunch: number; dinner: number }
+  typical_week: TypicalDay[]
   max_weekday_minutes: number | null
   notes: string
   members: Person[]

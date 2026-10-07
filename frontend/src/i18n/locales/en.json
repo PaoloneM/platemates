@@ -61,6 +61,29 @@
   "shell": {
     "account": "Account"
   },
+  "nav": {
+    "calendar": "Calendar",
+    "recipes": "Recipes"
+  },
+  "meal": {
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "dinner": "Dinner"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "week": "{{start}} – {{end}}",
+    "previous": "Previous week",
+    "next": "Next week",
+    "thisWeek": "Back to this week",
+    "today": "today, {{date}}",
+    "people_one": "{{count}} person",
+    "people_other": "{{count}} people",
+    "nobody": "nobody",
+    "dayOff": "Not planned",
+    "editWeek": "Edit typical week",
+    "hint": "People at the table come from the team's typical week."
+  },
   "course": {
     "first": "First course",
     "main": "Main course",
@@ -323,14 +346,19 @@
       "title": "Profile",
       "hint": "These guide the menu suggestions.",
       "name": "Team name",
-      "lunch": "People at lunch",
-      "dinner": "People at dinner",
       "maxMinutes": "Weekday time limit",
       "maxMinutesHint": "Preparation + cooking you can manage on an ordinary day",
       "tools": "Kitchen tools available",
       "toolsHint": "Recipes needing other tools will not be suggested",
-      "invalid": "Check the values: people go from 0 to 50.",
       "saved": "Profile saved"
+    },
+    "week": {
+      "title": "Typical week",
+      "hint": "How many people usually eat at each meal. The calendar and the menus start from here; a day turned off is not planned.",
+      "day": "Day",
+      "active": "On",
+      "invalid": "People go from 0 to 50.",
+      "saved": "Typical week saved"
     },
     "people": {
       "title": "People at the table",

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { api, type AssistantMode, type AssistantSession } from '../api'
 import { useTeam } from '../team'
+import { BOTTOM_BAR_HEIGHT } from './Navigation'
 
 type Item = { key: string; icon: ReactNode; label: string; primary?: boolean; disabled?: boolean; run?: () => void }
 
@@ -65,7 +66,7 @@ export function AddRecipeFab() {
         onOpen={(_, reason) => reason === 'toggle' && setOpen(true)}
         onClose={(_, reason) => (reason === 'toggle' || reason === 'escapeKeyDown') && setOpen(false)}
         FabProps={{ disabled: busy }}
-        sx={{ position: 'fixed', right: { xs: 16, sm: 32 }, bottom: { xs: 16, sm: 32 } }}
+        sx={{ position: 'fixed', right: { xs: 16, sm: 32 }, bottom: { xs: `calc(${BOTTOM_BAR_HEIGHT + 16}px + env(safe-area-inset-bottom))`, sm: 32 } }}
       >
         {items.map((item) => (
           <SpeedDialAction

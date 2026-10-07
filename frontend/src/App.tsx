@@ -6,6 +6,7 @@ import { useAuth } from './auth/context'
 import { AppShell } from './components/AppShell'
 import { TeamProvider } from './team'
 import { AssistantPage } from './pages/AssistantPage'
+import { CalendarPage } from './pages/CalendarPage'
 import { InvitePage } from './pages/InvitePage'
 import { IngredientsPage } from './pages/manage/IngredientsPage'
 import { ManageLayout } from './pages/manage/ManageLayout'
@@ -30,7 +31,8 @@ function Protected() {
     <TeamProvider>
       <AppShell>
         <Routes>
-          <Route path="/" element={<RecipeBookPage />} />
+          <Route path="/" element={<CalendarPage />} />
+          <Route path="/recipes" element={<RecipeBookPage />} />
           <Route path="/recipes/new" element={<RecipeEditorPage />} />
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
           <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />
@@ -38,7 +40,7 @@ function Protected() {
           <Route path="/team" element={<TeamPage />} />
           <Route path="/manage" element={<Navigate to="/manage/ingredients" replace />} />
           <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
-          <Route path="*" element={<RecipeBookPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>
     </TeamProvider>

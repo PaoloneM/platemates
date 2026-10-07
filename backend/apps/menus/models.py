@@ -14,7 +14,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from apps.recipes.models import Recipe
-from apps.teams.models import Meal, Team
+from apps.teams.models import PLANNED_MEALS, Meal, Team
 
 
 class WeeklyMenu(models.Model):
@@ -46,16 +46,16 @@ class WeeklyMenu(models.Model):
             raise ValidationError({"week_start": "A week starts on Monday."})
 
     def create_empty_slots(self) -> list[MealSlot]:
-        """Create the 14 slots, prefilled with the team's default number of diners."""
+        """Create the 14 planned slots, prefilled from the team's typical week."""
         slots = [
             MealSlot(
                 menu=self,
                 date=self.week_start + dt.timedelta(days=offset),
                 meal=meal,
-                people=self.team.default_people_for(meal),
+                people=self.team.usual_people(offset, meal),
             )
             for offset in range(7)
-            for meal in Meal.values
+            for meal in PLANNED_MEALS
         ]
         return MealSlot.objects.bulk_create(slots)
 

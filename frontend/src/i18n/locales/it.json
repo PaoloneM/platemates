@@ -61,6 +61,29 @@
   "shell": {
     "account": "Account"
   },
+  "nav": {
+    "calendar": "Calendario",
+    "recipes": "Ricettario"
+  },
+  "meal": {
+    "breakfast": "Colazione",
+    "lunch": "Pranzo",
+    "dinner": "Cena"
+  },
+  "calendar": {
+    "title": "Calendario",
+    "week": "{{start}} – {{end}}",
+    "previous": "Settimana precedente",
+    "next": "Settimana successiva",
+    "thisWeek": "Torna a questa settimana",
+    "today": "oggi, {{date}}",
+    "people_one": "{{count}} persona",
+    "people_other": "{{count}} persone",
+    "nobody": "nessuno",
+    "dayOff": "Giorno non pianificato",
+    "editWeek": "Modifica settimana tipo",
+    "hint": "Le persone a tavola vengono dalla settimana tipo del team."
+  },
   "course": {
     "first": "Primo",
     "main": "Secondo",
@@ -323,14 +346,19 @@
       "title": "Profilo",
       "hint": "Questi dati guidano le proposte di menu.",
       "name": "Nome del team",
-      "lunch": "Persone a pranzo",
-      "dinner": "Persone a cena",
       "maxMinutes": "Tempo massimo nei giorni feriali",
       "maxMinutesHint": "Preparazione + cottura sostenibile in una giornata normale",
       "tools": "Attrezzi disponibili",
       "toolsHint": "Le ricette che richiedono altri attrezzi non verranno proposte",
-      "invalid": "Controlla i valori: le persone vanno da 0 a 50.",
       "saved": "Profilo salvato"
+    },
+    "week": {
+      "title": "Settimana tipo",
+      "hint": "Quante persone mangiano di solito a ogni pasto. Il calendario e i menu partono da qui; un giorno disattivato non viene pianificato.",
+      "day": "Giorno",
+      "active": "Attivo",
+      "invalid": "Le persone vanno da 0 a 50.",
+      "saved": "Settimana tipo salvata"
     },
     "people": {
       "title": "Persone a tavola",

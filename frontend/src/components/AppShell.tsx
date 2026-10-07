@@ -26,6 +26,7 @@ import { saveLanguage } from '../auth/language'
 import { useTeam } from '../team'
 import { supportedLanguages } from '../i18n'
 import { Logo } from './Logo'
+import { BOTTOM_BAR_HEIGHT, BottomBar, NavigationRail } from './Navigation'
 
 function UserMenu() {
   const { t, i18n } = useTranslation()
@@ -140,9 +141,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           <UserMenu />
         </Toolbar>
       </AppBar>
-      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 }, pb: 12 }}>
-        {children}
-      </Container>
+      <Box sx={{ display: 'flex' }}>
+        <NavigationRail />
+        <Container maxWidth="lg" sx={{
+          py: { xs: 2, sm: 3 }, minWidth: 0,
+          pb: { xs: `calc(${BOTTOM_BAR_HEIGHT}px + 96px + env(safe-area-inset-bottom))`, sm: 12 },
+        }}>
+          {children}
+        </Container>
+      </Box>
+      <BottomBar />
     </>
   )
 }

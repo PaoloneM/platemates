@@ -17,13 +17,26 @@ from apps.recipes.models import Cuisine, Recipe
 
 
 class Meal(models.TextChoices):
+    BREAKFAST = "breakfast", _("Breakfast")
     LUNCH = "lunch", _("Lunch")
     DINNER = "dinner", _("Dinner")
 
 
+# Meals the menu proposes dishes for. Breakfast is only counted (diners on the calendar, and
+# later the shopping list), not planned.
+PLANNED_MEALS = (Meal.LUNCH, Meal.DINNER)
+
+
 def default_people_per_meal() -> dict[str, int]:
-    """Initial prefill for new menu slots. Only a starting value, editable per team."""
+    """Default of the removed `Team.default_people`; kept because migration 0001 imports it."""
     return {Meal.LUNCH: 2, Meal.DINNER: 3}
+
+
+def default_typical_week() -> list[dict]:
+    """Initial typical week: every day active, 2 at lunch, 3 at dinner. Editable per team."""
+    return [
+        {"active": True, Meal.BREAKFAST: 0, Meal.LUNCH: 2, Meal.DINNER: 3} for _weekday in range(7)
+    ]
 
 
 class Team(models.Model):
@@ -32,9 +45,9 @@ class Team(models.Model):
         settings.AUTH_USER_MODEL, through="Membership", related_name="teams"
     )
     tools = models.ManyToManyField(KitchenTool, blank=True, related_name="teams")
-    # How many people a new slot is prefilled with, per meal. The slot's own count is what
-    # matters; this is only the default it starts from.
-    default_people = models.JSONField(default=default_people_per_meal)
+    # The usual week, Monday first: per day whether the team eats together at all, and how many
+    # people at each meal. Calendar days start from it; a menu slot's own count is what matters.
+    typical_week = models.JSONField(default=default_typical_week)
     # Ceiling on preparation + cooking time the team can sustain on an ordinary day.
     max_weekday_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
     notes = models.TextField(blank=True, help_text="Free-form context passed to the LLM.")
@@ -47,8 +60,10 @@ class Team(models.Model):
     def __str__(self) -> str:
         return self.name
 
-    def default_people_for(self, meal: str) -> int:
-        return int(self.default_people.get(meal, 0))
+    def usual_people(self, weekday: int, meal: str) -> int:
+        """People usually at `meal` on `weekday` (0 = Monday); 0 on inactive days."""
+        day = self.typical_week[weekday]
+        return int(day.get(meal, 0)) if day.get("active", True) else 0
 
 
 class Membership(models.Model):

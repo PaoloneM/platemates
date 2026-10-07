@@ -147,7 +147,7 @@ export function AssistantPage() {
   return (
     <Stack spacing={2} sx={{ maxWidth: 760, mx: 'auto' }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <IconButton component={RouterLink} to="/" aria-label={t('book.title')}>
+        <IconButton component={RouterLink} to="/recipes" aria-label={t('book.title')}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h1">{t(`assistant.mode.${session.mode}`)}</Typography>

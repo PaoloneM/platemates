@@ -56,13 +56,20 @@ def test_quantities_scale_linearly(pasta_recipe):
     assert pasta_recipe.ingredients.get(ingredient__name="salt").scaled_quantity(3) is None
 
 
-def test_new_menu_gets_fourteen_slots_with_team_defaults(team):
-    team.default_people = {"lunch": 2, "dinner": 3}
+def test_new_menu_gets_fourteen_slots_from_the_typical_week(team):
+    team.typical_week[2] = {"active": True, "breakfast": 3, "lunch": 0, "dinner": 5}
+    team.typical_week[6] = {"active": False, "breakfast": 1, "lunch": 2, "dinner": 3}
     team.save()
     menu = WeeklyMenu.objects.create(team=team, week_start=MONDAY)
     menu.create_empty_slots()
+    # Breakfast is counted, not planned: only lunch and dinner get slots.
     assert menu.slots.count() == 14
-    assert {s.people for s in menu.slots.filter(meal="dinner")} == {3}
+    assert not menu.slots.filter(meal="breakfast").exists()
+    people = {(s.date.weekday(), s.meal): s.people for s in menu.slots.all()}
+    assert people[0, "dinner"] == 3
+    assert people[2, "lunch"] == 0
+    assert people[2, "dinner"] == 5
+    assert people[6, "lunch"] == people[6, "dinner"] == 0
 
 
 @pytest.fixture

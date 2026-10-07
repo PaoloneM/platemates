@@ -19,23 +19,54 @@ def member(team):
 # -- team profile -----------------------------------------------------------------------------
 
 
+def week(breakfast=0, lunch=2, dinner=3, active=True):
+    return [
+        {"active": active, "breakfast": breakfast, "lunch": lunch, "dinner": dinner}
+        for _weekday in range(7)
+    ]
+
+
 def test_owners_edit_the_profile_members_only_read_it(api, team, member):
     _, client = member
     url = f"/api/teams/{team.pk}/"
-    payload = {"name": "Calcetto", "default_people": {"lunch": 1, "dinner": 4}}
+    typical = week(lunch=1, dinner=4)
+    typical[6] = {"active": False, "breakfast": 0, "lunch": 0, "dinner": 0}
+    payload = {"name": "Calcetto", "typical_week": typical}
     assert client.get(url).json()["my_role"] == "member"
     assert client.patch(url, payload, format="json").status_code == 403
     response = api.patch(url, payload, format="json")
     assert response.status_code == 200
-    assert response.json()["default_people"] == {"lunch": 1, "dinner": 4}
+    assert response.json()["typical_week"] == typical
     assert response.json()["my_role"] == "owner"
 
 
+def test_typical_week_fills_in_missing_meals(api, team):
+    days = [{"active": True, "lunch": 2}] * 7
+    response = api.patch(f"/api/teams/{team.pk}/", {"typical_week": days}, format="json")
+    assert response.status_code == 200
+    assert response.json()["typical_week"][0] == {
+        "active": True,
+        "breakfast": 0,
+        "lunch": 2,
+        "dinner": 0,
+    }
+
+
 @pytest.mark.parametrize(
-    "people", [{"lunch": -1, "dinner": 2}, {"lunch": 2, "brunch": 1}, {"lunch": "two"}, [2, 3]]
+    "days",
+    [
+        week()[:6],
+        week(lunch=-1),
+        week(lunch=51),
+        week(lunch="two"),
+        week(lunch=True),
+        week(active="yes"),
+        [{"brunch": 1}] * 7,
+        {"monday": {"lunch": 2}},
+    ],
 )
-def test_default_people_are_validated(api, team, people):
-    response = api.patch(f"/api/teams/{team.pk}/", {"default_people": people}, format="json")
+def test_typical_week_is_validated(api, team, days):
+    response = api.patch(f"/api/teams/{team.pk}/", {"typical_week": days}, format="json")
     assert response.status_code == 400
 
 

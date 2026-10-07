@@ -26,13 +26,19 @@ import {
   MenuItem,
   Snackbar,
   Stack,
+  Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import {
   api,
   ApiError,
@@ -43,19 +49,21 @@ import {
   type Role,
   type TeamMembership,
   type TeamProfile,
+  type Meal,
 } from '../api'
 import { useAuth } from '../auth/context'
-import { useLabels } from '../labels'
+import { MEALS, useLabels } from '../labels'
 import { useTeam } from '../team'
 
-function Section({ title, hint, action, children }: {
+function Section({ id, title, hint, action, children }: {
+  id?: string
   title: string
   hint?: string
   action?: ReactNode
   children: ReactNode
 }) {
   return (
-    <Card>
+    <Card id={id} sx={{ scrollMarginTop: 80 }}>
       <CardContent>
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: hint ? 0.5 : 2 }}>
           <Typography variant="h2">{title}</Typography>
@@ -86,8 +94,6 @@ function ProfileSection({ team, owner, onSaved }: {
   const { t } = useTranslation()
   const labels = useLabels()
   const [name, setName] = useState(team.name)
-  const [lunch, setLunch] = useState(String(team.default_people.lunch))
-  const [dinner, setDinner] = useState(String(team.default_people.dinner))
   const [minutes, setMinutes] = useState(team.max_weekday_minutes?.toString() ?? '')
   const [allTools, setAllTools] = useState<KitchenTool[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
@@ -110,23 +116,17 @@ function ProfileSection({ team, owner, onSaved }: {
           method: 'PATCH',
           body: JSON.stringify({
             name,
-            default_people: { lunch: Number(lunch), dinner: Number(dinner) },
             max_weekday_minutes: minutes ? Number(minutes) : null,
             tools: tools.map((tool) => tool.id),
           }),
         }),
       )
     } catch {
-      setError(t('team.profile.invalid'))
+      setError(t('common.error'))
     } finally {
       setBusy(false)
     }
   }
-
-  const people = (value: string, set: (v: string) => void, label: string) => (
-    <TextField label={label} type="number" value={value} disabled={!owner}
-      onChange={(e) => set(e.target.value)} slotProps={{ htmlInput: { min: 0, max: 50 } }} />
-  )
 
   return (
     <Section title={t('team.profile.title')} hint={t('team.profile.hint')}
@@ -137,9 +137,7 @@ function ProfileSection({ team, owner, onSaved }: {
           <TextField label={t('team.profile.name')} value={name} disabled={!owner}
             onChange={(e) => setName(e.target.value)} />
         </Grid>
-        <Grid size={{ xs: 6, sm: 4 }}>{people(lunch, setLunch, t('team.profile.lunch'))}</Grid>
-        <Grid size={{ xs: 6, sm: 4 }}>{people(dinner, setDinner, t('team.profile.dinner'))}</Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField label={t('team.profile.maxMinutes')} type="number" value={minutes} disabled={!owner}
             onChange={(e) => setMinutes(e.target.value)} helperText={t('team.profile.maxMinutesHint')}
             slotProps={{ htmlInput: { min: 0 }, input: { endAdornment: <InputAdornment position="end">min</InputAdornment> } }} />
@@ -161,6 +159,108 @@ function ProfileSection({ team, owner, onSaved }: {
           />
         </Grid>
       </Grid>
+    </Section>
+  )
+}
+
+// -- typical week -----------------------------------------------------------------------------
+
+const MAX_PEOPLE = 50
+
+// While editing, counts are kept as typed; they become numbers on save.
+type DraftDay = { active: boolean } & Record<Meal, string>
+
+function WeekSection({ team, owner, onSaved }: {
+  team: TeamProfile
+  owner: boolean
+  onSaved: (team: TeamProfile) => void
+}) {
+  const { t } = useTranslation()
+  const labels = useLabels()
+  const [days, setDays] = useState<DraftDay[]>(() =>
+    team.typical_week.map((day) => ({
+      active: day.active,
+      breakfast: String(day.breakfast),
+      lunch: String(day.lunch),
+      dinner: String(day.dinner),
+    })),
+  )
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const valid = days.every((day) =>
+    MEALS.every((meal) => /^\d+$/.test(day[meal]) && Number(day[meal]) <= MAX_PEOPLE),
+  )
+
+  function change(index: number, patch: Partial<DraftDay>) {
+    setDays((current) => current.map((day, i) => (i === index ? { ...day, ...patch } : day)))
+  }
+
+  async function save() {
+    setBusy(true)
+    setError(null)
+    try {
+      onSaved(
+        await api<TeamProfile>(`/teams/${team.id}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            typical_week: days.map((day) => ({
+              active: day.active,
+              breakfast: Number(day.breakfast),
+              lunch: Number(day.lunch),
+              dinner: Number(day.dinner),
+            })),
+          }),
+        }),
+      )
+    } catch {
+      setError(t('team.week.invalid'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Section id="week" title={t('team.week.title')} hint={t('team.week.hint')}
+      action={owner && <Button variant="contained" onClick={() => void save()} disabled={busy || !valid}>{t('common.save')}</Button>}>
+      {(error || !valid) && <Alert severity="error" sx={{ mb: 2 }}>{error ?? t('team.week.invalid')}</Alert>}
+      <Table size="small" sx={{ '& td, & th': { px: { xs: 0.5, sm: 1.5 } } }}>
+        <TableHead>
+          <TableRow>
+            <TableCell>{t('team.week.day')}</TableCell>
+            <TableCell align="center">{t('team.week.active')}</TableCell>
+            {MEALS.map((meal) => (
+              <TableCell key={meal} align="center">{labels.meal(meal)}</TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {days.map((day, index) => (
+            <TableRow key={index}>
+              <TableCell>
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{labels.weekday(index)}</Box>
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>{labels.weekdayShort(index)}</Box>
+              </TableCell>
+              <TableCell align="center">
+                <Switch checked={day.active} disabled={!owner} size="small"
+                  onChange={(e) => change(index, { active: e.target.checked })}
+                  slotProps={{ input: { 'aria-label': `${labels.weekday(index)}: ${t('team.week.active')}` } }} />
+              </TableCell>
+              {MEALS.map((meal) => (
+                <TableCell key={meal} align="center">
+                  <TextField size="small" type="number" value={day[meal]}
+                    disabled={!owner || !day.active}
+                    onChange={(e) => change(index, { [meal]: e.target.value })}
+                    error={!/^\d+$/.test(day[meal]) || Number(day[meal]) > MAX_PEOPLE}
+                    sx={{ width: { xs: 56, sm: 88 } }}
+                    slotProps={{ htmlInput: { min: 0, max: MAX_PEOPLE, inputMode: 'numeric',
+                      'aria-label': `${labels.weekday(index)}, ${labels.meal(meal)}` } }} />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </Section>
   )
 }
@@ -479,8 +579,15 @@ export function TeamPage() {
   const [team, setTeam] = useState<TeamProfile | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
+  const location = useLocation()
+
   const load = useCallback(() => api<TeamProfile>(`/teams/${current.id}/`).then(setTeam), [current.id])
   useEffect(() => void load(), [load])
+  // Links such as /team#week open on a section, once the page has content to scroll to.
+  const loaded = team !== null
+  useEffect(() => {
+    if (loaded && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView()
+  }, [loaded, location.hash])
 
   if (!team) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 6 }} />
   const owner = team.my_role === 'owner'
@@ -494,6 +601,8 @@ export function TeamPage() {
       {!owner && <Alert severity="info">{t('team.memberNotice')}</Alert>}
       <ProfileSection key={team.id} team={team} owner={owner}
         onSaved={(saved) => { setTeam(saved); setMessage(t('team.profile.saved')); void refresh() }} />
+      <WeekSection key={`week-${team.id}`} team={team} owner={owner}
+        onSaved={(saved) => { setTeam(saved); setMessage(t('team.week.saved')) }} />
       <PeopleSection team={team} owner={owner} onChanged={() => void load()} />
       <UsersSection team={team} owner={owner} onMessage={setMessage} />
       <InvitationsSection team={team} owner={owner} onMessage={setMessage} />
