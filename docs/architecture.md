@@ -13,6 +13,7 @@ flowchart LR
         traefik["traefik<br/>entry point, routing from labels<br/>:80 = Mac :8080, :443 = LAN :8443"]
         spa["frontend<br/>nginx serving the built SPA"]
         backend["backend<br/>Django + DRF, gunicorn"]
+        worker["worker<br/>menu generations, in the background"]
         keycloak["keycloak<br/>/auth, theme platemates"]
         db[("db<br/>PostgreSQL 17 + pgvector<br/>databases platemates, keycloak")]
         embeddings["embeddings<br/>FastAPI + sentence-transformers"]
@@ -32,6 +33,8 @@ flowchart LR
     traefik -- "/auth (admin console refused)" --> keycloak
     backend -- "OIDC code exchange, keys" --> keycloak
     backend --> db
+    worker --> db
+    worker -- "OpenAI-compatible chat" --> studio
     keycloak --> db
     backend -- "OpenAI-compatible chat" --> studio
     backend -- "/v1/embeddings" --> embeddings
@@ -363,13 +366,49 @@ says in its rationale how it resolved a conflict):
   the calendar (`CalendarDay`), written only by `set_day`: the generator does not write there,
   it returns the change as a proposal, planned against the proposed count and applied to the
   calendar when the user accepts it.
-- Generation runs in the background (minutes with the local model) as a record holding its
-  status, a snapshot of the rules used, the result and the rationale: the user can leave the
-  page, and the history later serves as context for feedback.
+- Generation runs in the background as a record holding its status, a snapshot of the rules
+  used, the result and the rationale: the user can leave the page, and the history later serves
+  as context for feedback.
 
-Built so far: the rules (system, team, week), the `/week` page, the FAB, the dialog and the
-system rules page in the management section. The
-generator itself, and with it the "Generate" actions, comes next.
+### The generator (built 2026-10-08)
+
+- **A queue in the database, a worker beside the backend.** `POST /api/menus/generate/` creates
+  the week's menu if needed and queues a `MenuGeneration` (one active per week, enforced by a
+  partial unique constraint; a second request gets the running one with 409). The `worker`
+  compose service runs `manage.py menu_worker`, which claims queued generations with
+  `SELECT ... FOR UPDATE SKIP LOCKED`, one at a time, and on start marks as failed any left
+  running by a worker that stopped. No Celery or Redis: the LLM serves one request at a time
+  anyway, and a Raspberry Pi has no room to spare. The SPA polls the week's latest generation
+  every 3 s while it runs (`GET /api/menu-generations/?team=&week_start=`).
+- **Retrieval first, then one LLM call** (`apps/menus/generation.py`). The code picks the
+  candidates: the team's recipe book and own recipes (at most 40), plus a few in-season shared
+  recipes to discover, without "never propose" ingredients or cuisines, rejected recipes, or
+  recipes needing tools the team lacks; sorted by season, rating and how long since last eaten.
+  The prompt has the three levels of rules, the team (ages, weekday time limit, tastes), one
+  line per meal (OPEN, FIXED with its dishes, or nobody at home), what was eaten in the last
+  two weeks, and one line per candidate (`R1 ...`). It fits the model's 8k-token context with
+  room for the answer (about 3.8k characters for a week). Vector similarity joins retrieval
+  when recipe books grow.
+- **Structured answer, validated in code.** JSON schema with `rule_plan` first: one line per
+  team rule and week instruction with the meals it applies to, written before the meals.
+  Without it the model noticed broken rules only in its rationale, after the plan (2026-10-08:
+  "pizza on Friday evening" landed on Thursday; with it, 3 runs out of 3 were right). Day and
+  meal names are in the rules' language ("venerdì cena"), so rules match meals. Validation
+  keeps only what may be proposed: meals of this week that are open, recipes from the
+  candidates, at most 3 dishes per meal, people from 0 to 50; ids in free text become titles.
+  An unusable answer is retried once. The model's own thinking stays off: with an 8k context it
+  used up the tokens before answering (84 s, no answer).
+- **New dishes.** With a small recipe book a week cannot be planned from it alone, so a dish
+  may be a title without a recipe (`SlotDish.title`, `recipe` null), proposed as "new". The
+  user can also write such a dish in. Dishes without a recipe add nothing to the shopping list.
+- **Proposals and review** (`apps/menus/review.py`). Proposed dishes are `SlotDish.proposed`,
+  proposed people `MealSlot.proposed_people` with a reason; the calendar returns both. Accept
+  makes the dishes the user's and applies the people through `set_day`; reject deletes the
+  proposed dishes and the people change; per meal (card buttons, meal page) or the whole week
+  (`POST /api/menus/<id>/review/`). Every member can generate and review. Proposals stay off
+  the shopping list until accepted. Editing a meal keeps the proposals left in it; setting a
+  meal's people settles the proposed change.
+- Measured on Qwen3.6-35B-A3B (Studio, M-series Mac): 25-40 s for a week of 14 meals.
 
 ## Adding recipes (decided with Paolo 2026-10-06)
 
@@ -619,6 +658,6 @@ any recipe. A possible shape:
 
 ## Not built yet
 
-Menu generation engine (agentic, RAG) and its background runs, recipe discovery, embedding computation jobs,
+Vector similarity in menu retrieval, recipe discovery, embedding computation jobs,
 collaborative recommendation, a UI for creating invitations, streaming replies, weekly menus
 and the shopping list UI.

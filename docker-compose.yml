@@ -214,6 +214,32 @@ services:
       retries: 20
       start_period: 30s
 
+  # Runs menu generations in the background, one at a time (`menu_worker`). Waits for the
+  # backend's migrations before starting. On stop it finishes the generation in progress, if
+  # the LLM answers within the grace period; otherwise that one is marked failed on restart.
+  worker:
+    image: platemates-backend
+    pull_policy: never
+    command:
+      - sh
+      - -c
+      - until python manage.py migrate --check >/dev/null 2>&1; do sleep 2; done; exec python manage.py menu_worker
+    stop_grace_period: 90s
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-platemates}:${POSTGRES_PASSWORD:-platemates}@db:5432/${POSTGRES_DB:-platemates}
+      LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
+      EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
   # One-shot, idempotent: embeds recipes whose vector is missing or stale (e.g. saved while the
   # embedding service was down, or after changing EMBEDDINGS_MODEL). Runs on every `up`.
   embed-recipes:

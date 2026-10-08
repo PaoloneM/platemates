@@ -73,7 +73,7 @@
     "diners": "Diners",
     "backToUsual": "Back to {{count}} (typical week)",
     "menu": "Menu",
-    "menuEmpty": "No dishes. The menu generator will propose them; meanwhile you can pick them from the recipe book.",
+    "menuEmpty": "No dishes. Pick them from the recipe book, or generate the week's menu from the button on the Menu screen.",
     "addDish": "Add a dish from the recipe book",
     "removeDish": "Remove the dish",
     "noRecipes": "No recipes found",
@@ -491,13 +491,35 @@
     "systemRules_other": "{{count}} system rules, always applied",
     "precedence": "When two instructions conflict, the week's wins, then the team's. The dishes you have already chosen stay.",
     "generate": "Generate",
-    "generateSoon": "Menu generation is coming soon: meanwhile the instructions stay saved for this week.",
     "saved": "Week's instructions saved"
   },
   "menuFab": {
     "label": "Plan the menu",
-    "generateSoon": "Generate this week's menu (coming soon)",
     "plan": "Tell me how to plan it",
-    "week": "Set up the typical week"
+    "week": "Set up the typical week",
+    "generate": "Generate this week's menu",
+    "generating": "Generating…"
+  },
+  "generation": {
+    "running": "Planning the menu…",
+    "runningHint": "It usually takes less than a minute. You can leave the page: the proposal will wait for you here.",
+    "failed": "The menu could not be planned",
+    "retry": "Try again",
+    "done": "Here is the week's proposal",
+    "unplanned_one": "{{count}} meal was not planned: complete it by hand or generate again.",
+    "unplanned_other": "{{count}} meals were not planned: complete them by hand or generate again.",
+    "reviewHint": "Proposed dishes are marked with ✦. Accept or reject them meal by meal from the cards, or all at once.",
+    "acceptAll": "Accept all",
+    "rejectAll": "Reject all",
+    "accept": "Accept",
+    "reject": "Reject",
+    "accepted": "Proposal accepted",
+    "rejected": "Proposal rejected",
+    "proposed": "Proposed",
+    "proposedPeople": "Proposed people",
+    "newDish": "new",
+    "replaceConfirm": "Proposals not accepted yet will be replaced. The dishes you chose stay. Continue?",
+    "mealProposal": "The generator proposes this meal: accept it to keep it, or reject it.",
+    "peopleChange": "People: from {{from}} to {{to}}"
   }
 }

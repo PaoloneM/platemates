@@ -21,7 +21,7 @@ application.
 | **Shared catalogs**: ~160 common ingredients with Italian seasonality, kitchen tools; management section to edit, merge duplicates, add new ones | Built |
 | **Operations**: one-command Docker Compose stack, HTTPS on the home network for phones, backups and restore, repeatable setup | Built |
 | **Menu planning rules**: rules in plain language at three levels (system, team, this week), each team rule switchable per week; the menu screen's button to plan the week | Built |
-| **Weekly menu generation**: agentic, proactive, following the rules; starts from a partly planned week, keeps the dishes already set, proposes changes to the people for you to confirm | Next |
+| **Weekly menu generation**: in the background with the local LLM, following the rules; starts from a partly planned week, keeps the dishes already set, proposes new dishes beside the recipe book and changes to the people; everything is reviewed meal by meal before it counts | Built |
 | **Shopping list**: aggregated from the menu by supermarket aisle (the computation exists, the screen does not) | Planned |
 | **Tastes**: likes, dislikes and never-propose, per team or per person | Planned (data model ready) |
 | **Feedback and learning**: what was actually eaten, optional ratings, fed back as context (RAG) | Planned |

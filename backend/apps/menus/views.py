@@ -1,7 +1,8 @@
 import datetime as dt
 
-from django.db import transaction
-from rest_framework import mixins, viewsets
+from django.db import IntegrityError, transaction
+from django.utils import translation
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -9,9 +10,13 @@ from rest_framework.response import Response
 from apps.core.permissions import StaffWritesPermission
 from apps.teams.permissions import OwnerWritesMixin, TeamScopedMixin
 
-from .models import MealSlot, SystemRule, TeamRule, WeeklyMenu
+from . import review
+from .models import MealSlot, MenuGeneration, SystemRule, TeamRule, WeeklyMenu
 from .serializers import (
+    GenerateSerializer,
     MealSlotSerializer,
+    MenuGenerationSerializer,
+    ReviewSerializer,
     SystemRuleSerializer,
     TeamRuleSerializer,
     WeeklyMenuSerializer,
@@ -73,6 +78,52 @@ class WeeklyMenuViewSet(TeamScopedMixin, viewsets.ModelViewSet):
         menu = serializer.save()
         menu.create_empty_slots()
 
+    @action(detail=False, methods=["post"])
+    def generate(self, request):
+        """Queue a generation for a week, creating its menu if needed. Answers 202 with the
+        generation; 409 with the running one if the week is already being generated."""
+        data = GenerateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        team = data.validated_data["team"]
+        self.check_team(team)
+        with transaction.atomic():
+            menu, created = WeeklyMenu.objects.get_or_create(
+                team=team, week_start=data.validated_data["week_start"]
+            )
+            if created:
+                menu.create_empty_slots()
+        active = menu.generations.filter(
+            status__in=[MenuGeneration.Status.QUEUED, MenuGeneration.Status.RUNNING]
+        ).first()
+        if active is None:
+            try:
+                with transaction.atomic():
+                    generation = MenuGeneration.objects.create(
+                        menu=menu,
+                        requested_by=request.user,
+                        use_week_settings=data.validated_data["use_week_settings"],
+                        language=(translation.get_language() or "it")[:2],
+                    )
+                return Response(
+                    MenuGenerationSerializer(generation).data, status=status.HTTP_202_ACCEPTED
+                )
+            except IntegrityError:  # another request queued one in the meantime
+                active = menu.generations.filter(
+                    status__in=[MenuGeneration.Status.QUEUED, MenuGeneration.Status.RUNNING]
+                ).first()
+        return Response(MenuGenerationSerializer(active).data, status=status.HTTP_409_CONFLICT)
+
+    @action(detail=True, methods=["post"])
+    def review(self, request, pk=None):
+        """Accept or reject the generator's proposals, for the given meals or the whole week."""
+        menu = self.get_object()
+        data = ReviewSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        meals = data.validated_data.get("meals")
+        keys = None if meals is None else [(m["date"], m["meal"]) for m in meals]
+        (review.accept if data.validated_data["action"] == "accept" else review.reject)(menu, keys)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=True, url_path="shopping-list")
     def shopping_list(self, request, pk=None):
         menu = self.get_object()
@@ -91,3 +142,21 @@ class MealSlotViewSet(
     queryset = MealSlot.objects.prefetch_related("slot_dishes")
     serializer_class = MealSlotSerializer
     team_lookup = "menu__team"
+
+
+class MenuGenerationViewSet(TeamScopedMixin, viewsets.ReadOnlyModelViewSet):
+    """Generations, newest first: `?team=&week_start=` for a week's latest."""
+
+    queryset = MenuGeneration.objects.select_related("menu")
+    serializer_class = MenuGenerationSerializer
+    team_lookup = "menu__team"
+
+    def get_queryset(self):
+        queryset = _filter_team(super().get_queryset(), self.request, "menu__team")
+        week_start = self.request.query_params.get("week_start")
+        if week_start is None:
+            return queryset
+        try:
+            return queryset.filter(menu__week_start=dt.date.fromisoformat(week_start))
+        except ValueError:
+            return queryset.none()

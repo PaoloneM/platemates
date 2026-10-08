@@ -21,8 +21,9 @@ import {
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, Navigate, useParams } from 'react-router'
-import { api, type BookEntry, type CalendarDay, type CalendarDayChange, type Meal, type Paginated } from '../api'
-import { changeDay, isIsoDate, snapshot, weekUrl } from '../calendar'
+import { api, type BookEntry, type CalendarDay, type CalendarDayChange, type DishInput, type Meal, type Paginated } from '../api'
+import { changeDay, dishInput, hasProposal, isIsoDate, reviewMeal, snapshot, weekUrl } from '../calendar'
+import { DishLine } from '../components/DishLine'
 import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useTeam } from '../team'
@@ -115,30 +116,36 @@ function DishesSection({ day, meal, owner, onChange }: {
     }
   }, [owner, team.id, search])
 
-  async function setDishes(ids: number[]) {
+  async function setDishes(wanted: DishInput[]) {
     setBusy(true)
-    await onChange({ dishes: { [meal]: ids } })
+    await onChange({ dishes: { [meal]: wanted } })
     setBusy(false)
   }
 
-  const planned = new Set(dishes.map((d) => d.id))
+  const planned = new Set(dishes.map((d) => d.recipe))
   return (
     <Section title={t('meal.menu')} hint={dishes.length === 0 ? t('meal.menuEmpty') : undefined}>
       {dishes.length > 0 && (
         <List disablePadding sx={{ mb: owner ? 2 : 0 }}>
-          {dishes.map((dish) => (
-            <ListItem key={dish.id} disablePadding divider
-              secondaryAction={owner && (
-                <IconButton edge="end" disabled={busy} aria-label={`${t('meal.removeDish')}: ${dish.title}`}
-                  onClick={() => void setDishes(dishes.filter((d) => d.id !== dish.id).map((d) => d.id))}>
-                  <DeleteIcon />
-                </IconButton>
-              )}>
-              <ListItemButton component={RouterLink} to={`/recipes/${dish.id}`}>
-                <ListItemText primary={dish.title} secondary={labels.course(dish.course)} />
-              </ListItemButton>
-            </ListItem>
-          ))}
+          {dishes.map((dish, index) => {
+            const text = (
+              <ListItemText primary={<DishLine dish={dish} />} secondary={dish.note || undefined}
+                slotProps={{ primary: { component: 'div' } }} />
+            )
+            return (
+              <ListItem key={index} disablePadding={dish.recipe !== null} divider
+                secondaryAction={owner && (
+                  <IconButton edge="end" disabled={busy} aria-label={`${t('meal.removeDish')}: ${dish.title}`}
+                    onClick={() => void setDishes(dishes.filter((_, i) => i !== index).map(dishInput))}>
+                    <DeleteIcon />
+                  </IconButton>
+                )}>
+                {dish.recipe !== null ? (
+                  <ListItemButton component={RouterLink} to={`/recipes/${dish.recipe}`}>{text}</ListItemButton>
+                ) : text}
+              </ListItem>
+            )
+          })}
         </List>
       )}
       {owner && (
@@ -152,7 +159,7 @@ function DishesSection({ day, meal, owner, onChange }: {
           onChange={(_, entry) => {
             if (entry) {
               setSearch('')
-              void setDishes([...dishes.map((d) => d.id), entry.recipe])
+              void setDishes([...dishes.map(dishInput), entry.recipe])
             }
           }}
           renderOption={({ key, ...props }, entry) => (
@@ -201,6 +208,17 @@ export function MealPage() {
     }
   }
 
+  async function review(action: 'accept' | 'reject') {
+    try {
+      await reviewMeal(team.id, date!, which, action)
+      const [loaded] = await api<CalendarDay[]>(`/calendar/?team=${team.id}&start=${date}&days=1`)
+      setDay(loaded)
+      setNotice({ message: t(action === 'accept' ? 'generation.accepted' : 'generation.rejected') })
+    } catch {
+      setNotice({ message: t('common.error') })
+    }
+  }
+
   async function undo(previous: CalendarDayChange) {
     setNotice(null)
     try {
@@ -222,6 +240,23 @@ export function MealPage() {
         </Stack>
       </Stack>
       {day.note && <Alert severity="info" icon={false}>{day.note}</Alert>}
+      {hasProposal(day, which) && (
+        <Alert severity="success" icon={false}
+          action={
+            <Stack direction="row" spacing={1}>
+              <Button color="inherit" size="small" onClick={() => void review('reject')}>{t('generation.reject')}</Button>
+              <Button variant="contained" size="small" onClick={() => void review('accept')}>{t('generation.accept')}</Button>
+            </Stack>
+          }>
+          {t('generation.mealProposal')}
+          {day.proposed_people[which] !== undefined && (
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              {t('generation.peopleChange', { from: day.people[which], to: day.proposed_people[which] })}
+              {day.people_notes[which] && ` — ${day.people_notes[which]}`}
+            </Typography>
+          )}
+        </Alert>
+      )}
       {!owner && <Alert severity="info">{t('meal.memberNotice')}</Alert>}
       <PeopleSection key={`${day.people[which]}`} day={day} meal={which} owner={owner} onChange={(u) => change(u)} />
       {day.dishes[which] ? (

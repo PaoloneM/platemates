@@ -144,7 +144,13 @@ def test_dishes_are_set_per_meal_and_create_the_weeks_menu(api, week, pasta_reci
     assert response.status_code == 200
     day = response.json()
     assert day["dishes"]["dinner"] == [
-        {"id": pasta_recipe.pk, "title": pasta_recipe.title, "course": pasta_recipe.course}
+        {
+            "recipe": pasta_recipe.pk,
+            "title": pasta_recipe.title,
+            "course": pasta_recipe.course,
+            "proposed": False,
+            "note": "",
+        }
     ]
     assert day["dishes"]["lunch"] == []
     assert "breakfast" not in day["dishes"]
@@ -193,3 +199,20 @@ def test_another_teams_private_recipe_cannot_be_planned(api, week, pasta_recipe)
     pasta_recipe.save()
     body = {"dishes": {"lunch": [pasta_recipe.pk]}}
     assert api.put(day_url(MONDAY, week), body, format="json").status_code == 400
+
+
+def test_a_dish_can_be_a_title_without_a_recipe(api, week, pasta_recipe):
+    body = {
+        "dishes": {"dinner": [{"title": "  Pizza  fuori ", "course": "single"}, pasta_recipe.pk]}
+    }
+    day = api.put(day_url(MONDAY, week), body, format="json").json()
+    assert [(d["recipe"], d["title"]) for d in day["dishes"]["dinner"]] == [
+        (None, "Pizza fuori"),
+        (pasta_recipe.pk, pasta_recipe.title),
+    ]
+
+
+@pytest.mark.parametrize("dish", [{"title": "  "}, {"title": "Pizza", "course": "x"}, {"x": 1}])
+def test_title_dishes_are_validated(api, week, dish):
+    response = api.put(day_url(MONDAY, week), {"dishes": {"dinner": [dish]}}, format="json")
+    assert response.status_code == 400

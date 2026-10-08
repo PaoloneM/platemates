@@ -2,8 +2,9 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.recipes.models import Recipe
+from apps.teams.models import PLANNED_MEALS, Team
 
-from .models import MealSlot, SlotDish, SystemRule, TeamRule, WeeklyMenu
+from .models import MealSlot, MenuGeneration, SlotDish, SystemRule, TeamRule, WeeklyMenu
 
 MAX_INSTRUCTIONS = 2000
 
@@ -123,3 +124,49 @@ class WeeklyMenuSerializer(serializers.ModelSerializer):
         if any(rule.team_id != team.pk for rule in attrs.get("excluded_rules", [])):
             raise serializers.ValidationError({"excluded_rules": "Not one of the team's rules."})
         return attrs
+
+
+class MenuGenerationSerializer(serializers.ModelSerializer):
+    week_start = serializers.DateField(source="menu.week_start", read_only=True)
+
+    class Meta:
+        model = MenuGeneration
+        fields = [
+            "id",
+            "menu",
+            "week_start",
+            "status",
+            "use_week_settings",
+            "rules",
+            "result",
+            "error",
+            "created_at",
+            "started_at",
+            "finished_at",
+        ]
+        read_only_fields = fields
+
+
+class GenerateSerializer(serializers.Serializer):
+    """`POST /api/menus/generate/`: plan a week, with the standing rules or the week's too."""
+
+    team = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all())
+    week_start = serializers.DateField()
+    use_week_settings = serializers.BooleanField(default=False)
+
+    def validate_week_start(self, value):
+        if value.weekday() != 0:
+            raise serializers.ValidationError("A week starts on Monday.")
+        return value
+
+
+class MealKeySerializer(serializers.Serializer):
+    date = serializers.DateField()
+    meal = serializers.ChoiceField(choices=PLANNED_MEALS)
+
+
+class ReviewSerializer(serializers.Serializer):
+    """`POST /api/menus/<id>/review/`: accept or reject the proposals, of some meals or all."""
+
+    action = serializers.ChoiceField(choices=["accept", "reject"])
+    meals = MealKeySerializer(many=True, required=False)

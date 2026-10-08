@@ -11,6 +11,7 @@ import {
   ButtonBase,
   Card,
   CardActionArea,
+  CardActions,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -30,10 +31,10 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { PickerDay, type PickerDayProps } from '@mui/x-date-pickers/PickerDay'
 import type { Theme } from '@mui/material/styles'
 import { enGB, it } from 'date-fns/locale'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useSearchParams } from 'react-router'
-import { api, type CalendarDay, type CalendarDayChange, type Meal } from '../api'
+import { api, type CalendarDay, type CalendarDayChange, type Meal, type MenuGeneration } from '../api'
 import {
   addDays,
   changeDay,
@@ -41,32 +42,45 @@ import {
   fromIso,
   isIsoDate,
   isoDate,
+  generateMenu,
+  generationActive,
+  hasProposal,
+  latestGeneration,
   mealInUse,
+  reviewProposals,
   mealUrl,
   mondayOf,
   snapshot,
 } from '../calendar'
+import { DishLine } from '../components/DishLine'
+import { GenerationBanner } from '../components/GenerationBanner'
 import { MenuFab } from '../components/MenuFab'
 import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useTeam } from '../team'
 
 const MAX_PEOPLE = 50
+const POLL_MS = 3000
 
-function MealCard({ day, meal, owner, onClear }: {
+function MealCard({ day, meal, owner, onClear, onReview }: {
   day: CalendarDay
   meal: Meal
   owner: boolean
   onClear: () => void
+  onReview: (action: 'accept' | 'reject') => void
 }) {
   const { t } = useTranslation()
   const labels = useLabels()
   const dishes = day.dishes[meal]
-  const nobody = day.people[meal] === 0
+  const nobody = day.people[meal] === 0 && day.proposed_people[meal] === undefined
+  const proposal = hasProposal(day, meal)
   return (
-    <Card sx={{ position: 'relative', height: '100%', opacity: nobody ? 0.6 : 1 }}>
+    <Card sx={{
+      position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', opacity: nobody ? 0.6 : 1,
+      ...(proposal && { outline: '1px dashed', outlineColor: 'primary.main', outlineOffset: -1 }),
+    }}>
       <CardActionArea component={RouterLink} to={mealUrl(day.date, meal)}
-        sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', p: 1.5, pr: owner ? 6 : 1.5 }}>
+        sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', p: 1.5, pr: owner ? 6 : 1.5 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.75 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{labels.meal(meal)}</Typography>
           <PeopleCount day={day} meal={meal} />
@@ -79,15 +93,18 @@ function MealCard({ day, meal, owner, onClear }: {
           <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>{t('calendar.noDishes')}</Typography>
         ) : (
           <Stack spacing={0.25}>
-            {dishes.map((dish) => (
-              <Typography key={dish.id} variant="body2" noWrap>
-                {dish.title}
-                <Typography component="span" variant="caption" color="text.secondary"> · {labels.course(dish.course)}</Typography>
-              </Typography>
-            ))}
+            {dishes.map((dish, index) => <DishLine key={index} dish={dish} />)}
           </Stack>
         )}
       </CardActionArea>
+      {proposal && (
+        <CardActions sx={{ pt: 0, px: 1, justifyContent: 'flex-end' }}>
+          <Button size="small" color="inherit" onClick={() => onReview('reject')}
+            aria-label={`${t('generation.reject')}: ${labels.meal(meal)}`}>{t('generation.reject')}</Button>
+          <Button size="small" onClick={() => onReview('accept')}
+            aria-label={`${t('generation.accept')}: ${labels.meal(meal)}`}>{t('generation.accept')}</Button>
+        </CardActions>
+      )}
       {owner && mealInUse(day, meal) && (
         <Tooltip title={t('calendar.clearMeal')}>
           <IconButton size="small" onClick={onClear} aria-label={`${t('calendar.clearMeal')}: ${labels.meal(meal)}`}
@@ -100,12 +117,13 @@ function MealCard({ day, meal, owner, onClear }: {
   )
 }
 
-function DayRow({ day, today, owner, onConfigure, onClear }: {
+function DayRow({ day, today, owner, onConfigure, onClear, onReview }: {
   day: CalendarDay
   today: boolean
   owner: boolean
   onConfigure: () => void
   onClear: (meals: Meal[]) => void
+  onReview: (meal: Meal, action: 'accept' | 'reject') => void
 }) {
   const { t } = useTranslation()
   const { weekday, dayMonth } = useDayTitle(day.date)
@@ -149,7 +167,8 @@ function DayRow({ day, today, owner, onConfigure, onClear }: {
       </Stack>
       <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(280px, 1fr))' } }}>
         {MEALS.map((meal) => (
-          <MealCard key={meal} day={day} meal={meal} owner={owner} onClear={() => onClear([meal])} />
+          <MealCard key={meal} day={day} meal={meal} owner={owner} onClear={() => onClear([meal])}
+            onReview={(action) => onReview(meal, action)} />
         ))}
       </Box>
     </Box>
@@ -329,9 +348,63 @@ export function CalendarPage() {
   const thisMonday = mondayOf(today)
   const todayIso = isoDate(today)
 
+  // The latest generation, with the week it belongs to: another week's is never shown.
+  const [loadedGeneration, setLoadedGeneration] = useState<{ week: string; generation: MenuGeneration | null } | null>(null)
+  const generation = loadedGeneration?.week === start ? loadedGeneration.generation : null
+  const setGeneration = useCallback(
+    (value: MenuGeneration | null) => setLoadedGeneration({ week: start, generation: value }),
+    [start],
+  )
+  const [reviewing, setReviewing] = useState(false)
+
+  const loadDays = useCallback(
+    () => api<CalendarDay[]>(`/calendar/?team=${team.id}&start=${start}&days=7`).then(setDays),
+    [team.id, start],
+  )
+  useEffect(() => void loadDays(), [loadDays])
+
   useEffect(() => {
-    api<CalendarDay[]>(`/calendar/?team=${team.id}&start=${start}&days=7`).then(setDays)
-  }, [team.id, start])
+    latestGeneration(team.id, start).then(setGeneration)
+  }, [team.id, start, setGeneration])
+
+  // While the week is being generated, check every few seconds; once it ends, show the result.
+  const active = generationActive(generation)
+  const generationId = generation?.id
+  useEffect(() => {
+    if (!active || generationId === undefined) return
+    const timer = setInterval(async () => {
+      const latest = await latestGeneration(team.id, start).catch(() => null)
+      if (!latest || latest.id !== generationId || generationActive(latest)) return
+      setGeneration(latest)
+      void loadDays()
+    }, POLL_MS)
+    return () => clearInterval(timer)
+  }, [active, generationId, team.id, start, loadDays, setGeneration])
+
+  const pending = !!days?.some((day) => MEALS.some((meal) => hasProposal(day, meal)))
+
+  async function generate(useWeekSettings: boolean) {
+    if (pending && !window.confirm(t('generation.replaceConfirm'))) return
+    try {
+      setGeneration(await generateMenu(team.id, start, useWeekSettings))
+    } catch {
+      setNotice({ message: t('common.error') })
+    }
+  }
+
+  async function review(action: 'accept' | 'reject', meals?: { date: string; meal: Meal }[]) {
+    if (!generation) return
+    setReviewing(true)
+    try {
+      await reviewProposals(generation.menu, action, meals)
+      await loadDays()
+      setNotice({ message: t(action === 'accept' ? 'generation.accepted' : 'generation.rejected') })
+    } catch {
+      setNotice({ message: t('common.error') })
+    } finally {
+      setReviewing(false)
+    }
+  }
 
   const replace = (saved: CalendarDay) =>
     setDays((list) => list?.map((d) => (d.date === saved.date ? saved : d)) ?? null)
@@ -372,13 +445,17 @@ export function CalendarPage() {
         <Button component={RouterLink} to="/week" size="small">{t('calendar.editWeek')}</Button>
       </Stack>
       <WeekBar monday={monday} thisMonday={thisMonday} onChange={goTo} />
+      <GenerationBanner generation={generation} pending={pending} busy={reviewing}
+        onAcceptAll={() => void review('accept')} onRejectAll={() => void review('reject')}
+        onRetry={() => void generate(generation?.use_week_settings ?? false)} />
       {!current ? (
         <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />
       ) : (
         <Stack spacing={3}>
           {current.map((day) => (
             <DayRow key={day.date} day={day} today={day.date === todayIso} owner={owner}
-              onConfigure={() => setConfiguring(day)} onClear={(meals) => void clear(day, meals)} />
+              onConfigure={() => setConfiguring(day)} onClear={(meals) => void clear(day, meals)}
+              onReview={(meal, action) => void review(action, [{ date: day.date, meal }])} />
           ))}
         </Stack>
       )}
@@ -393,7 +470,8 @@ export function CalendarPage() {
             setNotice({ message: t('calendar.saved') })
           }} />
       )}
-      <MenuFab weekStart={start} onSaved={() => setNotice({ message: t('plan.saved') })} />
+      <MenuFab weekStart={start} generating={active} onGenerate={(useWeek) => void generate(useWeek)}
+        onSaved={() => setNotice({ message: t('plan.saved') })} />
       <Snackbar open={!!notice} autoHideDuration={notice?.undo ? 6000 : 3000} onClose={() => setNotice(null)}
         message={notice?.message}
         action={notice?.undo && (

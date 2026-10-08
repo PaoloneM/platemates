@@ -73,7 +73,7 @@
     "diners": "Commensali",
     "backToUsual": "Torna a {{count}} (settimana tipo)",
     "menu": "Menu",
-    "menuEmpty": "Nessun piatto. Il generatore del menu li proporrà; intanto puoi sceglierli dal ricettario.",
+    "menuEmpty": "Nessun piatto. Puoi sceglierli dal ricettario, o generare il menu della settimana dal pulsante nella schermata Menu.",
     "addDish": "Aggiungi un piatto dal ricettario",
     "removeDish": "Togli il piatto",
     "noRecipes": "Nessuna ricetta trovata",
@@ -491,13 +491,35 @@
     "systemRules_other": "{{count}} regole di sistema, sempre applicate",
     "precedence": "Se due indicazioni sono in contrasto vince quella della settimana, poi quella del team. I piatti che hai già scelto restano.",
     "generate": "Genera",
-    "generateSoon": "La generazione del menu è in arrivo: intanto le indicazioni restano salvate per questa settimana.",
     "saved": "Indicazioni della settimana salvate"
   },
   "menuFab": {
     "label": "Prepara il menu",
-    "generateSoon": "Genera il menu della settimana (in arrivo)",
     "plan": "Dimmi come prepararlo",
-    "week": "Configura la settimana tipo"
+    "week": "Configura la settimana tipo",
+    "generate": "Genera il menu della settimana",
+    "generating": "Generazione in corso…"
+  },
+  "generation": {
+    "running": "Sto preparando il menu…",
+    "runningHint": "Di solito ci vuole meno di un minuto. Puoi lasciare la pagina: la proposta ti aspetta qui.",
+    "failed": "Non sono riuscito a preparare il menu",
+    "retry": "Riprova",
+    "done": "Ecco la proposta per la settimana",
+    "unplanned_one": "{{count}} pasto non è stato pianificato: puoi completarlo a mano o rigenerare.",
+    "unplanned_other": "{{count}} pasti non sono stati pianificati: puoi completarli a mano o rigenerare.",
+    "reviewHint": "I piatti proposti sono segnati con ✦. Accetta o scarta pasto per pasto dalle card, oppure tutto insieme.",
+    "acceptAll": "Accetta tutto",
+    "rejectAll": "Scarta tutto",
+    "accept": "Accetta",
+    "reject": "Scarta",
+    "accepted": "Proposta accettata",
+    "rejected": "Proposta scartata",
+    "proposed": "Proposto",
+    "proposedPeople": "Persone proposte",
+    "newDish": "nuovo",
+    "replaceConfirm": "Le proposte non ancora accettate verranno sostituite. I piatti che hai scelto tu restano. Continuare?",
+    "mealProposal": "Il generatore propone questo pasto: accettalo per tenerlo, oppure scartalo.",
+    "peopleChange": "Persone: da {{from}} a {{to}}"
   }
 }

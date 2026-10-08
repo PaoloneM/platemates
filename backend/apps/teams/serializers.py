@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
-from apps.recipes.models import Recipe
+from apps.recipes.models import Course, Recipe
 
+from .calendar import NewDish
 from .models import PLANNED_MEALS, Meal, Member, Membership, Preference, RecipeBookEntry, Team
 
 MAX_PEOPLE = 50
@@ -129,9 +130,11 @@ class MembershipSerializer(serializers.ModelSerializer):
 
 
 class CalendarDishSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
+    recipe = serializers.IntegerField(allow_null=True)
     title = serializers.CharField()
     course = serializers.CharField()
+    proposed = serializers.BooleanField()
+    note = serializers.CharField()
 
 
 class CalendarDaySerializer(serializers.Serializer):
@@ -144,20 +147,21 @@ class CalendarDaySerializer(serializers.Serializer):
     overridden = serializers.ListField(child=serializers.CharField())
     note = serializers.CharField()
     dishes = serializers.DictField(child=CalendarDishSerializer(many=True))
+    proposed_people = serializers.DictField(child=serializers.IntegerField())
+    people_notes = serializers.DictField(child=serializers.CharField())
 
 
 class CalendarDayInputSerializer(serializers.Serializer):
     """What an owner changes on a date; every part is optional and the rest is kept.
 
-    `people`: meal -> count. `note`: replaces the note. `dishes`: planned meal -> recipe ids,
-    in order, replacing that meal's dishes (`[]` clears it).
+    `people`: meal -> count. `note`: replaces the note. `dishes`: planned meal -> dishes, in
+    order, replacing that meal's dishes (`[]` clears it); a dish is a recipe id, or
+    `{"title": ..., "course": ...}` for a dish without a recipe.
     """
 
     people = serializers.DictField(child=serializers.IntegerField(), required=False)
     note = serializers.CharField(max_length=200, required=False, allow_blank=True)
-    dishes = serializers.DictField(
-        child=serializers.ListField(child=serializers.IntegerField()), required=False
-    )
+    dishes = serializers.DictField(child=serializers.ListField(), required=False)
 
     def validate_people(self, value):
         if set(value) - set(Meal.values):
@@ -170,11 +174,32 @@ class CalendarDayInputSerializer(serializers.Serializer):
         return " ".join(value.split())
 
     def validate_dishes(self, value):
-        """Recipe ids become recipes the user can see; only planned meals have dishes."""
+        """Recipe ids become recipes the user can see, titles `NewDish`es; only planned meals
+        have dishes."""
         if set(value) - set(PLANNED_MEALS):
             raise serializers.ValidationError(f"Dishes go to {', '.join(PLANNED_MEALS)}.")
-        wanted = {pk for ids in value.values() for pk in ids}
+        wanted = set()
+        for items in value.values():
+            for item in items:
+                if type(item) is int:
+                    wanted.add(item)
+                elif not (isinstance(item, dict) and isinstance(item.get("title"), str)):
+                    raise serializers.ValidationError("A dish is a recipe id or {title, course}.")
         visible = Recipe.objects.visible_to(self.context["request"].user).in_bulk(wanted)
         if missing := wanted - set(visible):
             raise serializers.ValidationError(f"Unknown recipes: {sorted(missing)}.")
-        return {meal: [visible[pk] for pk in ids] for meal, ids in value.items()}
+        return {
+            meal: [self._dish(item, visible) for item in items] for meal, items in value.items()
+        }
+
+    @staticmethod
+    def _dish(item, visible):
+        if type(item) is int:
+            return visible[item]
+        title = " ".join(item["title"].split())[:200]
+        course = item.get("course") or ""
+        if not title:
+            raise serializers.ValidationError("A dish needs a title.")
+        if course not in {"", *Course.values}:
+            raise serializers.ValidationError(f"Courses are {', '.join(Course.values)}.")
+        return NewDish(title=title, course=course)

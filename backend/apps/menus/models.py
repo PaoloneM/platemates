@@ -6,12 +6,13 @@ optional ratings feeds the RAG context of future generations.
 
 from __future__ import annotations
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from apps.recipes.models import Recipe
+from apps.recipes.models import Course, Recipe
 from apps.teams.calendar import calendar
 from apps.teams.models import PLANNED_MEALS, Meal, Team
 
@@ -117,6 +118,10 @@ class MealSlot(models.Model):
     meal = models.CharField(max_length=10, choices=Meal.choices)
     # Diners for this occasion. 0 means nobody eats at home: the slot generates no shopping.
     people = models.PositiveSmallIntegerField(default=0)
+    # A change to the people proposed by the generator (from the week's instructions), with its
+    # reason. Applied to the calendar only when the user accepts it; null when there is none.
+    proposed_people = models.PositiveSmallIntegerField(null=True, blank=True)
+    people_note = models.CharField(max_length=200, blank=True)
     dishes = models.ManyToManyField(Recipe, through="SlotDish", related_name="slots", blank=True)
 
     # Implicit feedback.
@@ -140,16 +145,90 @@ class MealSlot(models.Model):
 
 
 class SlotDish(models.Model):
-    """A dish served at a slot. Usually one; several when a meal has more courses."""
+    """A dish served at a slot. Usually one; several when a meal has more courses.
+
+    Either a recipe, or a dish named by its title only: a new dish the generator suggests (not
+    in any recipe book yet), or one the user writes in ("pizza out"). A dish without a recipe
+    adds nothing to the shopping list.
+    """
 
     slot = models.ForeignKey(MealSlot, on_delete=models.CASCADE, related_name="slot_dishes")
-    recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT, related_name="slot_dishes")
+    recipe = models.ForeignKey(
+        Recipe, null=True, blank=True, on_delete=models.PROTECT, related_name="slot_dishes"
+    )
+    title = models.CharField(max_length=200, blank=True)
+    course = models.CharField(max_length=10, choices=Course.choices, blank=True)
+    # The generator's one-line description of a new dish, or why it chose this one.
+    note = models.CharField(max_length=200, blank=True)
+    # Proposed by the generator and not accepted yet. Accepting makes it a user decision;
+    # rejecting deletes it; regenerating replaces only proposals.
+    proposed = models.BooleanField(default=False)
     position = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         ordering = ["slot", "position", "id"]
         verbose_name_plural = "slot dishes"
-        constraints = [models.UniqueConstraint(fields=["slot", "recipe"], name="unique_slot_dish")]
+        constraints = [
+            models.UniqueConstraint(fields=["slot", "recipe"], name="unique_slot_dish"),
+            models.CheckConstraint(
+                condition=models.Q(recipe__isnull=False) | ~models.Q(title=""),
+                name="slot_dish_has_recipe_or_title",
+            ),
+        ]
 
     def __str__(self) -> str:
-        return f"{self.slot}: {self.recipe}"
+        return f"{self.slot}: {self.recipe or self.title}"
+
+    @property
+    def display_title(self) -> str:
+        return self.recipe.title if self.recipe else self.title
+
+    @property
+    def display_course(self) -> str:
+        return self.recipe.course if self.recipe else self.course
+
+
+class MenuGeneration(models.Model):
+    """One request to generate a week's menu, run in the background by `menu_worker`.
+
+    Keeps a snapshot of the rules it used and what came back, so the user sees what a proposal
+    was based on, and later generations can learn from the history.
+    """
+
+    class Status(models.TextChoices):
+        QUEUED = "queued", _("Queued")
+        RUNNING = "running", _("Running")
+        DONE = "done", _("Done")
+        FAILED = "failed", _("Failed")
+
+    menu = models.ForeignKey(WeeklyMenu, on_delete=models.CASCADE, related_name="generations")
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    # False: the standing rules only (system and team). True: the week's settings too.
+    use_week_settings = models.BooleanField(default=False)
+    # The language the proposal is written in (new dishes, notes, rationale).
+    language = models.CharField(max_length=10, default="it")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.QUEUED)
+    # {"system": [...], "team": [...], "week": "..."}: the rules as they were.
+    rules = models.JSONField(default=dict, blank=True)
+    # The model's answer once validated (see `apps/menus/generation.py`).
+    result = models.JSONField(null=True, blank=True)
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            # One generation at a time per week: a second request waits for the first.
+            models.UniqueConstraint(
+                fields=["menu"],
+                condition=models.Q(status__in=["queued", "running"]),
+                name="one_active_generation_per_menu",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.menu} ({self.status})"

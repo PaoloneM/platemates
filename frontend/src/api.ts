@@ -125,15 +125,30 @@ export type CalendarDay = {
   note: string
   // Planned meals only (lunch, dinner): breakfast is counted, not planned.
   dishes: Partial<Record<Meal, CalendarDish[]>>
+  // Changes to the people proposed by the menu generator, with their reasons: `people` stays
+  // as it is until the user accepts them.
+  proposed_people: Partial<Record<Meal, number>>
+  people_notes: Partial<Record<Meal, string>>
 }
 
-export type CalendarDish = { id: number; title: string; course: Course }
+// A dish of a meal: a recipe, or a dish named by its title only (`recipe` null), such as a new
+// dish the generator suggests. `proposed`: suggested by the generator, not accepted yet.
+export type CalendarDish = {
+  recipe: number | null
+  title: string
+  course: Course | ''
+  proposed: boolean
+  note: string
+}
+
+// How a change names a dish: a recipe id, or a title for a dish without a recipe.
+export type DishInput = number | { title: string; course: Course | '' }
 
 // A change to a date; every part is optional. `dishes` replaces the listed meals' dishes.
 export type CalendarDayChange = {
   people?: Partial<Record<Meal, number>>
   note?: string
-  dishes?: Partial<Record<Meal, number[]>>
+  dishes?: Partial<Record<Meal, DishInput[]>>
 }
 
 // A rule every team's menus follow, kept in both interface languages. Shipped rules have a
@@ -161,6 +176,26 @@ export type WeeklyMenu = {
   instructions: string
   use_team_rules: boolean
   excluded_rules: number[]
+}
+
+export type GenerationStatus = 'queued' | 'running' | 'done' | 'failed'
+
+// A request to generate a week's menu, run in the background.
+export type MenuGeneration = {
+  id: number
+  menu: number
+  week_start: string
+  status: GenerationStatus
+  use_week_settings: boolean
+  rules: { system?: string[]; team?: string[]; week?: string }
+  result: {
+    rationale: string
+    unplanned: { date: string; meal: Meal }[]
+  } | null
+  error: string
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
 }
 
 export type TeamProfile = {

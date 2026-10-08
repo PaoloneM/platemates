@@ -39,7 +39,10 @@ class ShoppingItem:
 
 def build_shopping_list(menu: WeeklyMenu) -> list[ShoppingItem]:
     dishes = (
-        SlotDish.objects.filter(slot__menu=menu, slot__people__gt=0)
+        # Proposals count once accepted; dishes without a recipe have no ingredients to buy.
+        SlotDish.objects.filter(
+            slot__menu=menu, slot__people__gt=0, recipe__isnull=False, proposed=False
+        )
         .exclude(slot__outcome=MealSlot.Outcome.SKIPPED)
         .select_related("slot", "recipe")
         .prefetch_related("recipe__ingredients__ingredient")

@@ -34,10 +34,12 @@ type Loaded = { menu: WeeklyMenu | null; rules: TeamRule[]; system: SystemRule[]
  * "Tell me how to plan it": the week's own instructions, and which team rules apply. Saved on
  * the week's menu (created if there is none yet), so whoever regenerates finds them again.
  */
-export function PlanWeekDialog({ weekStart, onClose, onSaved }: {
+export function PlanWeekDialog({ weekStart, generating, onClose, onSaved }: {
   weekStart: string
+  generating: boolean
   onClose: () => void
-  onSaved: () => void
+  // `generate`: the user asked to generate the week with these settings.
+  onSaved: (generate: boolean) => void
 }) {
   const { t, i18n } = useTranslation()
   const labels = useLabels()
@@ -79,7 +81,7 @@ export function PlanWeekDialog({ weekStart, onClose, onSaved }: {
     })
   }
 
-  async function save() {
+  async function save(generate: boolean) {
     if (!loaded) return
     setBusy(true)
     setError(false)
@@ -95,7 +97,7 @@ export function PlanWeekDialog({ weekStart, onClose, onSaved }: {
       } else {
         await api('/menus/', { method: 'POST', body: JSON.stringify({ team: team.id, week_start: weekStart, ...settings }) })
       }
-      onSaved()
+      onSaved(generate)
     } catch {
       setError(true)
     } finally {
@@ -166,10 +168,14 @@ export function PlanWeekDialog({ weekStart, onClose, onSaved }: {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{t('common.cancel')}</Button>
-        <Button onClick={() => void save()} disabled={!loaded || busy}>{t('common.save')}</Button>
-        <Tooltip title={t('plan.generateSoon')}>
+        <Button onClick={() => void save(false)} disabled={!loaded || busy}>{t('common.save')}</Button>
+        <Tooltip title={generating ? t('menuFab.generating') : ''}>
           {/* The span keeps the tooltip working on a disabled button. */}
-          <span><Button variant="contained" disabled>{t('plan.generate')}</Button></span>
+          <span>
+            <Button variant="contained" onClick={() => void save(true)} disabled={!loaded || busy || generating}>
+              {t('plan.generate')}
+            </Button>
+          </span>
         </Tooltip>
       </DialogActions>
     </Dialog>

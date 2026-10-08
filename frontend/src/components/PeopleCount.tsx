@@ -8,6 +8,21 @@ export function PeopleCount({ day, meal }: { day: CalendarDay; meal: Meal }) {
   const { t } = useTranslation()
   const count = day.people[meal]
   const changed = day.overridden.includes(meal)
+  const proposed = day.proposed_people[meal]
+  if (proposed !== undefined) {
+    // A change the generator proposes: the current count, an arrow, the proposed one.
+    return (
+      <Tooltip title={day.people_notes[meal] ? `${t('generation.proposedPeople')}: ${day.people_notes[meal]}` : t('generation.proposedPeople')}>
+        <Stack direction="row" spacing={0.5} sx={{
+          alignItems: 'center', px: 0.75, borderRadius: 1, color: 'primary.main',
+          bgcolor: (theme) => theme.alpha((theme.vars ?? theme).palette.primary.main, 0.12),
+        }}>
+          <PeopleIcon fontSize="small" />
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>{count} → {proposed}</Typography>
+        </Stack>
+      </Tooltip>
+    )
+  }
   const value = (
     <Stack direction="row" spacing={0.5} sx={{
       alignItems: 'center', px: 0.75, borderRadius: 1, color: changed ? 'secondary.main' : 'text.secondary',

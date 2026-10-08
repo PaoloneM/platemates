@@ -19,11 +19,11 @@ The functional and architectural design was defined in a planning session with t
 
 ## Project Status
 
-**Recipe book complete, menus next.** Built and in use: recipe book and editor, the recipe
+**Recipe book and menu generation built, shopping list next.** Built and in use: recipe book and editor, the recipe
 assistant in all four modes (tell, link, photo, search), sign-in with invitation-only teams,
 team management, the team calendar and menu screen, the menu planning rules (system, team,
-week), the management section for shared catalogs, phone access over HTTPS on the home
-network, backups. Not built yet: weekly menu generation, the shopping list screen, tastes,
+week), weekly menu generation with review, the management section for shared catalogs, phone
+access over HTTPS on the home network, backups. Not built yet: the shopping list screen, tastes,
 feedback, collaborative recommendation. The README's status table is kept current;
 `docs/architecture.md` explains how the code maps onto the concepts and the decisions taken.
 
@@ -123,6 +123,7 @@ cd backend && uv run python manage.py setup_keycloak    # configure the Keycloak
 cd backend && uv run python manage.py create_team "Name" --owner you@example.com --staff  # bootstrap
 cd backend && uv run python manage.py migrate           # apply migrations
 cd backend && uv run python manage.py runserver         # API on :8000, admin on /admin/
+cd backend && uv run python manage.py menu_worker       # runs menu generations (the `worker` service in compose)
 cd backend && uv run pytest                             # backend tests (needs the db running)
 cd backend && uv run ruff check --fix . && uv run ruff format .
 cd services/embeddings && uv run uvicorn app.main:app --port 8100   # local embeddings
@@ -156,6 +157,10 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - Menu generation is guided only by the rules (`SystemRule`, `TeamRule`,
   the week's settings on `WeeklyMenu`) plus the structured team data; `Team.notes` is a note for
   users and is never passed to the LLM. Hard constraints are enforced in code, not in rule text
+- Whatever the menu generator returns is a proposal (`SlotDish.proposed`,
+  `MealSlot.proposed_people`) validated in `apps/menus/generation.py`, and counts only once the
+  user accepts it (`apps/menus/review.py`). The generator never writes the calendar; people
+  change only through `set_day`
 - Everything the assistant produces goes through `normalize_draft` and the editor's review;
   nothing it proposes is saved without the user
 - **Every initialization step must be idempotent** (safe to re-run, same result) and, where it

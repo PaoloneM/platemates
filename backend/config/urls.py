@@ -6,7 +6,13 @@ from apps.accounts.views import InvitationViewSet, login_options, me
 from apps.assistant.views import AssistantSessionViewSet
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
 from apps.core.views import health
-from apps.menus.views import MealSlotViewSet, SystemRuleViewSet, TeamRuleViewSet, WeeklyMenuViewSet
+from apps.menus.views import (
+    MealSlotViewSet,
+    MenuGenerationViewSet,
+    SystemRuleViewSet,
+    TeamRuleViewSet,
+    WeeklyMenuViewSet,
+)
 from apps.recipes.views import CuisineViewSet, RecipeViewSet
 from apps.teams.views import (
     CalendarDayView,
@@ -30,6 +36,7 @@ router.register("preferences", PreferenceViewSet)
 router.register("recipe-book", RecipeBookEntryViewSet)
 router.register("menus", WeeklyMenuViewSet)
 router.register("team-rules", TeamRuleViewSet)
+router.register("menu-generations", MenuGenerationViewSet)
 router.register("system-rules", SystemRuleViewSet, basename="system-rule")
 router.register("slots", MealSlotViewSet)
 router.register("invitations", InvitationViewSet)
