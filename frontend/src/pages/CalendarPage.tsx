@@ -58,6 +58,7 @@ import { MenuFab } from '../components/MenuFab'
 import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useOnConnect, useRealtimeConnected, useRealtimeEvent } from '../realtime'
+import { DAY_ACTION, MEAL_ACTION, revealOnHover } from '../hover'
 import { useTeam } from '../team'
 
 const MAX_PEOPLE = 50
@@ -78,6 +79,7 @@ function MealCard({ day, meal, owner, onClear, onReview }: {
   const proposal = hasProposal(day, meal)
   return (
     <Card sx={{
+      ...revealOnHover(MEAL_ACTION),
       position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', opacity: nobody ? 0.6 : 1,
       ...(proposal && { outline: '1px dashed', outlineColor: 'primary.main', outlineOffset: -1 }),
     }}>
@@ -109,7 +111,7 @@ function MealCard({ day, meal, owner, onClear, onReview }: {
       )}
       {owner && mealInUse(day, meal) && (
         <Tooltip title={t('calendar.clearMeal')}>
-          <IconButton size="small" onClick={onClear} aria-label={`${t('calendar.clearMeal')}: ${labels.meal(meal)}`}
+          <IconButton size="small" className={MEAL_ACTION} onClick={onClear} aria-label={`${t('calendar.clearMeal')}: ${labels.meal(meal)}`}
             sx={{ position: 'absolute', top: 8, right: 8 }}>
             <DeleteIcon fontSize="small" />
           </IconButton>
@@ -139,20 +141,21 @@ function DayRow({ day, today, owner, onConfigure, onClear, onReview }: {
   )
   return (
     <Box component="section" aria-label={`${weekday} ${dayMonth}`}>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+      <Stack direction="row" sx={{ ...revealOnHover(DAY_ACTION), alignItems: 'center', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
         {owner ? (
           <ButtonBase onClick={onConfigure} sx={{ borderRadius: 1, px: 0.5, mx: -0.5 }}>{title}</ButtonBase>
         ) : title}
         {owner && (
           <>
             <Tooltip title={t('calendar.configureDay')}>
-              <IconButton size="small" onClick={onConfigure} aria-label={`${t('calendar.configureDay')}: ${weekday} ${dayMonth}`}>
+              <IconButton size="small" className={DAY_ACTION} onClick={onConfigure}
+                aria-label={`${t('calendar.configureDay')}: ${weekday} ${dayMonth}`}>
                 <SettingsIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             {MEALS.some((meal) => mealInUse(day, meal)) && (
               <Tooltip title={t('calendar.clearDay')}>
-                <IconButton size="small" onClick={() => onClear(MEALS.filter((meal) => mealInUse(day, meal)))}
+                <IconButton size="small" className={DAY_ACTION} onClick={() => onClear(MEALS.filter((meal) => mealInUse(day, meal)))}
                   aria-label={`${t('calendar.clearDay')}: ${weekday} ${dayMonth}`}>
                   <DeleteIcon fontSize="small" />
                 </IconButton>
@@ -461,7 +464,6 @@ export function CalendarPage() {
     <Stack spacing={2}>
       <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="h1" sx={{ flex: 1, minWidth: 0 }}>{t('calendar.title')}</Typography>
-        <Button component={RouterLink} to="/week" size="small">{t('calendar.editWeek')}</Button>
       </Stack>
       <WeekBar monday={monday} thisMonday={thisMonday} onChange={goTo} />
       <GenerationBanner generation={generation} progress={progress?.id === generation?.id ? progress : null}

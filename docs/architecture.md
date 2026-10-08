@@ -316,7 +316,9 @@ current week (its slot is reserved, so nothing shifts), and the week's dates ope
 calendar (MUI X `DateCalendar`) to jump to any date. A row per day
 with a card per meal (people, dishes; exceptions in terracotta, nobody at home dimmed). The day's
 gear (or its date) opens the day settings, the bin clears the day or a single meal at once with
-Undo. A meal card opens the meal page (`/calendar/<date>/<meal>`): people, and the dishes picked
+Undo. With a mouse or trackpad these icons appear only on hovering the day's heading or the
+card (or on keyboard focus); on touch screens they are always shown. The choice follows the
+pointer (`(hover: hover) and (pointer: fine)`, `src/hover.ts`), not a guess about the device. A meal card opens the meal page (`/calendar/<date>/<meal>`): people, and the dishes picked
 from the recipe book until the menu generator proposes them. Members see everything read-only.
 The screen's FAB (`components/MenuFab.tsx`, on the same `ActionFab` as the recipe book's) holds
 the generation actions and the way to the typical week: see "Generating a menu" below.
