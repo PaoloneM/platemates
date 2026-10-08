@@ -1,4 +1,5 @@
 import EggIcon from '@mui/icons-material/EggOutlined'
+import RuleIcon from '@mui/icons-material/RuleOutlined'
 import {
   Box,
   List,
@@ -18,8 +19,11 @@ import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, Navigate, useLocation } from 'react-router'
 import { useAuth } from '../../auth/context'
 
-/** The entities the management section covers. New ones (kitchen tools, ...) go here. */
-const SECTIONS = [{ key: 'ingredients', path: '/manage/ingredients', icon: <EggIcon /> }]
+/** The entities and settings the management section covers. New ones (kitchen tools, ...) go here. */
+const SECTIONS = [
+  { key: 'ingredients', path: '/manage/ingredients', icon: <EggIcon /> },
+  { key: 'rules', path: '/manage/rules', icon: <RuleIcon /> },
+]
 
 /**
  * The management section: shared catalogs, for staff. A menu of entities on the left on

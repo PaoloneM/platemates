@@ -339,7 +339,8 @@
   "manage": {
     "title": "Gestione",
     "section": {
-      "ingredients": "Ingredienti"
+      "ingredients": "Ingredienti",
+      "rules": "Regole di sistema"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -360,6 +361,21 @@
       "deleteTitle": "Eliminare «{{name}}»?",
       "deleteHint": "L'ingrediente verrà tolto dal catalogo comune.",
       "inUse": "Non si può eliminare: è usato da queste ricette. Puoi unirlo a un altro ingrediente."
+    },
+    "rules": {
+      "hint": "Valgono per i menu di tutti i team, che le vedono in sola lettura. Le modifiche hanno effetto subito, senza rilasci. Le regole fornite con l'app si disattivano, non si eliminano.",
+      "new": "Nuova regola",
+      "edit": "Modifica regola",
+      "textIt": "Testo in italiano",
+      "textEn": "Testo in inglese",
+      "active": "Attiva",
+      "inactive": "Disattivata",
+      "shipped": "Fornita con l'app",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "deleteConfirm": "Eliminare la regola «{{text}}»?",
+      "saved": "Regola salvata",
+      "deleted": "Regola eliminata"
     }
   },
   "noTeam": {
@@ -458,7 +474,8 @@
     },
     "system": {
       "title": "Regole di sistema",
-      "hint": "Valgono per tutti i team. Le regole del team e quelle della settimana hanno la precedenza."
+      "hint": "Valgono per tutti i team. Le regole del team e quelle della settimana hanno la precedenza.",
+      "manage": "Modifica nella gestione"
     }
   },
   "plan": {

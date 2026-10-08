@@ -9,6 +9,7 @@ import { AssistantPage } from './pages/AssistantPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { InvitePage } from './pages/InvitePage'
 import { IngredientsPage } from './pages/manage/IngredientsPage'
+import { SystemRulesPage } from './pages/manage/SystemRulesPage'
 import { ManageLayout } from './pages/manage/ManageLayout'
 import { LoginPage } from './pages/LoginPage'
 import { MealPage } from './pages/MealPage'
@@ -44,6 +45,7 @@ function Protected() {
           <Route path="/week" element={<WeekPage />} />
           <Route path="/manage" element={<Navigate to="/manage/ingredients" replace />} />
           <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
+          <Route path="/manage/rules" element={<ManageLayout><SystemRulesPage /></ManageLayout>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>

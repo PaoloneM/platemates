@@ -25,7 +25,9 @@ import {
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link as RouterLink } from 'react-router'
 import { api, type Meal, type Paginated, type SystemRule, type TeamProfile, type TeamRule } from '../api'
+import { useAuth } from '../auth/context'
 import { Section } from '../components/Section'
 import { MEALS, useLabels } from '../labels'
 import { useTeam } from '../team'
@@ -274,10 +276,14 @@ function SystemRulesSection() {
   const { t } = useTranslation()
   const labels = useLabels()
   const [rules, setRules] = useState<SystemRule[] | null>(null)
+  const { me } = useAuth()
   // Staff also get the switched-off rules, for the management section: only active ones apply.
   useEffect(() => void api<SystemRule[]>('/system-rules/').then((all) => setRules(all.filter((r) => r.active))), [])
   return (
-    <Section title={t('week.system.title')} hint={t('week.system.hint')}>
+    <Section title={t('week.system.title')} hint={t('week.system.hint')}
+      action={me?.authenticated && me.user.is_staff && (
+        <Button component={RouterLink} to="/manage/rules" size="small">{t('week.system.manage')}</Button>
+      )}>
       {!rules ? (
         <CircularProgress size={24} />
       ) : (

@@ -339,7 +339,8 @@
   "manage": {
     "title": "Management",
     "section": {
-      "ingredients": "Ingredients"
+      "ingredients": "Ingredients",
+      "rules": "System rules"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -360,6 +361,21 @@
       "deleteTitle": "Delete “{{name}}”?",
       "deleteHint": "The ingredient will be removed from the shared catalog.",
       "inUse": "It cannot be deleted: these recipes use it. You can merge it into another ingredient."
+    },
+    "rules": {
+      "hint": "They apply to every team's menus, and teams see them read-only. Changes take effect at once, with no release. Rules shipped with the app are switched off, not deleted.",
+      "new": "New rule",
+      "edit": "Edit rule",
+      "textIt": "Italian text",
+      "textEn": "English text",
+      "active": "Active",
+      "inactive": "Switched off",
+      "shipped": "Shipped with the app",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "deleteConfirm": "Delete the rule \"{{text}}\"?",
+      "saved": "Rule saved",
+      "deleted": "Rule deleted"
     }
   },
   "noTeam": {
@@ -458,7 +474,8 @@
     },
     "system": {
       "title": "System rules",
-      "hint": "They apply to every team. The team's rules and the week's take precedence."
+      "hint": "They apply to every team. The team's rules and the week's take precedence.",
+      "manage": "Edit in management"
     }
   },
   "plan": {

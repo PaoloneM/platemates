@@ -192,8 +192,8 @@ ingredient never touches a recipe.
   make a winter sauce of peeled tomatoes "in season" only in summer. The assistant's prompts say
   so, and `normalize_draft` forces an all-year season on names that denote a preserved product,
   because the model kept proposing the fresh product's season anyway.
-- **Management section** (frontend `/manage`, staff only, from the user menu): one page per
-  shared catalog, starting with ingredients: search, category filter, sorting by usage, editing
+- **Management section** (frontend `/manage`, staff only, from the user menu; also holds the
+  system rules for menus): one page per shared catalog, starting with ingredients: search, category filter, sorting by usage, editing
   (name, aliases, category, unit, season), deleting unused ones, and merging duplicates
   (`catalog/services.py`: recipe lines and preferences move to the target, same-unit quantities
   are added up when a recipe had both, the duplicate's name becomes an alias). Changing an
@@ -338,7 +338,7 @@ says in its rationale how it resolved a conflict):
 
 | Level | Written by | Stored in | Editable |
 |---|---|---|---|
-| System | us, then staff live | `menus.SystemRule`, Italian and English text | by staff, from the Django admin; teams read-only |
+| System | us, then staff live | `menus.SystemRule`, Italian and English text | by staff, from `/manage/rules`; teams read-only |
 | Team | owners | `menus.TeamRule`, one row per sentence | yes, from `/week` |
 | Week | any member | `WeeklyMenu.instructions`, `use_team_rules`, `excluded_rules` | yes, from the dialog |
 
@@ -367,7 +367,8 @@ says in its rationale how it resolved a conflict):
   status, a snapshot of the rules used, the result and the rationale: the user can leave the
   page, and the history later serves as context for feedback.
 
-Built so far: the rules (system, team, week), the `/week` page, the FAB and the dialog. The
+Built so far: the rules (system, team, week), the `/week` page, the FAB, the dialog and the
+system rules page in the management section. The
 generator itself, and with it the "Generate" actions, comes next.
 
 ## Adding recipes (decided with Paolo 2026-10-06)
