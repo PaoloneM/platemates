@@ -522,7 +522,18 @@
     "newDish": "nuovo",
     "replaceConfirm": "Le proposte non ancora accettate verranno sostituite. I piatti che hai scelto tu restano. Continuare?",
     "mealProposal": "Il generatore propone questo pasto: accettalo per tenerlo, oppure scartalo.",
-    "peopleChange": "Persone: da {{from}} a {{to}}"
+    "peopleChange": "Persone: da {{from}} a {{to}}",
+    "phase": {
+      "queued": "In coda…",
+      "preparing": "Raccolgo regole, ricette e persone della settimana…",
+      "thinking": "Il modello sta ragionando sulla settimana…",
+      "planning": "Il modello sta pianificando le regole sui pasti…",
+      "writing": "Il modello scrive i pasti: {{done}} di {{total}}",
+      "checking": "Controllo la proposta…",
+      "retrying": "La risposta non era utilizzabile: riprovo…",
+      "done": "Pronta",
+      "failed": "Non riuscita"
+    }
   },
   "settings": {
     "hint": "Impostazioni dell'applicazione, valide per tutti i team. Hanno effetto subito, senza riavvii; solo gli amministratori le vedono.",
@@ -538,6 +549,10 @@
       "menu_thinking": {
         "label": "Ragionamento del modello",
         "hint": "Il modello ragiona prima di proporre la settimana: rispetta meglio le regole, ma ci mette circa quattro volte tanto (2-3 minuti invece di 30-40 secondi). Serve un contesto di almeno 32.768 token."
+      },
+      "menu_max_seconds": {
+        "label": "Durata massima di una generazione (secondi)",
+        "hint": "Oltre questo tempo, tentativi compresi, la generazione viene interrotta e segnata come non riuscita. Con il ragionamento attivo una settimana richiede 2-3 minuti."
       }
     },
     "on": "attivo",

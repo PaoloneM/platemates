@@ -73,7 +73,7 @@ class Command(BaseCommand):
                 # both in the queue and announced, never missed.
                 listen()
                 while not stopping and (generation := claim_next()) is not None:
-                    self._run(generation)
+                    self._run(generation, lambda: stopping)
                 if once:
                     break
                 wait_for_notification(SAFETY_CHECK_SECONDS, lambda: stopping)
@@ -83,10 +83,10 @@ class Command(BaseCommand):
                 connection.close()
                 time.sleep(RECONNECT_SECONDS)
 
-    def _run(self, generation) -> None:
+    def _run(self, generation, stopping) -> None:
         self.stdout.write(f"Generating {generation.menu} ({generation.pk})...")
         started = time.monotonic()
-        run_generation(generation)
+        run_generation(generation, should_stop=stopping)
         self.stdout.write(
             f"Generation {generation.pk}: {generation.status} in "
             f"{time.monotonic() - started:.0f} s."

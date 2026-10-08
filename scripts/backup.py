@@ -37,7 +37,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BACKUP_DIR = ROOT / "backups"
 # Services that hold connections to the databases and must be stopped during a restore.
-DB_CLIENTS = ["backend", "worker", "embed-recipes", "keycloak", "keycloak-setup"]
+DB_CLIENTS = ["backend", "worker", "realtime", "embed-recipes", "keycloak", "keycloak-setup"]
 
 
 def read_env(path: Path) -> dict[str, str]:

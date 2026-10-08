@@ -1,14 +1,16 @@
-import { Alert, AlertTitle, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import { Alert, AlertTitle, Box, Button, LinearProgress, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import type { MenuGeneration } from '../api'
+import type { GenerationEvent, MenuGeneration } from '../api'
 import { generationActive } from '../calendar'
 
 /**
  * What the week's latest generation is doing: running, failed (with a retry), or done with
  * proposals waiting for review (the rationale, and accept or reject everything at once).
  */
-export function GenerationBanner({ generation, pending, busy, onAcceptAll, onRejectAll, onRetry }: {
+export function GenerationBanner({ generation, progress, pending, busy, onAcceptAll, onRejectAll, onRetry }: {
   generation: MenuGeneration | null
+  // The latest phase announced by the worker, when connected.
+  progress: GenerationEvent | null
   // The week still has proposals to review.
   pending: boolean
   busy: boolean
@@ -19,10 +21,19 @@ export function GenerationBanner({ generation, pending, busy, onAcceptAll, onRej
   const { t } = useTranslation()
   if (!generation) return null
   if (generationActive(generation)) {
+    const phase = progress?.phase ?? (generation.status === 'queued' ? 'queued' : 'preparing')
+    const total = progress?.meals_total ?? 0
+    const done = progress?.meals_done ?? 0
+    const writing = phase === 'writing' && total > 0
     return (
-      <Alert severity="info" icon={<CircularProgress size={20} />}>
+      <Alert severity="info" icon={false} sx={{ '& .MuiAlert-message': { width: '100%' } }}>
         <AlertTitle>{t('generation.running')}</AlertTitle>
-        {t('generation.runningHint')}
+        <Typography variant="body2">{t(`generation.phase.${phase}`, { done, total })}</Typography>
+        <Box sx={{ my: 1 }}>
+          <LinearProgress variant={writing ? 'determinate' : 'indeterminate'} value={writing ? (100 * done) / total : undefined}
+            aria-label={t('generation.running')} />
+        </Box>
+        <Typography variant="caption" color="text.secondary">{t('generation.runningHint')}</Typography>
       </Alert>
     )
   }

@@ -93,6 +93,7 @@ Full detail in `README.md`:
   adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
   `src/api.ts` is the only place that calls `fetch`; enum labels live in `src/labels.ts`
+- `backend/apps/realtime/`: the Socket.IO service (`realtime` in compose) at `/websocket/`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
 - `keycloak/`: Keycloak image (login theme, Apple provider)
 - `scripts/`: repository-level tooling (`init_env.py`, `backup.py`, `setup_lan_https.py`)
@@ -127,6 +128,7 @@ cd backend && uv run python manage.py create_team "Name" --owner you@example.com
 cd backend && uv run python manage.py migrate           # apply migrations
 cd backend && uv run python manage.py runserver         # API on :8000, admin on /admin/
 cd backend && uv run python manage.py menu_worker       # runs menu generations (the `worker` service in compose)
+cd backend && uv run uvicorn apps.realtime.asgi:app --port 8001 --ws wsproto   # Socket.IO at /websocket/ (`realtime`)
 cd backend && uv run pytest                             # backend tests (needs the db running)
 cd backend && uv run ruff check --fix . && uv run ruff format .
 cd services/embeddings && uv run uvicorn app.main:app --port 8100   # local embeddings
@@ -167,6 +169,9 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - Data read often and changed rarely (rules, settings) is read through
   `apps.core.cache.cache_manager`, never at start-up; its models clear the cache from their
   signals, so write them with `save()` / `delete()`, never a bulk `update()`
+- Real-time events (`apps.realtime.events.publish`) are notices to a team's browsers, never the
+  only way state reaches them: every screen that listens also reloads from the API on
+  (re)connection. Never send data a user of another team must not see: rooms are per team
 - The administrator role comes only from `APP_ADMINS` through `setup_keycloak`, and reaches the
   app as the ID token's `roles` claim; never grant it by hand or decide it in Django
 - Whatever the menu generator returns is a proposal (`SlotDish.proposed`,

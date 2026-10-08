@@ -213,6 +213,22 @@ export type CacheStats = {
   last_cleared: { at: string; by: string } | null
 }
 
+// A generation's progress, sent by the worker through the real-time connection.
+export type GenerationPhase =
+  | 'queued' | 'preparing' | 'thinking' | 'planning' | 'writing' | 'checking' | 'retrying'
+  | 'done' | 'failed'
+export type GenerationEvent = {
+  id: number
+  team: number
+  menu: number
+  week_start: string
+  status: GenerationStatus
+  phase: GenerationPhase
+  meals_done?: number
+  meals_total?: number
+  error?: string
+}
+
 export type GenerationStatus = 'queued' | 'running' | 'done' | 'failed'
 
 // A request to generate a week's menu, run in the background.

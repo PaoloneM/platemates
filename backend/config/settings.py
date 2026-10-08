@@ -125,6 +125,11 @@ CACHES = {
     },
 }
 
+# Real-time messages to the browsers (Socket.IO, `apps/realtime`): their own Redis database, so
+# that clearing the cache never touches them. Browsers may connect only from the app's origins.
+REALTIME_REDIS_URL = os.getenv("REALTIME_REDIS_URL", "redis://localhost:6379/1")
+REALTIME_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
+
 # Italian by default; English available. The SPA has its own translations (frontend/src/i18n);
 # these cover the admin, choice labels and API error messages. Per-request language comes from
 # the Accept-Language header via LocaleMiddleware.

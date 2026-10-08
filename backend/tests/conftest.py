@@ -42,6 +42,16 @@ def isolated_caches(settings):
     yield
 
 
+@pytest.fixture(autouse=True)
+def realtime_events(monkeypatch):
+    """Real-time events are recorded instead of sent: tests never reach Redis."""
+    sent = []
+    monkeypatch.setattr(
+        "apps.realtime.events._emit", lambda event, data, room: sent.append((room, event, data))
+    )
+    return sent
+
+
 @pytest.fixture
 def user(db):
     return get_user_model().objects.create_user("alice", password="pw")

@@ -8,6 +8,7 @@ import { defineConfig } from 'vite'
 const backend = process.env.BACKEND_URL ?? 'http://127.0.0.1:8000'
 const keycloak = process.env.KEYCLOAK_URL ?? 'http://127.0.0.1:8180'
 const toBackend = { target: backend, changeOrigin: false }
+const realtime = process.env.REALTIME_URL ?? 'http://127.0.0.1:8001'
 
 export default defineConfig({
   plugins: [react()],
@@ -17,6 +18,8 @@ export default defineConfig({
       '/oidc': toBackend,
       '/admin': toBackend,
       '/static': toBackend,
+      // Socket.IO (apps/realtime), WebSocket upgrade included.
+      '/websocket': { target: realtime, changeOrigin: false, ws: true },
       '/auth': {
         target: keycloak,
         changeOrigin: false,

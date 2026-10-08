@@ -14,7 +14,8 @@ flowchart LR
         spa["frontend<br/>nginx serving the built SPA"]
         backend["backend<br/>Django + DRF, gunicorn"]
         worker["worker<br/>menu generations, in the background"]
-        redis[("redis<br/>cache of rules and settings")]
+        redis[("redis<br/>cache of rules and settings,<br/>real-time messages")]
+        realtime["realtime<br/>Socket.IO at /websocket/, uvicorn"]
         keycloak["keycloak<br/>/auth, theme platemates"]
         db[("db<br/>PostgreSQL 17 + pgvector<br/>databases platemates, keycloak")]
         embeddings["embeddings<br/>FastAPI + sentence-transformers"]
@@ -30,6 +31,8 @@ flowchart LR
 
     user --> traefik
     traefik -- "/" --> spa
+    traefik -- "/websocket" --> realtime
+    realtime --> redis
     traefik -- "/api /oidc /admin /static" --> backend
     traefik -- "/auth (admin console refused)" --> keycloak
     backend -- "OIDC code exchange, keys" --> keycloak
@@ -390,8 +393,13 @@ says in its rationale how it resolved a conflict):
   queue on start and every 60 s (measured: a generation queued without notification was taken
   after 51 s). It reconnects and listens again if the database goes away. The queue stays in
   PostgreSQL rather than Redis, which is a cache without persistence.
-- The SPA polls the week's latest generation every 3 s while it runs
-  (`GET /api/menu-generations/?team=&week_start=`).
+- **Progress reaches the browser in real time** (see "Real-time messages" below). The model's
+  answer is streamed (`chat_stream`): the worker announces each phase (queued, preparing,
+  thinking, planning, writing with meals done out of the open ones, checking, retrying, done
+  or failed). A generation has a time limit, both attempts included (setting
+  `menu.max_seconds`, 6 minutes); the HTTP client's timeout (`LLM_TIMEOUT_SECONDS`) now only
+  bounds a silence of the model. Stopping the worker interrupts the streamed call at once and
+  marks the generation failed ("Interrupted"), instead of waiting for the model.
 - **Retrieval first, then one LLM call** (`apps/menus/generation.py`). The code picks the
   candidates: the team's recipe book and own recipes (at most 40), plus a few in-season shared
   recipes to discover, without "never propose" ingredients or cuisines, rejected recipes, or
@@ -442,6 +450,29 @@ the deployment (addresses, secrets, who the administrators are).
   characters and 40 recipes at 8k, the size they were tuned at); `menu.thinking`, the model's
   own reasoning when planning a week (used only with a context of at least 32k, where it has
   room to answer; each generation records whether it used it).
+
+### Real-time messages (decided with Paolo 2026-10-08)
+
+The browsers hear about changes through **Socket.IO** (python-socketio, socket.io-client),
+chosen over Django Channels for Paolo's experience with it and its client's built-in
+reconnection. It runs as its own service, `realtime` (`apps/realtime`, uvicorn, ASGI), routed
+by Traefik at `/websocket/`, so long-lived connections never hold the backend's gunicorn
+threads.
+
+- **Login is the session cookie**: on connect the server loads the Django session as the
+  session middleware would (hash check included) and refuses anyone not signed in; no token
+  is ever sent to the browser. Origins are the app's own (`DJANGO_CSRF_TRUSTED_ORIGINS`).
+- **One room per team** (`team-<id>`), joined on connect for every team of the user; the SPA
+  reconnects when the user's teams change. Browsers only listen.
+- **Any process sends** through Redis (`apps.realtime.events.publish`, `RedisManager` in write
+  mode): the backend (a generation queued) and the worker (its phases). Messages use their own
+  Redis database (`REALTIME_REDIS_URL`, `/1`), so clearing the cache never touches them.
+  Sending never fails the caller.
+- **Events are notices, not data**: one missed while disconnected is lost, so a screen reloads
+  its state from the API whenever the connection is (re)established (`useOnConnect`). While it
+  is down, the menu screen falls back to reading a running generation every 15 s.
+- Events so far: `generation`. Planned: `calendar.changed`, so that members see the week change
+  as someone else edits it.
 
 ### Cache (decided with Paolo 2026-10-08)
 

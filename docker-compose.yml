@@ -4,6 +4,7 @@
 # (Unsloth Studio on the host by default) reached through LLM_BASE_URL.
 #
 #   docker compose up -d db keycloak redis embeddings  # backing services, for native development
+#   (then runserver, menu_worker and the realtime service natively: see CLAUDE.md)
 #   docker compose up -d                    # everything
 
 name: platemates
@@ -147,6 +148,7 @@ services:
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
       REDIS_URL: redis://redis:6379/0
+      REALTIME_REDIS_URL: redis://redis:6379/1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -166,6 +168,37 @@ services:
       - "traefik.http.routers.backend-tls.rule=PathPrefix(`/api`) || PathPrefix(`/oidc`) || PathPrefix(`/admin`) || PathPrefix(`/static`)"
       - traefik.http.routers.backend-tls.entrypoints=websecure
       - traefik.http.routers.backend-tls.tls=true
+
+  # Real-time messages to the browsers (Socket.IO at /websocket/, apps/realtime): generation
+  # progress now, live changes later. The same image as the backend, served by uvicorn (ASGI)
+  # so that long-lived connections do not hold the backend's threads.
+  realtime:
+    image: platemates-backend
+    pull_policy: never
+    command: ["uvicorn", "apps.realtime.asgi:app", "--host", "0.0.0.0", "--port", "8001", "--ws", "wsproto", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-platemates}:${POSTGRES_PASSWORD:-platemates}@db:5432/${POSTGRES_DB:-platemates}
+      REALTIME_REDIS_URL: redis://redis:6379/1
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.realtime.loadbalancer.server.port=8001
+      - traefik.http.routers.realtime.rule=PathPrefix(`/websocket`)
+      - traefik.http.routers.realtime.entrypoints=web
+      - traefik.http.routers.realtime-tls.rule=PathPrefix(`/websocket`)
+      - traefik.http.routers.realtime-tls.entrypoints=websecure
+      - traefik.http.routers.realtime-tls.tls=true
 
   # Entry point: routes /api, /oidc, /admin, /static to the backend, /auth to Keycloak and the
   # rest to the SPA, from the labels on those services. Terminates HTTPS for the home network
@@ -249,6 +282,7 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
       REDIS_URL: redis://redis:6379/0
+      REALTIME_REDIS_URL: redis://redis:6379/1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

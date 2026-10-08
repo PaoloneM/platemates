@@ -13,6 +13,7 @@ from .base import (
     ChatResult,
     EmbeddingProvider,
     ModelNotLoadedError,
+    StreamingChatProvider,
 )
 from .factory import (
     get_chat_provider,
@@ -31,6 +32,7 @@ __all__ = [
     "ChatResult",
     "EmbeddingProvider",
     "ModelNotLoadedError",
+    "StreamingChatProvider",
     "get_chat_provider",
     "get_embedding_provider",
     "get_reasoning_chat_provider",

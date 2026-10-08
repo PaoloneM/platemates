@@ -522,7 +522,18 @@
     "newDish": "new",
     "replaceConfirm": "Proposals not accepted yet will be replaced. The dishes you chose stay. Continue?",
     "mealProposal": "The generator proposes this meal: accept it to keep it, or reject it.",
-    "peopleChange": "People: from {{from}} to {{to}}"
+    "peopleChange": "People: from {{from}} to {{to}}",
+    "phase": {
+      "queued": "Queued…",
+      "preparing": "Gathering the week's rules, recipes and people…",
+      "thinking": "The model is reasoning about the week…",
+      "planning": "The model is placing the rules on the meals…",
+      "writing": "The model is writing the meals: {{done}} of {{total}}",
+      "checking": "Checking the proposal…",
+      "retrying": "The answer was not usable: trying again…",
+      "done": "Ready",
+      "failed": "Failed"
+    }
   },
   "settings": {
     "hint": "Application settings, for every team. They take effect at once, with no restart; only administrators see them.",
@@ -538,6 +549,10 @@
       "menu_thinking": {
         "label": "Model reasoning",
         "hint": "The model reasons before proposing the week: it follows the rules better, but takes about four times as long (2-3 minutes instead of 30-40 seconds). Needs a context of at least 32,768 tokens."
+      },
+      "menu_max_seconds": {
+        "label": "Longest a generation may take (seconds)",
+        "hint": "Past this time, attempts included, the generation is stopped and marked failed. With reasoning on, a week takes 2-3 minutes."
       }
     },
     "on": "on",

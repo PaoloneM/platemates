@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/context'
 import { AppShell } from './components/AppShell'
+import { RealtimeProvider } from './realtime'
 import { TeamProvider } from './team'
 import { AssistantPage } from './pages/AssistantPage'
 import { CalendarPage } from './pages/CalendarPage'
@@ -34,25 +35,27 @@ function Protected() {
   if (me.teams.length === 0) return <NoTeamPage />
   return (
     <TeamProvider>
-      <AppShell>
-        <Routes>
-          <Route path="/" element={<CalendarPage />} />
-          <Route path="/calendar/:date/:meal" element={<MealPage />} />
-          <Route path="/recipes" element={<RecipeBookPage />} />
-          <Route path="/recipes/new" element={<RecipeEditorPage />} />
-          <Route path="/recipes/:id" element={<RecipeDetailPage />} />
-          <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />
-          <Route path="/assistant/:id" element={<AssistantPage />} />
-          <Route path="/team" element={<TeamPage />} />
-          <Route path="/week" element={<WeekPage />} />
-          <Route path="/manage" element={<ManageIndex />} />
-          <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
-          <Route path="/manage/rules" element={<ManageLayout><SystemRulesPage /></ManageLayout>} />
-          <Route path="/manage/settings" element={<ManageLayout><SettingsPage /></ManageLayout>} />
-          <Route path="/manage/cache" element={<ManageLayout><CachePage /></ManageLayout>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AppShell>
+      <RealtimeProvider>
+        <AppShell>
+          <Routes>
+            <Route path="/" element={<CalendarPage />} />
+            <Route path="/calendar/:date/:meal" element={<MealPage />} />
+            <Route path="/recipes" element={<RecipeBookPage />} />
+            <Route path="/recipes/new" element={<RecipeEditorPage />} />
+            <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+            <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />
+            <Route path="/assistant/:id" element={<AssistantPage />} />
+            <Route path="/team" element={<TeamPage />} />
+            <Route path="/week" element={<WeekPage />} />
+            <Route path="/manage" element={<ManageIndex />} />
+            <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
+            <Route path="/manage/rules" element={<ManageLayout><SystemRulesPage /></ManageLayout>} />
+            <Route path="/manage/settings" element={<ManageLayout><SettingsPage /></ManageLayout>} />
+            <Route path="/manage/cache" element={<ManageLayout><CachePage /></ManageLayout>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AppShell>
+      </RealtimeProvider>
     </TeamProvider>
   )
 }

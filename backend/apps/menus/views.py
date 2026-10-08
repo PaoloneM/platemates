@@ -11,7 +11,7 @@ from apps.core.permissions import StaffWritesPermission
 from apps.teams.permissions import OwnerWritesMixin, TeamScopedMixin
 
 from . import review
-from .generation import notify_worker
+from .generation import announce, notify_worker
 from .models import MealSlot, MenuGeneration, SystemRule, TeamRule, WeeklyMenu
 from .serializers import (
     GenerateSerializer,
@@ -106,6 +106,7 @@ class WeeklyMenuViewSet(TeamScopedMixin, viewsets.ModelViewSet):
                         language=(translation.get_language() or "it")[:2],
                     )
                     notify_worker()
+                    transaction.on_commit(lambda: announce(generation, "queued"))
                 return Response(
                     MenuGenerationSerializer(generation).data, status=status.HTTP_202_ACCEPTED
                 )

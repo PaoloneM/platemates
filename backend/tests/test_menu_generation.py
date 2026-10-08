@@ -521,3 +521,75 @@ def test_the_worker_wakes_on_a_notification_and_not_otherwise():
     assert wait_for_notification(5) is True
     assert time.monotonic() - started < 2
     assert wait_for_notification(5, stopping=lambda: True) is False
+
+
+# -- phases and streaming ----------------------------------------------------------------------
+
+
+class FakeStreamChat(FakeChat):
+    """Streams each reply in small pieces, after some reasoning."""
+
+    def chat_stream(self, messages, *, on_delta, deadline=None, **kwargs):
+        self.calls.append({"messages": messages, "deadline": deadline, **kwargs})
+        reply = self.replies.pop(0)
+        text = reply if isinstance(reply, str) else json.dumps(reply)
+        on_delta("reasoning", "Let me think")
+        for start in range(0, len(text), 20):
+            on_delta("content", text[start : start + 20])
+        return ChatResult(content=text)
+
+
+def phases(sent):
+    return [data["phase"] for _, event, data in sent if event == "generation"]
+
+
+def test_a_generation_announces_its_phases(menu, book, realtime_events):
+    generation = queued(menu)
+    context = engine.build_context(generation)
+    pasta, orata = ref_of(context, book[0]), ref_of(context, book[1])
+    chat = FakeStreamChat(
+        {
+            "rule_plan": ["Fish: Monday dinner"],
+            "people_changes": [],
+            "meals": [meal(MONDAY, "lunch", dish(pasta)), meal(MONDAY, "dinner", dish(orata))],
+            "rationale": "ok",
+        }
+    )
+    engine.run_generation(generation, chat=chat)
+    seen = phases(realtime_events)
+    assert seen[0] == "preparing" and seen[-1] == "done"
+    assert {"thinking", "planning", "writing", "checking"} <= set(seen)
+    progress = [d["meals_done"] for _, _, d in realtime_events if d["phase"] == "writing"]
+    assert progress == sorted(progress) and progress[-1] == 2
+    assert {d["meals_total"] for _, _, d in realtime_events if d["phase"] == "writing"} == {14}
+    assert realtime_events[0][0] == f"team-{menu.team_id}"
+    assert chat.calls[0]["deadline"] is not None
+
+
+def test_a_stopping_worker_interrupts_the_generation(menu, book, realtime_events):
+    generation = queued(menu)
+    chat = FakeStreamChat(answer(meals=[meal(MONDAY, "lunch", dish(title="Zuppa"))]))
+    engine.run_generation(generation, chat=chat, should_stop=lambda: True)
+    generation.refresh_from_db()
+    assert generation.status == "failed" and generation.error.startswith("Interrupted")
+    assert phases(realtime_events)[-1] == "failed"
+
+
+def test_a_slow_model_fails_at_the_time_limit(menu, book):
+    from apps.siteconfig.models import ConfigVar
+
+    ConfigVar.objects.create(key="menu.max_seconds", value=60)
+    generation = queued(menu)
+    engine.run_generation(generation, chat=FakeChat(AIError("took longer than the time allowed")))
+    generation.refresh_from_db()
+    assert generation.status == "failed" and "longer" in generation.error
+
+
+def test_queuing_announces_the_generation_once_committed(
+    api, team, realtime_events, django_capture_on_commit_callbacks
+):
+    with django_capture_on_commit_callbacks(execute=True):
+        response = generate(api, team)
+    assert [(e, d["phase"], d["id"]) for _, e, d in realtime_events] == [
+        ("generation", "queued", response.json()["id"])
+    ]

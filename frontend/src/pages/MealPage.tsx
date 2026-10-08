@@ -21,11 +21,12 @@ import {
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, Navigate, useParams } from 'react-router'
-import { api, type BookEntry, type CalendarDay, type CalendarDayChange, type DishInput, type Meal, type Paginated } from '../api'
-import { changeDay, dishInput, hasProposal, isIsoDate, reviewMeal, snapshot, weekUrl } from '../calendar'
+import { api, type BookEntry, type CalendarDay, type CalendarDayChange, type DishInput, type GenerationEvent, type Meal, type Paginated } from '../api'
+import { changeDay, dishInput, fromIso, hasProposal, isIsoDate, isoDate, mondayOf, reviewMeal, snapshot, weekUrl } from '../calendar'
 import { DishLine } from '../components/DishLine'
 import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
+import { useRealtimeEvent } from '../realtime'
 import { useTeam } from '../team'
 
 const MAX_PEOPLE = 50
@@ -192,6 +193,13 @@ export function MealPage() {
     if (!valid) return
     api<CalendarDay[]>(`/calendar/?team=${team.id}&start=${date}&days=1`).then(([loaded]) => setDay(loaded))
   }, [valid, team.id, date])
+
+  // A generation of this week that ends while the page is open brings its proposal here too.
+  useRealtimeEvent<GenerationEvent>('generation', (event) => {
+    if (!valid || event.team !== team.id || event.status !== 'done') return
+    if (event.week_start !== isoDate(mondayOf(fromIso(date)))) return
+    api<CalendarDay[]>(`/calendar/?team=${team.id}&start=${date}&days=1`).then(([loaded]) => setDay(loaded))
+  })
 
   const title = useDayTitle(valid ? date : '2026-01-01')
   if (!valid) return <Navigate to="/" replace />

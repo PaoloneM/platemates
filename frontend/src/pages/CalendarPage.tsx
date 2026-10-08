@@ -34,7 +34,7 @@ import { enGB, it } from 'date-fns/locale'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useSearchParams } from 'react-router'
-import { api, type CalendarDay, type CalendarDayChange, type Meal, type MenuGeneration } from '../api'
+import { api, type CalendarDay, type CalendarDayChange, type GenerationEvent, type Meal, type MenuGeneration } from '../api'
 import {
   addDays,
   changeDay,
@@ -57,10 +57,12 @@ import { GenerationBanner } from '../components/GenerationBanner'
 import { MenuFab } from '../components/MenuFab'
 import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
+import { useOnConnect, useRealtimeConnected, useRealtimeEvent } from '../realtime'
 import { useTeam } from '../team'
 
 const MAX_PEOPLE = 50
-const POLL_MS = 3000
+// Only while the real-time connection is down: the progress then comes from the API.
+const FALLBACK_POLL_MS = 15000
 
 function MealCard({ day, meal, owner, onClear, onReview }: {
   day: CalendarDay
@@ -367,19 +369,36 @@ export function CalendarPage() {
     latestGeneration(team.id, start).then(setGeneration)
   }, [team.id, start, setGeneration])
 
-  // While the week is being generated, check every few seconds; once it ends, show the result.
+  // The worker announces each phase of a generation through the real-time connection; when it
+  // ends, the week is reloaded with the proposal. Events of other weeks and teams are ignored.
   const active = generationActive(generation)
-  const generationId = generation?.id
+  const [progress, setProgress] = useState<GenerationEvent | null>(null)
+  const connected = useRealtimeConnected()
+
+  const refresh = useCallback(async () => {
+    const latest = await latestGeneration(team.id, start).catch(() => null)
+    setGeneration(latest)
+    if (latest && !generationActive(latest)) void loadDays()
+  }, [team.id, start, setGeneration, loadDays])
+
+  useRealtimeEvent<GenerationEvent>('generation', (event) => {
+    if (event.team !== team.id || event.week_start !== start) return
+    if (event.status === 'queued' || event.status === 'running') {
+      setProgress(event)
+      if (event.id !== generation?.id) void refresh()
+    } else {
+      setProgress(null)
+      void refresh()
+    }
+  })
+  // Whatever happened while disconnected (a generation started or ended) is read again.
+  useOnConnect(() => void refresh())
+
   useEffect(() => {
-    if (!active || generationId === undefined) return
-    const timer = setInterval(async () => {
-      const latest = await latestGeneration(team.id, start).catch(() => null)
-      if (!latest || latest.id !== generationId || generationActive(latest)) return
-      setGeneration(latest)
-      void loadDays()
-    }, POLL_MS)
+    if (!active || connected) return
+    const timer = setInterval(() => void refresh(), FALLBACK_POLL_MS)
     return () => clearInterval(timer)
-  }, [active, generationId, team.id, start, loadDays, setGeneration])
+  }, [active, connected, refresh])
 
   const pending = !!days?.some((day) => MEALS.some((meal) => hasProposal(day, meal)))
 
@@ -445,7 +464,8 @@ export function CalendarPage() {
         <Button component={RouterLink} to="/week" size="small">{t('calendar.editWeek')}</Button>
       </Stack>
       <WeekBar monday={monday} thisMonday={thisMonday} onChange={goTo} />
-      <GenerationBanner generation={generation} pending={pending} busy={reviewing}
+      <GenerationBanner generation={generation} progress={progress?.id === generation?.id ? progress : null}
+        pending={pending} busy={reviewing}
         onAcceptAll={() => void review('accept')} onRejectAll={() => void review('reject')}
         onRetry={() => void generate(generation?.use_week_settings ?? false)} />
       {!current ? (

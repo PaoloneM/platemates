@@ -64,6 +64,24 @@ class ChatProvider(Protocol):
 
 
 @runtime_checkable
+class StreamingChatProvider(ChatProvider, Protocol):
+    """A chat provider that can also deliver the answer as it is written (`chat_stream`):
+    pieces passed to `on_delta(kind, text)`, kind "reasoning" or "content", and a `deadline`
+    (a `time.monotonic()` value) past which the call is abandoned."""
+
+    def chat_stream(
+        self,
+        messages: list[ChatMessage],
+        *,
+        on_delta: Any,
+        deadline: float | None = None,
+        temperature: float = 0.7,
+        max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
+    ) -> ChatResult: ...
+
+
+@runtime_checkable
 class EmbeddingProvider(Protocol):
     """A model that turns text into vectors.
 

@@ -5,6 +5,9 @@ This is the only module (together with `studio`, which extends it) that knows HT
 
 from __future__ import annotations
 
+import json
+import time
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -124,6 +127,70 @@ class OpenAICompatibleChat(_HTTPProvider):
             finish_reason=choices[0].get("finish_reason"),
             raw=data,
         )
+
+    def chat_stream(
+        self,
+        messages: list[ChatMessage],
+        *,
+        on_delta: Callable[[str, str], None],
+        deadline: float | None = None,
+        temperature: float = 0.7,
+        max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
+    ) -> ChatResult:
+        """Like `chat`, receiving the answer as it is written.
+
+        `on_delta(kind, text)` gets every piece: kind "reasoning" (the model's own reasoning,
+        where it has one) or "content"; it may raise to stop the call. `deadline` is a
+        `time.monotonic()` value: past it the call is abandoned. The connection is closed
+        either way, so the server can stop generating.
+        """
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": True,
+            **self._extra_payload(),
+        }
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
+        if response_format is not None:
+            payload["response_format"] = response_format
+        path = "/v1/chat/completions"
+        content: list[str] = []
+        finish_reason = None
+        try:
+            with self._client.stream(
+                "POST", path, json=payload, headers=self._headers()
+            ) as response:
+                if not response.is_success:
+                    response.read()
+                    self._raise_for_status(response, path)
+                for line in response.iter_lines():
+                    if deadline is not None and time.monotonic() > deadline:
+                        raise AIUnavailableError(
+                            f"{self._base_url} took longer than the time allowed on {path}."
+                        )
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    choice = (json.loads(data).get("choices") or [{}])[0]
+                    delta = choice.get("delta") or {}
+                    finish_reason = choice.get("finish_reason") or finish_reason
+                    if reasoning := delta.get("reasoning_content"):
+                        on_delta("reasoning", reasoning)
+                    if piece := delta.get("content"):
+                        content.append(piece)
+                        on_delta("content", piece)
+        except httpx.ConnectError as exc:
+            raise AIUnavailableError(f"{self._base_url} is not reachable.") from exc
+        except httpx.TimeoutException as exc:
+            raise AIUnavailableError(
+                f"{self._base_url} stopped answering for {self._timeout:.0f}s on {path}."
+            ) from exc
+        return ChatResult(content="".join(content).strip(), finish_reason=finish_reason)
 
 
 class OpenAICompatibleEmbeddings(_HTTPProvider):

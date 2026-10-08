@@ -24,6 +24,7 @@ import datetime as dt
 import json
 import logging
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -33,6 +34,7 @@ from django.utils import timezone
 
 from ai import AIError, ChatProvider, get_chat_provider, get_reasoning_chat_provider
 from apps.core.cache import cache_manager
+from apps.realtime.events import publish
 from apps.recipes.models import Course, Recipe, Visibility
 from apps.siteconfig import registry as config
 from apps.teams.models import PLANNED_MEALS, Preference, RecipeBookEntry, Team
@@ -525,21 +527,93 @@ def apply_proposal(context: Context, proposal: dict[str, Any]) -> None:
     menu.save(update_fields=["rationale", "updated_at"])
 
 
+class GenerationInterrupted(Exception):
+    """The worker is stopping: the generation is abandoned."""
+
+
+def announce(generation: MenuGeneration, phase: str, **extra: Any) -> None:
+    """Tell the team's browsers how a generation is going (`apps.realtime`)."""
+    menu = generation.menu
+    publish(
+        menu.team_id,
+        "generation",
+        {
+            "id": generation.pk,
+            "team": menu.team_id,
+            "menu": menu.pk,
+            "week_start": menu.week_start.isoformat(),
+            "status": generation.status,
+            "phase": phase,
+            **extra,
+        },
+    )
+
+
+class Progress:
+    """Follows a streamed answer and announces its phases: the model reasoning, planning the
+    rules ("rule_plan" and people changes come first), then writing the meals, counted as they
+    appear. Announces only when something changes."""
+
+    def __init__(self, generation: MenuGeneration, total: int, should_stop=lambda: False):
+        self.generation = generation
+        self.total = total
+        self.should_stop = should_stop
+        self.content = ""
+        self.last: tuple[str, int] | None = None
+
+    def start(self) -> None:
+        self.content = ""
+        self.last = None
+
+    def __call__(self, kind: str, text: str) -> None:
+        if self.should_stop():
+            raise GenerationInterrupted
+        if kind == "reasoning":
+            phase, meals = "thinking", 0
+        else:
+            self.content += text
+            meals = min(self.content.count('"dishes"'), self.total)
+            phase = "writing" if '"meals"' in self.content else "planning"
+        if (phase, meals) != self.last:
+            self.last = (phase, meals)
+            announce(self.generation, phase, meals_done=meals, meals_total=self.total)
+
+
 def ask(
-    context: Context, chat: ChatProvider, max_tokens: int = MAX_ANSWER_TOKENS
+    context: Context,
+    chat: ChatProvider,
+    max_tokens: int = MAX_ANSWER_TOKENS,
+    progress: Progress | None = None,
+    deadline: float | None = None,
 ) -> dict[str, Any]:
-    """One call to the model, retried once if the answer is not usable."""
+    """One call to the model, retried once if the answer is not usable. Streamed when the
+    provider can, so progress is announced and the deadline holds for the whole call."""
     last_error: Exception | None = None
-    for _ in range(2):
-        result = chat.chat(
-            context.messages,
-            temperature=0.7,
-            max_tokens=max_tokens,
-            response_format={
-                "type": "json_schema",
-                "json_schema": {"name": "weekly_menu", "schema": ANSWER_SCHEMA},
-            },
-        )
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {"name": "weekly_menu", "schema": ANSWER_SCHEMA},
+    }
+    for attempt in range(2):
+        if attempt and progress:
+            announce(progress.generation, "retrying")
+        if progress and hasattr(chat, "chat_stream"):
+            progress.start()
+            result = chat.chat_stream(
+                context.messages,
+                on_delta=progress,
+                deadline=deadline,
+                temperature=0.7,
+                max_tokens=max_tokens,
+                response_format=response_format,
+            )
+            announce(progress.generation, "checking")
+        else:
+            result = chat.chat(
+                context.messages,
+                temperature=0.7,
+                max_tokens=max_tokens,
+                response_format=response_format,
+            )
         try:
             return validate_answer(context, json.loads(result.content or "{}"))
         except (ValueError, GenerationError) as exc:
@@ -548,8 +622,13 @@ def ask(
     raise GenerationError(f"The model's answer was not usable: {last_error}")
 
 
-def run_generation(generation: MenuGeneration, chat: ChatProvider | None = None) -> None:
-    """Run a claimed generation to the end: done with a proposal applied, or failed."""
+def run_generation(
+    generation: MenuGeneration, chat: ChatProvider | None = None, should_stop=lambda: False
+) -> None:
+    """Run a claimed generation to the end: done with a proposal applied, or failed. Its
+    phases are announced to the team's browsers as it goes."""
+    deadline = time.monotonic() + config.get("menu.max_seconds")
+    announce(generation, "preparing")
     try:
         context = build_context(generation)
         generation.rules = context.rules
@@ -557,8 +636,13 @@ def run_generation(generation: MenuGeneration, chat: ChatProvider | None = None)
         generation.save(update_fields=["rules", "thinking"])
         if chat is None:
             chat = get_reasoning_chat_provider() if generation.thinking else get_chat_provider()
-        proposal = ask(context, chat, max_answer_tokens(generation.thinking))
+        open_meals = sum(1 for p in context.slots.values() if not p.fixed and p.slot.people > 0)
+        progress = Progress(generation, open_meals, should_stop)
+        proposal = ask(context, chat, max_answer_tokens(generation.thinking), progress, deadline)
         apply_proposal(context, proposal)
+    except GenerationInterrupted:
+        generation.status = MenuGeneration.Status.FAILED
+        generation.error = "Interrupted: the worker was stopped. Generate the menu again."
     except (AIError, GenerationError) as exc:
         log.warning("menu generation %s failed: %s", generation.pk, exc)
         generation.status = MenuGeneration.Status.FAILED
@@ -572,6 +656,7 @@ def run_generation(generation: MenuGeneration, chat: ChatProvider | None = None)
         generation.result = proposal
     generation.finished_at = timezone.now()
     generation.save(update_fields=["status", "error", "result", "finished_at"])
+    announce(generation, generation.status, error=generation.error)
 
 
 # PostgreSQL channel on which a queued generation wakes the worker up (`menu_worker`).

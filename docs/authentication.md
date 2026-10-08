@@ -65,6 +65,9 @@ roles in the ID token's `roles` claim, and the backend copies the role to
 `UserProfile.is_admin` at every login: a change applies from the user's next login. Staff
 (`is_staff`, from `create_team --staff`) is a separate, Django-side flag.
 
+The real-time connection (`/websocket/`, `apps/realtime`) authenticates with the same session
+cookie: the server loads the Django session and refuses connections without a signed-in user.
+
 An invitation is a single-use link, `/invite/<token>`, valid 14 days. Opened while signed out, it
 shows the login screen first and comes back to the invitation afterwards.
 

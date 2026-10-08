@@ -50,6 +50,8 @@ SETTINGS: dict[str, Setting] = {
         # The chat model's own reasoning before it answers, when planning a week. Better plans,
         # about four times slower (2-2.5 min against 30 s on Qwen3.6-35B, 2026-10-08).
         Setting("menu.thinking", "bool", False, "menu"),
+        # Longest a generation may take, both attempts included; past it, it fails.
+        Setting("menu.max_seconds", "int", 360, "menu", minimum=60, maximum=1800),
     ]
 }
 
