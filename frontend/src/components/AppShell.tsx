@@ -1,7 +1,6 @@
 import GroupsIcon from '@mui/icons-material/GroupsOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
-import TranslateIcon from '@mui/icons-material/Translate'
 import {
   AppBar,
   Avatar,
@@ -25,6 +24,7 @@ import { useAuth } from '../auth/context'
 import { saveLanguage } from '../auth/language'
 import { useTeam } from '../team'
 import { supportedLanguages } from '../i18n'
+import { Flag } from './Flag'
 import { Logo } from './Logo'
 import { BOTTOM_BAR_HEIGHT, BottomBar, NavigationRail } from './Navigation'
 
@@ -63,7 +63,7 @@ function UserMenu() {
             }}
           >
             <ListItemIcon>
-              <TranslateIcon fontSize="small" />
+              <Flag language={code} />
             </ListItemIcon>
             <ListItemText>{label}</ListItemText>
           </MenuItem>
