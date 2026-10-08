@@ -194,6 +194,25 @@ export type ConfigSetting = {
   updated_by: string | null
 }
 
+// The two-level cache of rules and settings (`/manage/cache`). `process`: the counters of the
+// backend process that answered; `shared`: Redis's own figures.
+export type CacheStats = {
+  process: { memory_hits: number; shared_hits: number; misses: number; errors: number }
+  shared: {
+    available: boolean
+    error?: string
+    version?: string
+    keys?: number
+    used_memory?: string
+    max_memory?: string
+    hits?: number
+    misses?: number
+    uptime_seconds?: number
+  }
+  timeouts: { memory_seconds: number | null; shared_seconds: number | null }
+  last_cleared: { at: string; by: string } | null
+}
+
 export type GenerationStatus = 'queued' | 'running' | 'done' | 'failed'
 
 // A request to generate a week's menu, run in the background.

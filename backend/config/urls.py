@@ -14,7 +14,7 @@ from apps.menus.views import (
     WeeklyMenuViewSet,
 )
 from apps.recipes.views import CuisineViewSet, RecipeViewSet
-from apps.siteconfig.views import config_detail, config_list
+from apps.siteconfig.views import cache_clear, cache_stats, config_detail, config_list
 from apps.teams.views import (
     CalendarDayView,
     CalendarView,
@@ -50,6 +50,8 @@ urlpatterns = [
     path("api/me/", me),
     path("api/login-options/", login_options),
     path("api/config/", config_list),
+    path("api/cache/", cache_stats),
+    path("api/cache/clear/", cache_clear),
     path("api/config/<str:key>/", config_detail),
     path("api/calendar/", CalendarView.as_view()),
     path("api/calendar/<str:date>/", CalendarDayView.as_view()),

@@ -1,3 +1,4 @@
+import CachedIcon from '@mui/icons-material/Cached'
 import EggIcon from '@mui/icons-material/EggOutlined'
 import RuleIcon from '@mui/icons-material/RuleOutlined'
 import TuneIcon from '@mui/icons-material/Tune'
@@ -29,6 +30,7 @@ const SECTIONS = [
   { key: 'ingredients', path: '/manage/ingredients', icon: <EggIcon />, who: 'staff' },
   { key: 'rules', path: '/manage/rules', icon: <RuleIcon />, who: 'staff' },
   { key: 'settings', path: '/manage/settings', icon: <TuneIcon />, who: 'admin' },
+  { key: 'cache', path: '/manage/cache', icon: <CachedIcon />, who: 'admin' },
 ] as const
 
 function useSections() {

@@ -88,7 +88,8 @@ Full detail in `README.md`:
 ### Layout
 
 - `backend/`: Django project (`config/`), domain apps in `apps/` (`accounts`, `catalog`,
-  `recipes`, `teams`, `menus`, `assistant`, `siteconfig`; `core` holds abstract mixins only), AI
+  `recipes`, `teams`, `menus`, `assistant`, `siteconfig`; `core` holds abstract mixins and the
+  cache manager), AI
   adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
   `src/api.ts` is the only place that calls `fetch`; enum labels live in `src/labels.ts`
@@ -109,7 +110,8 @@ Full detail in `README.md`:
   `python3 scripts/init_env.py` creates or completes it (generates missing secrets, adds new
   keys, never overwrites a value)
 - PostgreSQL is the only supported database, also for tests: start it with
-  `docker compose up -d db`
+  `docker compose up -d db`. Redis is the cache (`docker compose up -d redis`); tests use
+  in-memory caches instead (`tests/conftest.py`)
 - Signing in needs Keycloak running and configured: `docker compose up -d db keycloak`, then
   `uv run python manage.py setup_keycloak`. Use the app through the SPA's origin (`:5173` or
   `:8080`, or `:8443` over HTTPS from other devices), never directly on `:8000`: Keycloak is
@@ -119,7 +121,7 @@ Full detail in `README.md`:
 
 ```bash
 python3 scripts/init_env.py                             # create/complete .env (idempotent)
-docker compose up -d db keycloak                        # database + identity provider, for native development
+docker compose up -d db keycloak redis                  # database, identity provider, cache, for native development
 cd backend && uv run python manage.py setup_keycloak    # configure the Keycloak realm from .env (idempotent)
 cd backend && uv run python manage.py create_team "Name" --owner you@example.com --staff  # bootstrap
 cd backend && uv run python manage.py migrate           # apply migrations
@@ -162,6 +164,9 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   `apps/siteconfig/registry.py` and read with `registry.get`, changed only by administrators;
   `.env` is for the deployment (addresses, secrets). Never hardcode a budget tied to the model's
   context: derive it from `llm.context_tokens`
+- Data read often and changed rarely (rules, settings) is read through
+  `apps.core.cache.cache_manager`, never at start-up; its models clear the cache from their
+  signals, so write them with `save()` / `delete()`, never a bulk `update()`
 - The administrator role comes only from `APP_ADMINS` through `setup_keycloak`, and reaches the
   app as the ID token's `roles` claim; never grant it by hand or decide it in Django
 - Whatever the menu generator returns is a proposal (`SlotDish.proposed`,

@@ -21,6 +21,27 @@ def empty_ingredient_catalog(request):
         Ingredient.objects.all().delete()
 
 
+@pytest.fixture(autouse=True)
+def isolated_caches(settings):
+    """Tests never touch the running app's Redis: both cache levels live in this process."""
+    settings.CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "t-shared",
+        },
+        "local": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "t-memory",
+        },
+    }
+    from apps.core.cache import cache_manager
+
+    cache_manager.memory.clear()
+    cache_manager.shared.clear()
+    cache_manager.reset_counters()
+    yield
+
+
 @pytest.fixture
 def user(db):
     return get_user_model().objects.create_user("alice", password="pw")

@@ -2,6 +2,7 @@ from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from apps.core.cache import cache_manager
 from apps.core.permissions import IsAppAdmin
 
 from .models import ConfigVar
@@ -54,3 +55,17 @@ def config_detail(request, key):
     )
     return Response(_describe(setting, row))
 
+
+@api_view(["GET"])
+@permission_classes([IsAppAdmin])
+def cache_stats(request):
+    """What the cache holds and how it is doing; administrators only."""
+    return Response(cache_manager.stats())
+
+
+@api_view(["POST"])
+@permission_classes([IsAppAdmin])
+def cache_clear(request):
+    """Empty the cache: Redis, and this process's memory (the others follow within seconds)."""
+    cache_manager.clear(by=request.user.get_full_name() or request.user.email)
+    return Response(cache_manager.stats())

@@ -21,7 +21,9 @@ def test_a_stored_value_wins_unless_it_no_longer_fits(db):
     ConfigVar.objects.create(key="llm.context_tokens", value=65536)
     assert registry.get("llm.context_tokens") == 65536
     assert registry.prompt_budget_chars() == 72000
-    ConfigVar.objects.filter(key="llm.context_tokens").update(value="lots")
+    row = ConfigVar.objects.get(key="llm.context_tokens")
+    row.value = "lots"
+    row.save()
     assert registry.get("llm.context_tokens") == 8192
 
 

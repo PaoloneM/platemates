@@ -3,7 +3,7 @@
 # The generative LLM is NOT part of this stack: it is an external OpenAI-compatible service
 # (Unsloth Studio on the host by default) reached through LLM_BASE_URL.
 #
-#   docker compose up -d db keycloak embeddings  # backing services, for native development
+#   docker compose up -d db keycloak redis embeddings  # backing services, for native development
 #   docker compose up -d                    # everything
 
 name: platemates
@@ -21,6 +21,19 @@ services:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Cache shared by the backend and the worker (rules, settings): a cache only, so nothing is
+  # persisted. Losing it costs a few queries.
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -133,12 +146,15 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
+      REDIS_URL: redis://redis:6379/0
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
       keycloak:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
@@ -232,10 +248,13 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-platemates}:${POSTGRES_PASSWORD:-platemates}@db:5432/${POSTGRES_DB:-platemates}
       LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
+      REDIS_URL: redis://redis:6379/0
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       backend:
         condition: service_started

@@ -109,6 +109,22 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# Two caches, read in turn by `apps.core.cache.CacheManager`: each process's memory first
+# (seconds, so a change made elsewhere shows up soon), then Redis, shared by every process.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+        "TIMEOUT": int(os.getenv("CACHE_REDIS_TIMEOUT_SECONDS", str(12 * 3600))),
+        "KEY_PREFIX": "platemates",
+    },
+    "local": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "platemates-local",
+        "TIMEOUT": int(os.getenv("CACHE_MEMORY_TIMEOUT_SECONDS", "10")),
+    },
+}
+
 # Italian by default; English available. The SPA has its own translations (frontend/src/i18n);
 # these cover the admin, choice labels and API error messages. Per-request language comes from
 # the Accept-Language header via LocaleMiddleware.

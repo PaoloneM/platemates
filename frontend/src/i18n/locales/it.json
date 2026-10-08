@@ -341,7 +341,8 @@
     "section": {
       "ingredients": "Ingredienti",
       "rules": "Regole di sistema",
-      "settings": "Impostazioni"
+      "settings": "Impostazioni",
+      "cache": "Cache"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -545,5 +546,38 @@
     "changed": "Modificato da {{who}} il {{date}} (predefinito: {{default}})",
     "reset": "Torna al predefinito ({{value}})",
     "saved": "Impostazione salvata"
+  },
+  "cache": {
+    "hint": "Regole e impostazioni passano da una cache a due livelli: prima la memoria di ogni processo del backend, poi Redis, condiviso da tutti. Ogni modifica a regole o impostazioni la svuota da sola; il pulsante serve se i dati sono stati cambiati per altre vie (per esempio dall'admin di Django).",
+    "refresh": "Aggiorna",
+    "clear": "Svuota la cache",
+    "clearConfirm": "Svuotare la cache? I dati verranno ricaricati dal database alla prossima lettura.",
+    "cleared": "Cache svuotata",
+    "redisDown": "Redis non è raggiungibile: l'app funziona leggendo dal database, un po' più lentamente.",
+    "shared": "Redis (condivisa)",
+    "sharedHint": "Comune a tutti i processi. Un valore resta al massimo {{ttl}}.",
+    "process": "Memoria di questo processo",
+    "processHint": "Contatori del processo che ha risposto (ognuno ha i suoi). Un valore resta al massimo {{ttl}}: le modifiche fatte altrove arrivano entro quel tempo.",
+    "keys": "Chiavi",
+    "memory": "Memoria usata",
+    "hitRate": "Letture trovate",
+    "hitsMisses": "Trovate / mancate",
+    "uptime": "Attiva da",
+    "version": "Versione",
+    "memoryHits": "Trovate in memoria",
+    "sharedHits": "Trovate in Redis",
+    "loads": "Lette dal database",
+    "errors": "Errori Redis",
+    "lastCleared": "Ultimo svuotamento: {{date}}, {{by}}.",
+    "automatic": "automatico (dati modificati o avvio)",
+    "neverCleared": "Nessuno svuotamento registrato.",
+    "seconds_one": "{{count}} secondo",
+    "seconds_other": "{{count}} secondi",
+    "minutes_one": "{{count}} minuto",
+    "minutes_other": "{{count}} minuti",
+    "hours_one": "{{count}} ora",
+    "hours_other": "{{count}} ore",
+    "days_one": "{{count}} giorno",
+    "days_other": "{{count}} giorni"
   }
 }

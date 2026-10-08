@@ -6,7 +6,8 @@ All persistent data is in one Docker volume, `platemates_pgdata`: the PostgreSQL
 the application database (`platemates`: teams, recipes, menus) and Keycloak's (`keycloak`:
 accounts, passwords, links to Google/Microsoft/Apple). The volume name is stable because
 `docker-compose.yml` fixes the project name (`name: platemates`). `platemates_hf-cache` only caches the
-embedding model and can always be re-downloaded.
+embedding model and can always be re-downloaded. Redis holds only a cache, in memory, with no
+volume: restarting it loses nothing.
 
 | Command | Data |
 |---|---|

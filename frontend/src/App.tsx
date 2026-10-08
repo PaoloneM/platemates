@@ -9,6 +9,7 @@ import { AssistantPage } from './pages/AssistantPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { InvitePage } from './pages/InvitePage'
 import { IngredientsPage } from './pages/manage/IngredientsPage'
+import { CachePage } from './pages/manage/CachePage'
 import { SettingsPage } from './pages/manage/SettingsPage'
 import { SystemRulesPage } from './pages/manage/SystemRulesPage'
 import { ManageIndex, ManageLayout } from './pages/manage/ManageLayout'
@@ -48,6 +49,7 @@ function Protected() {
           <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
           <Route path="/manage/rules" element={<ManageLayout><SystemRulesPage /></ManageLayout>} />
           <Route path="/manage/settings" element={<ManageLayout><SettingsPage /></ManageLayout>} />
+          <Route path="/manage/cache" element={<ManageLayout><CachePage /></ManageLayout>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>

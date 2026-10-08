@@ -32,11 +32,12 @@ from django.db.models import Max, Q
 from django.utils import timezone
 
 from ai import AIError, ChatProvider, get_chat_provider, get_reasoning_chat_provider
+from apps.core.cache import cache_manager
 from apps.recipes.models import Course, Recipe, Visibility
 from apps.siteconfig import registry as config
 from apps.teams.models import PLANNED_MEALS, Preference, RecipeBookEntry, Team
 
-from .models import MealSlot, MenuGeneration, SlotDish, SystemRule, WeeklyMenu
+from .models import MealSlot, MenuGeneration, SlotDish, SystemRule, TeamRule, WeeklyMenu
 
 log = logging.getLogger(__name__)
 
@@ -187,19 +188,35 @@ class Context:
 # -- rules -------------------------------------------------------------------------------------
 
 
+def system_rules() -> list[dict[str, str]]:
+    """The active system rules in both languages, through the cache (cleared on any change)."""
+    return cache_manager.get_or_load(
+        "menus:system_rules",
+        lambda: list(SystemRule.objects.filter(active=True).values("text_it", "text_en")),
+    )
+
+
+def team_rules(team_id: int) -> list[tuple[int, str]]:
+    """A team's rules, through the cache (cleared on any change)."""
+    return cache_manager.get_or_load(
+        f"menus:team_rules:{team_id}",
+        lambda: list(TeamRule.objects.filter(team_id=team_id).values_list("pk", "text")),
+    )
+
+
 def rules_for(menu: WeeklyMenu, use_week_settings: bool, language: str) -> dict[str, Any]:
     """The rules a generation follows, as text: system, team, and the week's instructions."""
     text = "text_it" if language == "it" else "text_en"
-    system = [getattr(rule, text) for rule in SystemRule.objects.filter(active=True)]
-    team_rules = menu.team.rules.all()
+    rules = team_rules(menu.team_id)
     if use_week_settings:
         if not menu.use_team_rules:
-            team_rules = team_rules.none()
+            rules = []
         else:
-            team_rules = team_rules.exclude(pk__in=menu.excluded_rules.all())
+            excluded = set(menu.excluded_rules.values_list("pk", flat=True))
+            rules = [(pk, rule) for pk, rule in rules if pk not in excluded]
     return {
-        "system": system,
-        "team": [rule.text for rule in team_rules],
+        "system": [rule[text] for rule in system_rules()],
+        "team": [rule for _, rule in rules],
         "week": menu.instructions if use_week_settings else "",
     }
 

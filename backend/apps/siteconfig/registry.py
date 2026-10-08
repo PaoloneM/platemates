@@ -10,7 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from apps.core.cache import cache_manager
+
 from .models import ConfigVar
+
+CACHE_KEY = "siteconfig:values"
 
 
 @dataclass(frozen=True)
@@ -60,12 +64,19 @@ def prompt_budget_chars() -> int:
     return context_tokens() * 9000 // 8192
 
 
+def stored_values() -> dict[str, Any]:
+    """Every stored value, by key, through the cache (cleared whenever one changes)."""
+    return cache_manager.get_or_load(
+        CACHE_KEY, lambda: dict(ConfigVar.objects.values_list("key", "value"))
+    )
+
+
 def get(key: str) -> Any:
     setting = SETTINGS[key]
-    row = ConfigVar.objects.filter(key=key).first()
-    if row is None:
+    stored = stored_values()
+    if key not in stored:
         return setting.default
     try:
-        return setting.clean(row.value)
+        return setting.clean(stored[key])
     except ValueError:
         return setting.default

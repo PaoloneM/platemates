@@ -14,6 +14,7 @@ flowchart LR
         spa["frontend<br/>nginx serving the built SPA"]
         backend["backend<br/>Django + DRF, gunicorn"]
         worker["worker<br/>menu generations, in the background"]
+        redis[("redis<br/>cache of rules and settings")]
         keycloak["keycloak<br/>/auth, theme platemates"]
         db[("db<br/>PostgreSQL 17 + pgvector<br/>databases platemates, keycloak")]
         embeddings["embeddings<br/>FastAPI + sentence-transformers"]
@@ -34,6 +35,8 @@ flowchart LR
     backend -- "OIDC code exchange, keys" --> keycloak
     backend --> db
     worker --> db
+    backend --> redis
+    worker --> redis
     worker -- "OpenAI-compatible chat" --> studio
     keycloak --> db
     backend -- "OpenAI-compatible chat" --> studio
@@ -430,6 +433,26 @@ the deployment (addresses, secrets, who the administrators are).
   characters and 40 recipes at 8k, the size they were tuned at); `menu.thinking`, the model's
   own reasoning when planning a week (used only with a context of at least 32k, where it has
   room to answer; each generation records whether it used it).
+
+### Cache (decided with Paolo 2026-10-08)
+
+Rules and settings are read at every use, never loaded at start-up, so a change never needs a
+restart. They go through a two-level cache (`apps/core/cache.py`, `CacheManager`): this
+process's memory first (Django cache `local`, `CACHE_MEMORY_TIMEOUT_SECONDS`, 10 s), then Redis
+(`default`, shared by the backend's processes and the worker, `CACHE_REDIS_TIMEOUT_SECONDS`,
+12 h), then the database; a value found in Redis is copied back to memory. Cached so far: the
+stored settings (`siteconfig:values`), the active system rules, each team's rules.
+
+- **Every change clears it**: `post_save` / `post_delete` of `SystemRule`, `TeamRule` and
+  `ConfigVar` empty Redis and this process's memory; other processes see the change within
+  their 10 s. Signals do not fire on bulk `update()`: those models are written with `save()`.
+  The backend also clears it after its migrations at every start, so seeded data and changes
+  made while it was down are never hidden.
+- **Redis is only a cache**: no persistence, 128 MB with LRU eviction. If it is unreachable the
+  app reads from the database and keeps values in memory only.
+- Management > Cache (administrators): Redis's figures (keys, memory, hits and misses,
+  uptime), the counters of the backend process that answered, the last clear and by whom, and
+  a button to clear it (for data changed some other way, such as the Django admin).
 
 ## Adding recipes (decided with Paolo 2026-10-06)
 
