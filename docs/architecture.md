@@ -318,7 +318,10 @@ with a card per meal (people, dishes; exceptions in terracotta, nobody at home d
 gear (or its date) opens the day settings, the bin clears the day or a single meal at once with
 Undo. With a mouse or trackpad these icons appear only on hovering the day's heading or the
 card (or on keyboard focus); on touch screens they are always shown. The choice follows the
-pointer (`(hover: hover) and (pointer: fine)`, `src/hover.ts`), not a guess about the device. A meal card opens the meal page (`/calendar/<date>/<meal>`): people, and the dishes picked
+pointer (`(hover: hover) and (pointer: fine)`, `src/hover.ts`), not a guess about the device. A card's magnifier (and
+each dish's on the meal page) opens the recipe dialog: quantities for the meal's people,
+ingredients and steps, one tab per recipe when the meal has several; dishes without a recipe
+have none. The dialog and the recipe page share `components/RecipeView.tsx`. A meal card opens the meal page (`/calendar/<date>/<meal>`): people, and the dishes picked
 from the recipe book until the menu generator proposes them. Members see everything read-only.
 The screen's FAB (`components/MenuFab.tsx`, on the same `ActionFab` as the recipe book's) holds
 the generation actions and the way to the typical week: see "Generating a menu" below.

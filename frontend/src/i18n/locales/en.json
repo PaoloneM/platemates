@@ -31,7 +31,8 @@
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
-    "error": "Something went wrong. Please try again."
+    "error": "Something went wrong. Please try again.",
+    "close": "Close"
   },
   "auth": {
     "tagline": "The weekly menu and the shopping list, for people who eat together: family, flatmates, friends, a sports team or an office.",
@@ -79,7 +80,8 @@
     "noRecipes": "No recipes found",
     "saved": "Meal updated",
     "memberNotice": "Only the team's owners can change people and dishes.",
-    "breakfastHint": "Breakfast is only counted: the menu plans lunch and dinner."
+    "breakfastHint": "Breakfast is only counted: the menu plans lunch and dinner.",
+    "viewRecipe": "See the recipe"
   },
   "calendar": {
     "title": "Weekly menu",
@@ -185,7 +187,8 @@
     "removeTitle": "Remove the recipe?",
     "removePrivate": "This recipe is private: removing it from the recipe book deletes it.",
     "removeShared": "The recipe stays available to other teams, but will no longer be in your recipe book.",
-    "tools": "Tools"
+    "tools": "Tools",
+    "openPage": "Open the recipe page"
   },
   "editor": {
     "newTitle": "New recipe",

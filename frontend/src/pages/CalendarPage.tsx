@@ -4,6 +4,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import NoteIcon from '@mui/icons-material/StickyNote2Outlined'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
+import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import {
   Alert,
   Box,
@@ -56,6 +57,7 @@ import { DishLine } from '../components/DishLine'
 import { GenerationBanner } from '../components/GenerationBanner'
 import { MenuFab } from '../components/MenuFab'
 import { PeopleCount } from '../components/PeopleCount'
+import { RecipeDialog } from '../components/RecipeDialog'
 import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useOnConnect, useRealtimeConnected, useRealtimeEvent } from '../realtime'
 import { DAY_ACTION, MEAL_ACTION, revealOnHover } from '../hover'
@@ -77,6 +79,10 @@ function MealCard({ day, meal, owner, onClear, onReview }: {
   const dishes = day.dishes[meal]
   const nobody = day.people[meal] === 0 && day.proposed_people[meal] === undefined
   const proposal = hasProposal(day, meal)
+  const [viewing, setViewing] = useState(false)
+  const clearable = owner && mealInUse(day, meal)
+  // Dishes without a recipe (a new dish, "pizza out") have nothing to show.
+  const recipes = (dishes ?? []).flatMap((d) => (d.recipe === null ? [] : [{ recipe: d.recipe, title: d.title }]))
   return (
     <Card sx={{
       ...revealOnHover(MEAL_ACTION),
@@ -84,7 +90,7 @@ function MealCard({ day, meal, owner, onClear, onReview }: {
       ...(proposal && { outline: '1px dashed', outlineColor: 'primary.main', outlineOffset: -1 }),
     }}>
       <CardActionArea component={RouterLink} to={mealUrl(day.date, meal)}
-        sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', p: 1.5, pr: owner ? 6 : 1.5 }}>
+        sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', p: 1.5, pr: clearable || recipes.length > 0 ? 6 : 1.5 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.75 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{labels.meal(meal)}</Typography>
           <PeopleCount day={day} meal={meal} />
@@ -109,13 +115,27 @@ function MealCard({ day, meal, owner, onClear, onReview }: {
             aria-label={`${t('generation.accept')}: ${labels.meal(meal)}`}>{t('generation.accept')}</Button>
         </CardActions>
       )}
-      {owner && mealInUse(day, meal) && (
-        <Tooltip title={t('calendar.clearMeal')}>
-          <IconButton size="small" className={MEAL_ACTION} onClick={onClear} aria-label={`${t('calendar.clearMeal')}: ${labels.meal(meal)}`}
-            sx={{ position: 'absolute', top: 8, right: 8 }}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+      {(clearable || recipes.length > 0) && (
+        <Stack sx={{ position: 'absolute', top: 8, right: 8 }}>
+          {clearable && (
+            <Tooltip title={t('calendar.clearMeal')} placement="left">
+              <IconButton size="small" className={MEAL_ACTION} onClick={onClear} aria-label={`${t('calendar.clearMeal')}: ${labels.meal(meal)}`}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {recipes.length > 0 && (
+            <Tooltip title={t('meal.viewRecipe')} placement="left">
+              <IconButton size="small" className={MEAL_ACTION} onClick={() => setViewing(true)}
+                aria-label={`${t('meal.viewRecipe')}: ${labels.meal(meal)}`}>
+                <ZoomInIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      )}
+      {viewing && (
+        <RecipeDialog dishes={recipes} people={day.proposed_people[meal] ?? day.people[meal]} onClose={() => setViewing(false)} />
       )}
     </Card>
   )

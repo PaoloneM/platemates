@@ -4,7 +4,6 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import EditIcon from '@mui/icons-material/EditOutlined'
 import LockIcon from '@mui/icons-material/LockOutlined'
 import PublicIcon from '@mui/icons-material/PublicOutlined'
-import RemoveIcon from '@mui/icons-material/Remove'
 import {
   Alert,
   Box,
@@ -18,10 +17,7 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
-  IconButton,
   Link,
-  List,
-  ListItem,
   Rating,
   Stack,
   Typography,
@@ -29,39 +25,10 @@ import {
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
-import { api, type KitchenTool, type Recipe, type RecipeLine } from '../api'
+import { api, type KitchenTool, type Recipe } from '../api'
+import { IngredientList, PeopleStepper, StepList } from '../components/RecipeView'
 import { useTeam } from '../team'
-import { formatQuantity, useDescribeMonths, useLabels } from '../labels'
-
-function LineText({ line, factor }: { line: RecipeLine; factor: number }) {
-  const { t, i18n } = useTranslation()
-  const labels = useLabels()
-  let amount = t('unit.tt')
-  if (line.unit !== 'tt' && line.quantity != null) {
-    const value = formatQuantity(Number(line.quantity) * factor, i18n.resolvedLanguage)
-    amount = line.unit === 'pc' ? value : `${value} ${labels.unit(line.unit)}`
-  }
-  return (
-    <Stack direction="row" spacing={2} sx={{ alignItems: 'baseline', width: '100%' }}>
-      <Typography sx={{ minWidth: 72, color: 'text.secondary', textAlign: 'right' }}>{amount}</Typography>
-      <Box>
-        <Typography component="span" sx={{ fontWeight: 500 }}>
-          {line.ingredient_name}
-        </Typography>
-        {line.optional && (
-          <Typography component="span" color="text.secondary">
-            {` (${t('recipe.optional')})`}
-          </Typography>
-        )}
-        {line.note && (
-          <Typography variant="body2" color="text.secondary">
-            {line.note}
-          </Typography>
-        )}
-      </Box>
-    </Stack>
-  )
-}
+import { useDescribeMonths, useLabels } from '../labels'
 
 export function RecipeDetailPage() {
   const { t } = useTranslation()
@@ -94,7 +61,6 @@ export function RecipeDetailPage() {
 
   const entry = recipe.book_entries.find((e) => e.team === team.id)
   const tools = allTools.filter((tool) => recipe.tools.includes(tool.id))
-  const factor = people / recipe.servings
   const suitable = recipe.season_months.months.length === 0
     ? recipe.climate_months.months
     : recipe.climate_months.months.length === 0
@@ -184,30 +150,9 @@ export function RecipeDetailPage() {
             <CardContent>
               <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="h2">{t('recipe.ingredients')}</Typography>
-                <Stack direction="row" sx={{ alignItems: 'center' }}>
-                  <IconButton size="small" onClick={() => setPeople(Math.max(1, people - 1))}
-                    aria-label={t('recipe.fewerPeople')}>
-                    <RemoveIcon fontSize="small" />
-                  </IconButton>
-                  <Typography sx={{ minWidth: 88, textAlign: 'center' }}>
-                    {t('recipe.people', { count: people })}
-                  </Typography>
-                  <IconButton size="small" onClick={() => setPeople(people + 1)} aria-label={t('recipe.morePeople')}>
-                    <AddIcon fontSize="small" />
-                  </IconButton>
-                </Stack>
+                <PeopleStepper people={people} onChange={setPeople} />
               </Stack>
-              {recipe.ingredients.length === 0 ? (
-                <Typography color="text.secondary">{t('recipe.noIngredients')}</Typography>
-              ) : (
-                <List dense disablePadding>
-                  {recipe.ingredients.map((line) => (
-                    <ListItem key={line.id} disableGutters divider>
-                      <LineText line={line} factor={factor} />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
+              <IngredientList recipe={recipe} people={people} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                 {t('recipe.season')}: {describeMonths(suitable)}
               </Typography>
@@ -223,17 +168,7 @@ export function RecipeDetailPage() {
           <Typography variant="h2" sx={{ mb: 1.5 }}>
             {t('recipe.steps')}
           </Typography>
-          {recipe.steps.length === 0 ? (
-            <Typography color="text.secondary">{t('recipe.noSteps')}</Typography>
-          ) : (
-            <Stack component="ol" spacing={1.5} sx={{ pl: 2.5, m: 0 }}>
-              {recipe.steps.map((step, i) => (
-                <Typography component="li" key={i} sx={{ pl: 0.5 }}>
-                  {step}
-                </Typography>
-              ))}
-            </Stack>
-          )}
+          <StepList recipe={recipe} />
           {recipe.source_url && (
             <Typography variant="body2" sx={{ mt: 3 }}>
               {t('recipe.source')}:{' '}

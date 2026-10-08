@@ -1,6 +1,7 @@
 import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
+import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import {
   Alert,
   Autocomplete,
@@ -16,6 +17,7 @@ import {
   Snackbar,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import { useEffect, useState, type ReactNode } from 'react'
@@ -24,6 +26,7 @@ import { Link as RouterLink, Navigate, useParams } from 'react-router'
 import { api, type BookEntry, type CalendarDay, type CalendarDayChange, type DishInput, type GenerationEvent, type Meal, type Paginated } from '../api'
 import { changeDay, dishInput, fromIso, hasProposal, isIsoDate, isoDate, mondayOf, reviewMeal, snapshot, weekUrl } from '../calendar'
 import { DishLine } from '../components/DishLine'
+import { RecipeDialog } from '../components/RecipeDialog'
 import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useRealtimeEvent } from '../realtime'
@@ -100,6 +103,8 @@ function DishesSection({ day, meal, owner, onChange }: {
   const [search, setSearch] = useState('')
   const [options, setOptions] = useState<BookEntry[]>([])
   const [busy, setBusy] = useState(false)
+  // Index in `recipes` of the recipe shown in the dialog.
+  const [viewing, setViewing] = useState<number | null>(null)
 
   useEffect(() => {
     if (!owner) return
@@ -124,6 +129,7 @@ function DishesSection({ day, meal, owner, onChange }: {
   }
 
   const planned = new Set(dishes.map((d) => d.recipe))
+  const recipes = dishes.flatMap((d) => (d.recipe === null ? [] : [{ recipe: d.recipe, title: d.title }]))
   return (
     <Section title={t('meal.menu')} hint={dishes.length === 0 ? t('meal.menuEmpty') : undefined}>
       {dishes.length > 0 && (
@@ -135,11 +141,24 @@ function DishesSection({ day, meal, owner, onChange }: {
             )
             return (
               <ListItem key={index} disablePadding={dish.recipe !== null} divider
-                secondaryAction={owner && (
-                  <IconButton edge="end" disabled={busy} aria-label={`${t('meal.removeDish')}: ${dish.title}`}
-                    onClick={() => void setDishes(dishes.filter((_, i) => i !== index).map(dishInput))}>
-                    <DeleteIcon />
-                  </IconButton>
+                sx={{ pr: (owner ? 6 : 0) + (dish.recipe !== null ? 6 : 0) }}
+                secondaryAction={(owner || dish.recipe !== null) && (
+                  <Stack direction="row">
+                    {dish.recipe !== null && (
+                      <Tooltip title={t('meal.viewRecipe')}>
+                        <IconButton aria-label={`${t('meal.viewRecipe')}: ${dish.title}`}
+                          onClick={() => setViewing(recipes.findIndex((r) => r.recipe === dish.recipe))}>
+                          <ZoomInIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {owner && (
+                      <IconButton edge="end" disabled={busy} aria-label={`${t('meal.removeDish')}: ${dish.title}`}
+                        onClick={() => void setDishes(dishes.filter((_, i) => i !== index).map(dishInput))}>
+                        <DeleteIcon />
+                      </IconButton>
+                    )}
+                  </Stack>
                 )}>
                 {dish.recipe !== null ? (
                   <ListItemButton component={RouterLink} to={`/recipes/${dish.recipe}`}>{text}</ListItemButton>
@@ -148,6 +167,10 @@ function DishesSection({ day, meal, owner, onChange }: {
             )
           })}
         </List>
+      )}
+      {viewing !== null && (
+        <RecipeDialog dishes={recipes} initial={viewing} people={day.proposed_people[meal] ?? day.people[meal]}
+          onClose={() => setViewing(null)} />
       )}
       {owner && (
         <Autocomplete<BookEntry>

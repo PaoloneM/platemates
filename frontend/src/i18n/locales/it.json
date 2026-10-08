@@ -31,7 +31,8 @@
     "delete": "Elimina",
     "edit": "Modifica",
     "add": "Aggiungi",
-    "error": "Qualcosa è andato storto. Riprova."
+    "error": "Qualcosa è andato storto. Riprova.",
+    "close": "Chiudi"
   },
   "auth": {
     "tagline": "Il menu della settimana e la lista della spesa, per chi mangia insieme: famiglia, coinquilini, amici, squadra o ufficio.",
@@ -79,7 +80,8 @@
     "noRecipes": "Nessuna ricetta trovata",
     "saved": "Pasto aggiornato",
     "memberNotice": "Solo i proprietari del team possono modificare persone e piatti.",
-    "breakfastHint": "La colazione viene solo contata: il menu pianifica pranzo e cena."
+    "breakfastHint": "La colazione viene solo contata: il menu pianifica pranzo e cena.",
+    "viewRecipe": "Vedi la ricetta"
   },
   "calendar": {
     "title": "Menu della settimana",
@@ -185,7 +187,8 @@
     "removeTitle": "Rimuovere la ricetta?",
     "removePrivate": "La ricetta è privata: rimuovendola dal ricettario verrà eliminata.",
     "removeShared": "La ricetta resta disponibile agli altri team, ma non sarà più nel vostro ricettario.",
-    "tools": "Attrezzi"
+    "tools": "Attrezzi",
+    "openPage": "Apri la pagina della ricetta"
   },
   "editor": {
     "newTitle": "Nuova ricetta",
