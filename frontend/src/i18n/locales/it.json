@@ -91,7 +91,7 @@
     "people_other": "{{count}} persone",
     "nobody": "nessuno",
     "dayOff": "Giorno non pianificato",
-    "editWeek": "Modifica settimana tipo",
+    "editWeek": "Settimana tipo",
     "hint": "Tocca un pasto per vedere persone e piatti. Le persone a tavola vengono dalla settimana tipo del team.",
     "usually_one": "di solito {{count}}",
     "usually_other": "di solito {{count}}",
@@ -384,14 +384,6 @@
       "toolsHint": "Le ricette che richiedono altri attrezzi non verranno proposte",
       "saved": "Profilo salvato"
     },
-    "week": {
-      "title": "Settimana tipo",
-      "hint": "Quante persone mangiano di solito a ogni pasto. Il calendario e i menu partono da qui; un giorno disattivato non viene pianificato.",
-      "day": "Giorno",
-      "active": "Attivo",
-      "invalid": "Le persone vanno da 0 a 50.",
-      "saved": "Settimana tipo salvata"
-    },
     "people": {
       "title": "Persone a tavola",
       "hint": "Chi mangia di solito con voi, anche senza un account (es. i bambini). L'età serve a confrontare team simili.",
@@ -442,5 +434,53 @@
         "revoked": "Annullato"
       }
     }
+  },
+  "week": {
+    "title": "Settimana tipo",
+    "memberNotice": "Solo i proprietari del team possono modificare la settimana tipo e le regole.",
+    "pattern": {
+      "title": "Pasti e persone",
+      "hint": "Quante persone mangiano di solito a ogni pasto. Il calendario e i menu partono da qui; un giorno disattivato non viene pianificato.",
+      "day": "Giorno",
+      "active": "Attivo",
+      "invalid": "Le persone vanno da 0 a 50.",
+      "saved": "Settimana tipo salvata"
+    },
+    "rules": {
+      "title": "Regole del team",
+      "hint": "Indicazioni in linguaggio naturale per preparare i menu, una per riga. Valgono ogni settimana; quando prepari una settimana puoi escluderne qualcuna o aggiungerne altre.",
+      "empty": "Nessuna regola per ora.",
+      "new": "Nuova regola",
+      "placeholder": "Es. «pesce almeno due volte», «il venerdì sera pizza», «a pranzo piatti veloci»",
+      "edit": "Modifica la regola",
+      "delete": "Elimina la regola",
+      "deleted": "Regola eliminata"
+    },
+    "system": {
+      "title": "Regole di sistema",
+      "hint": "Valgono per tutti i team. Le regole del team e quelle della settimana hanno la precedenza."
+    }
+  },
+  "plan": {
+    "title": "Come preparo il menu?",
+    "instructions": "Per questa settimana",
+    "placeholder": "Es. «giovedì a cena siamo in 5», «niente pesce», «mercoledì pranzo veloce»",
+    "instructionsHint": "Vale solo per questa settimana e ha la precedenza sulle regole. Puoi cambiare anche le persone a tavola: le modifiche ti verranno proposte da confermare.",
+    "teamRules": "Regole del team",
+    "noTeamRules": "Il team non ha ancora regole.",
+    "setUpWeek": "Configura la settimana tipo",
+    "useTeamRules": "Usa le regole del team",
+    "systemRules_one": "{{count}} regola di sistema, sempre applicata",
+    "systemRules_other": "{{count}} regole di sistema, sempre applicate",
+    "precedence": "Se due indicazioni sono in contrasto vince quella della settimana, poi quella del team. I piatti che hai già scelto restano.",
+    "generate": "Genera",
+    "generateSoon": "La generazione del menu è in arrivo: intanto le indicazioni restano salvate per questa settimana.",
+    "saved": "Indicazioni della settimana salvate"
+  },
+  "menuFab": {
+    "label": "Prepara il menu",
+    "generateSoon": "Genera il menu della settimana (in arrivo)",
+    "plan": "Dimmi come prepararlo",
+    "week": "Configura la settimana tipo"
   }
 }

@@ -3,7 +3,9 @@ from rest_framework import serializers
 
 from apps.recipes.models import Recipe
 
-from .models import MealSlot, SlotDish, WeeklyMenu
+from .models import MealSlot, SlotDish, SystemRule, TeamRule, WeeklyMenu
+
+MAX_INSTRUCTIONS = 2000
 
 
 class MealSlotSerializer(serializers.ModelSerializer):
@@ -47,14 +49,77 @@ class MealSlotSerializer(serializers.ModelSerializer):
         return slot
 
 
+def _one_line(text: str) -> str:
+    text = " ".join(text.split())
+    if not text:
+        raise serializers.ValidationError("A rule needs some text.")
+    return text
+
+
+class SystemRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemRule
+        fields = ["id", "code", "text_it", "text_en", "position", "active"]
+        read_only_fields = ["code"]
+
+    def validate_text_it(self, text: str) -> str:
+        return _one_line(text)
+
+    def validate_text_en(self, text: str) -> str:
+        return _one_line(text)
+
+
+class TeamRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeamRule
+        fields = ["id", "team", "text"]
+
+    def validate_text(self, text: str) -> str:
+        return _one_line(text)
+
+    def validate_team(self, team):
+        if self.instance and team != self.instance.team:
+            raise serializers.ValidationError("A rule stays with its team.")
+        return team
+
+
 class WeeklyMenuSerializer(serializers.ModelSerializer):
     slots = MealSlotSerializer(many=True, read_only=True)
+    excluded_rules = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=TeamRule.objects.all(), required=False
+    )
 
     class Meta:
         model = WeeklyMenu
-        fields = ["id", "team", "week_start", "status", "rationale", "slots"]
+        fields = [
+            "id",
+            "team",
+            "week_start",
+            "status",
+            "rationale",
+            "instructions",
+            "use_team_rules",
+            "excluded_rules",
+            "slots",
+        ]
+        read_only_fields = ["rationale"]
 
     def validate_week_start(self, value):
         if value.weekday() != 0:
             raise serializers.ValidationError("A week starts on Monday.")
+        if self.instance and value != self.instance.week_start:
+            raise serializers.ValidationError("A menu stays on its week.")
         return value
+
+    def validate_instructions(self, text: str) -> str:
+        if len(text) > MAX_INSTRUCTIONS:
+            raise serializers.ValidationError(f"At most {MAX_INSTRUCTIONS} characters.")
+        return text.strip()
+
+    def validate(self, attrs):
+        team = attrs.get("team") or self.instance.team
+        if self.instance and team != self.instance.team:
+            raise serializers.ValidationError({"team": "A menu stays with its team."})
+        if any(rule.team_id != team.pk for rule in attrs.get("excluded_rules", [])):
+            raise serializers.ValidationError({"excluded_rules": "Not one of the team's rules."})
+        return attrs

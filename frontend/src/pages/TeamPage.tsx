@@ -9,8 +9,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
   Dialog,
@@ -26,17 +24,11 @@ import {
   MenuItem,
   Snackbar,
   Stack,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router'
 import {
@@ -49,36 +41,11 @@ import {
   type Role,
   type TeamMembership,
   type TeamProfile,
-  type Meal,
 } from '../api'
 import { useAuth } from '../auth/context'
-import { MEALS, useLabels } from '../labels'
+import { Section } from '../components/Section'
+import { useLabels } from '../labels'
 import { useTeam } from '../team'
-
-function Section({ id, title, hint, action, children }: {
-  id?: string
-  title: string
-  hint?: string
-  action?: ReactNode
-  children: ReactNode
-}) {
-  return (
-    <Card id={id} sx={{ scrollMarginTop: 80 }}>
-      <CardContent>
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: hint ? 0.5 : 2 }}>
-          <Typography variant="h2">{title}</Typography>
-          {action}
-        </Stack>
-        {hint && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {hint}
-          </Typography>
-        )}
-        {children}
-      </CardContent>
-    </Card>
-  )
-}
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -159,108 +126,6 @@ function ProfileSection({ team, owner, onSaved }: {
           />
         </Grid>
       </Grid>
-    </Section>
-  )
-}
-
-// -- typical week -----------------------------------------------------------------------------
-
-const MAX_PEOPLE = 50
-
-// While editing, counts are kept as typed; they become numbers on save.
-type DraftDay = { active: boolean } & Record<Meal, string>
-
-function WeekSection({ team, owner, onSaved }: {
-  team: TeamProfile
-  owner: boolean
-  onSaved: (team: TeamProfile) => void
-}) {
-  const { t } = useTranslation()
-  const labels = useLabels()
-  const [days, setDays] = useState<DraftDay[]>(() =>
-    team.typical_week.map((day) => ({
-      active: day.active,
-      breakfast: String(day.breakfast),
-      lunch: String(day.lunch),
-      dinner: String(day.dinner),
-    })),
-  )
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  const valid = days.every((day) =>
-    MEALS.every((meal) => /^\d+$/.test(day[meal]) && Number(day[meal]) <= MAX_PEOPLE),
-  )
-
-  function change(index: number, patch: Partial<DraftDay>) {
-    setDays((current) => current.map((day, i) => (i === index ? { ...day, ...patch } : day)))
-  }
-
-  async function save() {
-    setBusy(true)
-    setError(null)
-    try {
-      onSaved(
-        await api<TeamProfile>(`/teams/${team.id}/`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            typical_week: days.map((day) => ({
-              active: day.active,
-              breakfast: Number(day.breakfast),
-              lunch: Number(day.lunch),
-              dinner: Number(day.dinner),
-            })),
-          }),
-        }),
-      )
-    } catch {
-      setError(t('team.week.invalid'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Section id="week" title={t('team.week.title')} hint={t('team.week.hint')}
-      action={owner && <Button variant="contained" onClick={() => void save()} disabled={busy || !valid}>{t('common.save')}</Button>}>
-      {(error || !valid) && <Alert severity="error" sx={{ mb: 2 }}>{error ?? t('team.week.invalid')}</Alert>}
-      <Table size="small" sx={{ '& td, & th': { px: { xs: 0.5, sm: 1.5 } } }}>
-        <TableHead>
-          <TableRow>
-            <TableCell>{t('team.week.day')}</TableCell>
-            <TableCell align="center">{t('team.week.active')}</TableCell>
-            {MEALS.map((meal) => (
-              <TableCell key={meal} align="center">{labels.meal(meal)}</TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {days.map((day, index) => (
-            <TableRow key={index}>
-              <TableCell>
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{labels.weekday(index)}</Box>
-                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>{labels.weekdayShort(index)}</Box>
-              </TableCell>
-              <TableCell align="center">
-                <Switch checked={day.active} disabled={!owner} size="small"
-                  onChange={(e) => change(index, { active: e.target.checked })}
-                  slotProps={{ input: { 'aria-label': `${labels.weekday(index)}: ${t('team.week.active')}` } }} />
-              </TableCell>
-              {MEALS.map((meal) => (
-                <TableCell key={meal} align="center">
-                  <TextField size="small" type="number" value={day[meal]}
-                    disabled={!owner || !day.active}
-                    onChange={(e) => change(index, { [meal]: e.target.value })}
-                    error={!/^\d+$/.test(day[meal]) || Number(day[meal]) > MAX_PEOPLE}
-                    sx={{ width: { xs: 56, sm: 88 } }}
-                    slotProps={{ htmlInput: { min: 0, max: MAX_PEOPLE, inputMode: 'numeric',
-                      'aria-label': `${labels.weekday(index)}, ${labels.meal(meal)}` } }} />
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
     </Section>
   )
 }
@@ -601,8 +466,6 @@ export function TeamPage() {
       {!owner && <Alert severity="info">{t('team.memberNotice')}</Alert>}
       <ProfileSection key={team.id} team={team} owner={owner}
         onSaved={(saved) => { setTeam(saved); setMessage(t('team.profile.saved')); void refresh() }} />
-      <WeekSection key={`week-${team.id}`} team={team} owner={owner}
-        onSaved={(saved) => { setTeam(saved); setMessage(t('team.week.saved')) }} />
       <PeopleSection team={team} owner={owner} onChanged={() => void load()} />
       <UsersSection team={team} owner={owner} onMessage={setMessage} />
       <InvitationsSection team={team} owner={owner} onMessage={setMessage} />

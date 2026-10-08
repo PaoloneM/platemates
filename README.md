@@ -20,7 +20,8 @@ application.
 | **Team calendar and menu screen**: a typical week (which days, how many at breakfast, lunch and dinner), exceptions on specific dates (guests, someone away), each meal's people and dishes, picked by hand from the recipe book for now | Built |
 | **Shared catalogs**: ~160 common ingredients with Italian seasonality, kitchen tools; management section to edit, merge duplicates, add new ones | Built |
 | **Operations**: one-command Docker Compose stack, HTTPS on the home network for phones, backups and restore, repeatable setup | Built |
-| **Weekly menu generation**: agentic, proactive, following composition rules (protein variety, cuisine variety, season) | Next |
+| **Menu planning rules**: rules in plain language at three levels (system, team, this week), each team rule switchable per week; the menu screen's button to plan the week | Built |
+| **Weekly menu generation**: agentic, proactive, following the rules; starts from a partly planned week, keeps the dishes already set, proposes changes to the people for you to confirm | Next |
 | **Shopping list**: aggregated from the menu by supermarket aisle (the computation exists, the screen does not) | Planned |
 | **Tastes**: likes, dislikes and never-propose, per team or per person | Planned (data model ready) |
 | **Feedback and learning**: what was actually eaten, optional ratings, fed back as context (RAG) | Planned |

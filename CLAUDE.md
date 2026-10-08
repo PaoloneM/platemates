@@ -21,9 +21,10 @@ The functional and architectural design was defined in a planning session with t
 
 **Recipe book complete, menus next.** Built and in use: recipe book and editor, the recipe
 assistant in all four modes (tell, link, photo, search), sign-in with invitation-only teams,
-the management section for shared catalogs, phone access over HTTPS on the home network,
-backups. Not built yet: weekly menu generation, the shopping list screen, the team profile
-screen, feedback, collaborative recommendation. The README's status table is kept current;
+team management, the team calendar and menu screen, the menu planning rules (system, team,
+week), the management section for shared catalogs, phone access over HTTPS on the home
+network, backups. Not built yet: weekly menu generation, the shopping list screen, tastes,
+feedback, collaborative recommendation. The README's status table is kept current;
 `docs/architecture.md` explains how the code maps onto the concepts and the decisions taken.
 
 ## Technology Stack
@@ -152,11 +153,15 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   non-public addresses at every redirect: never fetch a user-supplied URL with a bare httpx call
 - An assistant mode is enabled (`AVAILABLE_MODES`) only once its tools exist: the LLM must never
   be asked about a page, photo or search result it cannot actually read
+- Menu generation is guided only by the rules (`SystemRule`, `TeamRule`,
+  the week's settings on `WeeklyMenu`) plus the structured team data; `Team.notes` is a note for
+  users and is never passed to the LLM. Hard constraints are enforced in code, not in rule text
 - Everything the assistant produces goes through `normalize_draft` and the editor's review;
   nothing it proposes is saved without the user
 - **Every initialization step must be idempotent** (safe to re-run, same result) and, where it
   mirrors configuration, convergent (re-running after a config change applies the change).
-  Today: `init_env.py`, migrations and seed data, `db-init`, `setup_keycloak`, `create_team`.
+  Today: `init_env.py`, migrations and seed data (ingredients, kitchen tools, system rules:
+  never overwriting what users changed), `db-init`, `setup_keycloak`, `create_team`.
   Verify a new step by running it twice
 - Never run `docker compose down -v` (or remove `platemates_pgdata`) without a fresh backup: it deletes
   both databases, Keycloak accounts included. `backups/` holds personal data: never commit it

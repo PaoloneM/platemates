@@ -91,7 +91,7 @@
     "people_other": "{{count}} people",
     "nobody": "nobody",
     "dayOff": "Not planned",
-    "editWeek": "Edit typical week",
+    "editWeek": "Typical week",
     "hint": "Tap a meal to see people and dishes. People at the table come from the team's typical week.",
     "usually_one": "usually {{count}}",
     "usually_other": "usually {{count}}",
@@ -384,14 +384,6 @@
       "toolsHint": "Recipes needing other tools will not be suggested",
       "saved": "Profile saved"
     },
-    "week": {
-      "title": "Typical week",
-      "hint": "How many people usually eat at each meal. The calendar and the menus start from here; a day turned off is not planned.",
-      "day": "Day",
-      "active": "On",
-      "invalid": "People go from 0 to 50.",
-      "saved": "Typical week saved"
-    },
     "people": {
       "title": "People at the table",
       "hint": "Who usually eats with you, even without an account (e.g. children). Ages help compare similar teams.",
@@ -442,5 +434,53 @@
         "revoked": "Cancelled"
       }
     }
+  },
+  "week": {
+    "title": "Typical week",
+    "memberNotice": "Only the team's owners can change the typical week and the rules.",
+    "pattern": {
+      "title": "Meals and people",
+      "hint": "How many people usually eat at each meal. The calendar and the menus start from here; a day switched off is not planned.",
+      "day": "Day",
+      "active": "Active",
+      "invalid": "People go from 0 to 50.",
+      "saved": "Typical week saved"
+    },
+    "rules": {
+      "title": "Team rules",
+      "hint": "Guidance in plain language for planning the menus, one per line. They apply every week; when you plan a week you can leave some out or add others.",
+      "empty": "No rules yet.",
+      "new": "New rule",
+      "placeholder": "E.g. \"fish at least twice\", \"pizza on Friday evening\", \"quick dishes at lunch\"",
+      "edit": "Edit the rule",
+      "delete": "Delete the rule",
+      "deleted": "Rule deleted"
+    },
+    "system": {
+      "title": "System rules",
+      "hint": "They apply to every team. The team's rules and the week's take precedence."
+    }
+  },
+  "plan": {
+    "title": "How should I plan the menu?",
+    "instructions": "For this week",
+    "placeholder": "E.g. \"Thursday dinner we are five\", \"no fish\", \"quick lunch on Wednesday\"",
+    "instructionsHint": "Applies to this week only and takes precedence over the rules. You can also change the people at the table: the changes will be proposed for you to confirm.",
+    "teamRules": "Team rules",
+    "noTeamRules": "The team has no rules yet.",
+    "setUpWeek": "Set up the typical week",
+    "useTeamRules": "Use the team's rules",
+    "systemRules_one": "{{count}} system rule, always applied",
+    "systemRules_other": "{{count}} system rules, always applied",
+    "precedence": "When two instructions conflict, the week's wins, then the team's. The dishes you have already chosen stay.",
+    "generate": "Generate",
+    "generateSoon": "Menu generation is coming soon: meanwhile the instructions stay saved for this week.",
+    "saved": "Week's instructions saved"
+  },
+  "menuFab": {
+    "label": "Plan the menu",
+    "generateSoon": "Generate this week's menu (coming soon)",
+    "plan": "Tell me how to plan it",
+    "week": "Set up the typical week"
   }
 }

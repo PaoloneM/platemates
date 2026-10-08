@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { Course, Meal, Season, Unit } from './api'
+import type { Course, Meal, Season, SystemRule, Unit } from './api'
 
 // Stable codes from the API, translated for display. Kept in one place so every screen
 // names things the same way.
@@ -37,6 +37,8 @@ export function useLabels() {
     // Shipped tools are translated from their code; tools added by users keep their own name.
     tool: (tool: { code: string | null; name: string }) =>
       tool.code ? t(`tool.${tool.code}`, { defaultValue: tool.name }) : tool.name,
+    // System rules are stored in both interface languages.
+    systemRule: (rule: SystemRule) => (i18n.resolvedLanguage === 'it' ? rule.text_it : rule.text_en),
     month: (m: number) => monthFormat.format(new Date(2026, m - 1, 1)),
     monthLong: (m: number) => monthLong.format(new Date(2026, m - 1, 1)),
     meal: (m: Meal) => t(`meal.${m}`),

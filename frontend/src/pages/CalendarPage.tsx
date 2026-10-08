@@ -46,6 +46,7 @@ import {
   mondayOf,
   snapshot,
 } from '../calendar'
+import { MenuFab } from '../components/MenuFab'
 import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useTeam } from '../team'
@@ -368,7 +369,7 @@ export function CalendarPage() {
     <Stack spacing={2}>
       <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="h1" sx={{ flex: 1, minWidth: 0 }}>{t('calendar.title')}</Typography>
-        {owner && <Button component={RouterLink} to="/team#week" size="small">{t('calendar.editWeek')}</Button>}
+        <Button component={RouterLink} to="/week" size="small">{t('calendar.editWeek')}</Button>
       </Stack>
       <WeekBar monday={monday} thisMonday={thisMonday} onChange={goTo} />
       {!current ? (
@@ -392,6 +393,7 @@ export function CalendarPage() {
             setNotice({ message: t('calendar.saved') })
           }} />
       )}
+      <MenuFab weekStart={start} onSaved={() => setNotice({ message: t('plan.saved') })} />
       <Snackbar open={!!notice} autoHideDuration={notice?.undo ? 6000 : 3000} onClose={() => setNotice(null)}
         message={notice?.message}
         action={notice?.undo && (

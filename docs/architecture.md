@@ -278,9 +278,10 @@ Never assign a tracked field directly from LLM output; always go through `propos
 ### Team management (built 2026-10-07)
 
 The team page (`/team`, from the user menu or the team name in the top bar) covers the profile
-(name, weekday time limit, kitchen tools), the typical week, the people at the table
+(name, weekday time limit, kitchen tools), the people at the table
 (`Member`: name and birth year, no account needed), users and roles (`Membership`), and
-invitations.
+invitations. The typical week has its own page (`/week`, from the menu screen), with the
+team's rules for planning menus.
 
 - **Owners manage, members read** (`OwnerWritesMixin`, `require_owner` in
   `apps/teams/permissions.py`): profile, people, roles and invitations are changed by owners;
@@ -308,6 +309,8 @@ with a card per meal (people, dishes; exceptions in terracotta, nobody at home d
 gear (or its date) opens the day settings, the bin clears the day or a single meal at once with
 Undo. A meal card opens the meal page (`/calendar/<date>/<meal>`): people, and the dishes picked
 from the recipe book until the menu generator proposes them. Members see everything read-only.
+The screen's FAB (`components/MenuFab.tsx`, on the same `ActionFab` as the recipe book's) holds
+the generation actions and the way to the typical week: see "Generating a menu" below.
 
 ### Multi-team access
 
@@ -316,6 +319,56 @@ invitation (or by staff creating the team for them). Viewsets over team-owned da
 `TeamScopedMixin` (`apps/teams/permissions.py`), which filters querysets and rejects writes
 pointing at somebody else's team. Global catalogs (ingredients, tools, cuisines, recipes) are
 readable and writable by any authenticated user for now.
+
+## Generating a menu: triggers and rules (decided with Paolo 2026-10-08)
+
+A menu is generated on request only, from the menu screen's FAB: there is no scheduled
+generation yet (it would need a job scheduler). The FAB has three entries:
+
+1. **Generate this week's menu** (main entry): starts at once with the standing rules.
+2. **Tell me how to plan it**: a dialog with the team's rules, each with its own checkbox plus
+   a global one that switches them all off, and a free text for this week only. The week's
+   settings are saved on its `WeeklyMenu`, so whoever regenerates finds them again.
+3. **Set up the typical week**: the `/week` page, with the meal pattern (people per meal, moved
+   there from the team page) and the team's rules.
+
+**Rules** are natural-language sentences that guide the LLM, on three levels, the later
+overriding the earlier where they conflict (the prompt states the precedence, and the LLM
+says in its rationale how it resolved a conflict):
+
+| Level | Written by | Stored in | Editable |
+|---|---|---|---|
+| System | us, then staff live | `menus.SystemRule`, Italian and English text | by staff, from the Django admin; teams read-only |
+| Team | owners | `menus.TeamRule`, one row per sentence | yes, from `/week` |
+| Week | any member | `WeeklyMenu.instructions`, `use_team_rules`, `excluded_rules` | yes, from the dialog |
+
+- **System rules live in the database**, so they can change on a live install without a
+  release. The shipped ones are seeded by a data migration (`0007_seed_system_rules`) with a
+  stable `code`: idempotent and never destructive, it creates only codes not yet present and
+  never overwrites a live edit; a change to a shipped rule goes in a new data migration. Shipped
+  rules are switched off, not deleted; rules added by staff have no code and can be deleted.
+  Each rule carries both interface languages (`text_it`, `text_en`), as the text is edited
+  live and cannot sit in the frontend's locale files. Among them: compose each meal roughly
+  like Harvard's Healthy Eating Plate (half vegetables, a quarter grains, a quarter protein).
+- Team rules are a list of short sentences, not one text, so a week can leave out a single
+  one. `use_team_rules = False` leaves them all out, including rules added later.
+- Hard constraints are enforced by code, not trusted to the text: meals with nobody at home are
+  not planned, "never propose" preferences are excluded, dishes already set stay.
+- `Team.notes` is a note for the team's users: it is **not** passed to the LLM.
+- **The starting point can be a partly planned week.** The user may set dishes on some meals and
+  the people on any meal before generating: those are fixed, and the generator fills only the
+  open meals. Proposals stay distinct from user decisions until accepted; regenerating replaces
+  only proposals that were not accepted.
+- **The week's text can change the people too** ("thursday dinner we are five"). People live in
+  the calendar (`CalendarDay`), written only by `set_day`: the generator does not write there,
+  it returns the change as a proposal, planned against the proposed count and applied to the
+  calendar when the user accepts it.
+- Generation runs in the background (minutes with the local model) as a record holding its
+  status, a snapshot of the rules used, the result and the rationale: the user can leave the
+  page, and the history later serves as context for feedback.
+
+Built so far: the rules (system, team, week), the `/week` page, the FAB and the dialog. The
+generator itself, and with it the "Generate" actions, comes next.
 
 ## Adding recipes (decided with Paolo 2026-10-06)
 
@@ -565,6 +618,6 @@ any recipe. A possible shape:
 
 ## Not built yet
 
-Menu generation engine (agentic, RAG), recipe discovery, embedding computation jobs,
+Menu generation engine (agentic, RAG) and its background runs, recipe discovery, embedding computation jobs,
 collaborative recommendation, a UI for creating invitations, streaming replies, weekly menus
 and the shopping list UI.

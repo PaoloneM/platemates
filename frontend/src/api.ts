@@ -136,6 +136,33 @@ export type CalendarDayChange = {
   dishes?: Partial<Record<Meal, number[]>>
 }
 
+// A rule every team's menus follow, kept in both interface languages. Shipped rules have a
+// code and are switched off rather than deleted; rules added by staff have none.
+export type SystemRule = {
+  id: number
+  code: string | null
+  text_it: string
+  text_en: string
+  position: number
+  active: boolean
+}
+
+// One of the team's standing rules for planning its weeks, in natural language.
+export type TeamRule = { id: number; team: number; text: string }
+
+// A week's menu with how to plan it: `instructions` on top of the rules; `use_team_rules`
+// false leaves out every team rule, otherwise only `excluded_rules` are left out.
+export type WeeklyMenu = {
+  id: number
+  team: number
+  week_start: string
+  status: 'draft' | 'approved' | 'archived'
+  rationale: string
+  instructions: string
+  use_team_rules: boolean
+  excluded_rules: number[]
+}
+
 export type TeamProfile = {
   id: number
   name: string

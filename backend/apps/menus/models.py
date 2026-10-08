@@ -16,6 +16,49 @@ from apps.teams.calendar import calendar
 from apps.teams.models import PLANNED_MEALS, Meal, Team
 
 
+class SystemRule(models.Model):
+    """A rule every team's menus follow, in natural language; shown to teams read-only.
+
+    Rules guide the LLM on three levels: system, team (`TeamRule`) and week
+    (`WeeklyMenu.instructions`), the later winning where they conflict. They are guidance:
+    what must hold whatever the text says (meals with nobody at home are not planned, "never
+    propose" preferences are excluded, dishes already set stay) is enforced by code.
+
+    Kept in the database so staff can change them live from the management section. The rules
+    the app ships with are seeded by a data migration and carry a stable `code`; seeding never
+    overwrites them, and they are switched off rather than deleted. Rules added by staff have
+    no code.
+    """
+
+    code = models.SlugField(max_length=40, unique=True, null=True, blank=True, editable=False)
+    text_it = models.CharField(max_length=300)
+    text_en = models.CharField(max_length=300)
+    position = models.PositiveSmallIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["position", "id"]
+
+    def __str__(self) -> str:
+        return self.text_en
+
+
+class TeamRule(models.Model):
+    """One of the team's standing rules for planning its weeks, in natural language
+    ("fish at least twice", "pizza on friday evening"). See `SystemRule`."""
+
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="rules")
+    text = models.CharField(max_length=300)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["team", "created_at", "id"]
+
+    def __str__(self) -> str:
+        return self.text
+
+
 class WeeklyMenu(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", _("Draft")
@@ -28,6 +71,13 @@ class WeeklyMenu(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
     # The LLM's explanation of its choices, shown to the user and kept for later context.
     rationale = models.TextField(blank=True)
+    # How to plan this week: free text on top of the system and team rules, which wins where
+    # they conflict. It may also change the people ("thursday dinner we are five").
+    instructions = models.TextField(blank=True)
+    # False leaves out every team rule, including those added later; otherwise only the
+    # excluded ones are left out.
+    use_team_rules = models.BooleanField(default=True)
+    excluded_rules = models.ManyToManyField(TeamRule, blank=True, related_name="excluded_from")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

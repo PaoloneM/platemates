@@ -50,7 +50,9 @@ class Team(models.Model):
     typical_week = models.JSONField(default=default_typical_week)
     # Ceiling on preparation + cooking time the team can sustain on an ordinary day.
     max_weekday_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
-    notes = models.TextField(blank=True, help_text="Free-form context passed to the LLM.")
+    notes = models.TextField(
+        blank=True, help_text="A note for the team's users; not passed to the LLM."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -12,3 +12,12 @@ class CatalogPermission(BasePermission):
         if request.method in SAFE_METHODS or request.method == "POST":
             return request.user.is_authenticated
         return request.user.is_staff
+
+
+class StaffWritesPermission(BasePermission):
+    """Shared settings every user reads and only staff change."""
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return request.user.is_authenticated
+        return request.user.is_staff
