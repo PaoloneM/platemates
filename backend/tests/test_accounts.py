@@ -290,6 +290,7 @@ class FakeKeycloak:
         self.users = {email: f"u-{email}" for email in users}
         self.admins = {self.users[email] for email in admins}
         self.calls = []
+        self.default_role = {"id": "d1", "name": "default-roles-platemates", "composite": True}
 
     def __call__(self, request):
         import httpx
@@ -305,7 +306,13 @@ class FakeKeycloak:
             return httpx.Response(201)
         if len(parts) == 1:
             if method == "GET":
-                return httpx.Response(200 if parts[0] in self.realms else 404, json={})
+                found = parts[0] in self.realms
+                return httpx.Response(
+                    200 if found else 404, json={"defaultRole": self.default_role}
+                )
+            return httpx.Response(204)
+        if parts[1] == "roles-by-id":
+            self.default_role = {**self.default_role, "name": body["name"]}
             return httpx.Response(204)
         if parts[1] == "clients":
             if "protocol-mappers" in parts:
@@ -377,6 +384,16 @@ def test_setup_keycloak_converges(db):
     third = run_setup(fake, BASE_ENV)
     assert "removed identity provider google (no credentials in .env)" in third
     assert fake.providers == {}
+
+
+def test_setup_keycloak_names_the_default_role_after_the_realm(db):
+    fake = FakeKeycloak()
+    fake.default_role["name"] = "default-roles-mymenu"  # a realm renamed in place
+    assert "renamed role default-roles-mymenu to default-roles-platemates" in run_setup(
+        fake, BASE_ENV
+    )
+    assert fake.default_role["name"] == "default-roles-platemates"
+    assert not [line for line in run_setup(fake, BASE_ENV) if line.startswith("renamed")]
 
 
 def test_setup_keycloak_puts_roles_in_the_id_token(db):

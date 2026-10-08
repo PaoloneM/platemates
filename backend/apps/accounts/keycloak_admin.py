@@ -281,6 +281,7 @@ class KeycloakAdmin:
             log.append(f"created realm {realm}")
         self._call("PUT", f"/realms/{realm}", json=realm_representation(config))
         log.append(f"configured realm {realm}")
+        log += self._name_default_role(realm)
 
         client = client_representation(config)
         existing = self._call(
@@ -322,6 +323,18 @@ class KeycloakAdmin:
                 self._call("POST", path, json=provider)
                 log.append(f"created identity provider {alias}")
         return log
+
+    def _name_default_role(self, realm: str) -> list[str]:
+        """Keycloak names the role every user gets `default-roles-<realm>` when it creates the
+        realm, and keeps that name when the realm is renamed (ours was `mymenu`): follow it."""
+        role = self._call("GET", f"/realms/{realm}").json().get("defaultRole")
+        wanted = f"default-roles-{realm}"
+        if not role or role.get("name") == wanted:
+            return []
+        self._call(
+            "PUT", f"/realms/{realm}/roles-by-id/{role['id']}", json={**role, "name": wanted}
+        )
+        return [f"renamed role {role['name']} to {wanted}"]
 
     def _sync_admins(self, realm: str, emails: list[str]) -> list[str]:
         """Give ADMIN_ROLE to exactly the users listed (those registered so far)."""
