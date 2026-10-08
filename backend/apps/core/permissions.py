@@ -14,6 +14,16 @@ class CatalogPermission(BasePermission):
         return request.user.is_staff
 
 
+class IsAppAdmin(BasePermission):
+    """Application administrators: users holding Keycloak's `admin` realm role."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user.is_authenticated and getattr(getattr(user, "profile", None), "is_admin", False)
+        )
+
+
 class StaffWritesPermission(BasePermission):
     """Shared settings every user reads and only staff change."""
 

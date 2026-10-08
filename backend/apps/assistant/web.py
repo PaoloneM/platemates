@@ -25,7 +25,9 @@ USER_AGENT = (
 MAX_BYTES = 3 * 1024 * 1024
 MAX_REDIRECTS = 5
 TIMEOUT_SECONDS = 20
-# Text budget for the LLM: the chat model currently runs with an 8k-token context.
+# Text of a recipe page for the LLM. Enough for any recipe; the window around the ingredients
+# (`visible_text`) keeps the rest of the page out. Not scaled with the context: more text would
+# only bring in comments and other recipes.
 TEXT_BUDGET_CHARS = 9000
 
 BLOCK_TAGS = (

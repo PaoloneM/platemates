@@ -44,6 +44,7 @@ def me(request):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "is_staff": user.is_staff,
+                "is_admin": profile.is_admin,
                 "language": profile.language or None,
             },
             "teams": [{"id": m.team_id, "name": m.team.name, "role": m.role} for m in memberships],

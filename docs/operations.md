@@ -17,6 +17,27 @@ embedding model and can always be re-downloaded.
 After a deletion the stack still starts (every initialization step is repeatable), but empty:
 everyone must register again. Restore a backup instead.
 
+## The language model
+
+The chat model runs in Unsloth Studio on the host, outside the stack. Its context window is set
+when the model is loaded: in Studio's model settings (context length), or through its API:
+
+```bash
+curl -X POST http://127.0.0.1:8888/api/inference/load -H "Authorization: Bearer $LLM_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"model_path": "unsloth/Qwen3.6-35B-A3B-MTP-GGUF", "gguf_variant": "UD-Q4_K_XL",
+       "max_seq_length": 65536}'
+```
+
+Left at 0, Studio picks 8192. Qwen3.6-35B-A3B has a light context cache: at 64k it needs
+about 28.5 GB against 27.1 GB at 8k (Studio's `/api/inference/estimate-memory`, 2026-10-08),
+and it read a 36k-token prompt correctly in 34 s. Loading it again takes about 16 s and
+interrupts what Studio is doing for other programs.
+
+Then tell the app, from Management > Settings (administrators only): **Model context** must
+match the loaded context, never exceed it; prompt budgets follow it. **Model reasoning**
+(thinking) for menu generation needs at least 32k.
+
 ## Backups
 
 ```bash

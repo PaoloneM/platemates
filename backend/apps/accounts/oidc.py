@@ -16,6 +16,7 @@ from django.utils import timezone, translation
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from mozilla_django_oidc.views import OIDCAuthenticationRequestView
 
+from .keycloak_admin import ADMIN_ROLE
 from .models import OIDCIdentity, UserProfile, supported_language
 
 
@@ -55,6 +56,10 @@ class KeycloakBackend(OIDCAuthenticationBackend):
         user.last_name = claims.get("family_name", "")[:150]
         user.save(update_fields=["email", "first_name", "last_name"])
         OIDCIdentity.objects.filter(user=user).update(last_login_at=timezone.now())
+        # Roles are Keycloak's: granted or taken away there, they apply from the next login.
+        UserProfile.objects.update_or_create(
+            user=user, defaults={"is_admin": ADMIN_ROLE in (claims.get("roles") or [])}
+        )
         return user
 
 

@@ -17,6 +17,8 @@ export type Me =
         first_name: string
         last_name: string
         is_staff: boolean
+        // Holds Keycloak's `admin` role: changes the application settings.
+        is_admin: boolean
         language: string | null
       }
       teams: { id: number; name: string; role: 'owner' | 'member' }[]
@@ -176,6 +178,20 @@ export type WeeklyMenu = {
   instructions: string
   use_team_rules: boolean
   excluded_rules: number[]
+}
+
+// An application setting, changed by administrators (`/manage/settings`).
+export type ConfigSetting = {
+  key: string
+  kind: 'bool' | 'int'
+  group: string
+  default: boolean | number
+  minimum: number | null
+  maximum: number | null
+  value: boolean | number
+  is_default: boolean
+  updated_at: string | null
+  updated_by: string | null
 }
 
 export type GenerationStatus = 'queued' | 'running' | 'done' | 'failed'

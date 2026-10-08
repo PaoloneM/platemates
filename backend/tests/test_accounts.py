@@ -244,6 +244,19 @@ def test_anonymous_cannot_save_a_language(db):
     assert APIClient().patch("/api/me/", {"language": "it"}, format="json").status_code == 403
 
 
+def test_the_admin_role_follows_the_id_token_at_every_login(db):
+    from apps.accounts.oidc import KeycloakBackend
+
+    backend = KeycloakBackend()
+    claims = {"sub": "s-1", "email": "ada@example.com", "roles": ["admin", "offline_access"]}
+    user = backend.create_user(claims)
+    user.profile.refresh_from_db()
+    assert user.profile.is_admin is True
+    backend.update_user(user, {**claims, "roles": ["offline_access"]})
+    user.profile.refresh_from_db()
+    assert user.profile.is_admin is False
+
+
 def test_language_chosen_at_keycloak_is_adopted_on_first_login(db):
     from apps.accounts.models import UserProfile
 
@@ -267,10 +280,15 @@ def test_create_team_is_idempotent(db):
 class FakeKeycloak:
     """Just enough of Keycloak's admin API to check that `apply` converges."""
 
-    def __init__(self, providers=()):
+    def __init__(self, providers=(), users=(), admins=()):
         self.realms = set()
         self.clients = {}
         self.providers = {alias: {} for alias in providers}
+        self.mappers = {}
+        self.roles = set()
+        # email -> id; and the ids holding the admin role.
+        self.users = {email: f"u-{email}" for email in users}
+        self.admins = {self.users[email] for email in admins}
         self.calls = []
 
     def __call__(self, request):
@@ -281,6 +299,7 @@ class FakeKeycloak:
         if path.endswith("/openid-connect/token"):
             return httpx.Response(200, json={"access_token": "t"})
         parts = path.removeprefix("/admin/realms").strip("/").split("/")
+        body = json.loads(request.read() or "null")
         if parts == [""]:
             self.realms.add("platemates")
             return httpx.Response(201)
@@ -289,17 +308,43 @@ class FakeKeycloak:
                 return httpx.Response(200 if parts[0] in self.realms else 404, json={})
             return httpx.Response(204)
         if parts[1] == "clients":
+            if "protocol-mappers" in parts:
+                if method == "GET":
+                    return httpx.Response(200, json=list(self.mappers.values()))
+                if method == "POST":
+                    self.mappers[body["name"]] = {**body, "id": "m1"}
+                    return httpx.Response(201)
+                return httpx.Response(204)
             if method == "GET":
                 return httpx.Response(200, json=list(self.clients.values()))
             if method == "POST":
                 self.clients["c"] = {"id": "c"}
                 return httpx.Response(201)
             return httpx.Response(204)
+        if parts[1] == "roles":
+            if method == "POST":
+                self.roles.add(body["name"])
+                return httpx.Response(201)
+            if len(parts) == 4 and parts[3] == "users":
+                holders = [{"id": i, "email": e} for e, i in self.users.items() if i in self.admins]
+                return httpx.Response(200, json=holders)
+            exists = parts[2] in self.roles
+            return httpx.Response(200 if exists else 404, json={"name": parts[2], "id": "r"})
+        if parts[1] == "users":
+            if len(parts) == 2:
+                email = request.url.params.get("email")
+                found = [{"id": self.users[email]}] if email in self.users else []
+                return httpx.Response(200, json=found)
+            if method == "POST":
+                self.admins.add(parts[2])
+            elif method == "DELETE":
+                self.admins.discard(parts[2])
+            return httpx.Response(204)
         alias = parts[-1]
         if method == "GET":
             return httpx.Response(200 if alias in self.providers else 404, json={})
         if method == "POST":
-            self.providers[json.loads(request.read())["alias"]] = {}
+            self.providers[body["alias"]] = {}
             return httpx.Response(201)
         if method == "DELETE":
             self.providers.pop(alias)
@@ -332,6 +377,26 @@ def test_setup_keycloak_converges(db):
     third = run_setup(fake, BASE_ENV)
     assert "removed identity provider google (no credentials in .env)" in third
     assert fake.providers == {}
+
+
+def test_setup_keycloak_puts_roles_in_the_id_token(db):
+    fake = FakeKeycloak()
+    assert "added the realm roles to the ID token" in run_setup(fake, BASE_ENV)
+    assert fake.mappers["realm roles"]["config"]["id.token.claim"] == "true"
+    assert "added the realm roles to the ID token" not in run_setup(fake, BASE_ENV)
+
+
+def test_setup_keycloak_gives_the_admin_role_to_exactly_app_admins(db):
+    fake = FakeKeycloak(users=["ada@example.com", "bea@example.com"], admins=["bea@example.com"])
+    env = {**BASE_ENV, "APP_ADMINS": " Ada@Example.com , new@example.com"}
+    log = run_setup(fake, env)
+    assert "created role admin" in log
+    assert "gave role admin to ada@example.com" in log
+    assert "removed role admin from bea@example.com" in log
+    assert any(line.startswith("new@example.com has no account yet") for line in log)
+    assert fake.admins == {"u-ada@example.com"}
+    again = run_setup(fake, env)
+    assert not [line for line in again if "role admin" in line]
 
 
 def test_init_env_fills_gaps_and_never_overwrites(tmp_path):

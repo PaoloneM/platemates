@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "apps.teams",
     "apps.menus",
     "apps.assistant",
+    "apps.siteconfig",
 ]
 
 MIDDLEWARE = [

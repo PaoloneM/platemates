@@ -12,8 +12,10 @@ recipes must come from the candidate list, and changes to the people stay propos
 the user accepts them. Everything the model returns is a proposal (`SlotDish.proposed`,
 `MealSlot.proposed_people`) shown for review.
 
-The chat model currently runs with an 8k-token context, so the prompt is kept compact: one
-line per meal and per candidate recipe, and a cap on candidates.
+The prompt is kept compact (one line per meal and per candidate recipe), and the number of
+candidates follows the model's context (setting `llm.context_tokens`): 40 at 8k tokens. The
+model's own reasoning is a setting too (`menu.thinking`): better plans, about four times
+slower.
 """
 
 from __future__ import annotations
@@ -29,8 +31,9 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
 
-from ai import AIError, ChatProvider, get_chat_provider
+from ai import AIError, ChatProvider, get_chat_provider, get_reasoning_chat_provider
 from apps.recipes.models import Course, Recipe, Visibility
+from apps.siteconfig import registry as config
 from apps.teams.models import PLANNED_MEALS, Preference, RecipeBookEntry, Team
 
 from .models import MealSlot, MenuGeneration, SlotDish, SystemRule, WeeklyMenu
@@ -48,13 +51,32 @@ MEAL_NAMES = {
     "it": {"lunch": "pranzo", "dinner": "cena"},
     "en": {"lunch": "lunch", "dinner": "dinner"},
 }
-MAX_BOOK_CANDIDATES = 40
 MAX_DISCOVER_CANDIDATES = 8
 MAX_DISHES_PER_MEAL = 3
 MAX_PEOPLE = 50
 RECENT_DAYS = 14
 # Enough for 14 meals of two dishes with short notes, and the rationale.
 MAX_ANSWER_TOKENS = 3000
+# With the model's reasoning on, the reasoning counts too: it took 5-10k tokens (2026-10-08).
+MAX_THINKING_TOKENS = 24000
+# Below this context the reasoning leaves no room for the answer (at 8k: 84 s, no answer).
+MIN_THINKING_CONTEXT = 32768
+
+
+def use_thinking() -> bool:
+    return config.get("menu.thinking") and config.context_tokens() >= MIN_THINKING_CONTEXT
+
+
+def max_book_candidates() -> int:
+    """Recipe book candidates in the prompt: 40 at an 8k context, more with a larger one."""
+    return max(40, min(200, config.context_tokens() * 40 // 8192))
+
+
+def max_answer_tokens(thinking: bool) -> int:
+    if not thinking:
+        return MAX_ANSWER_TOKENS
+    return min(MAX_THINKING_TOKENS, config.context_tokens() // 2)
+
 
 SYSTEM_PROMPT = """\
 You plan a team's weekly menu: the dishes of each open meal (lunch and dinner).
@@ -245,7 +267,7 @@ def candidate_recipes(team: Team, week_start: dt.date) -> list[tuple[Recipe, dic
             item[1]["last_eaten"] or dt.date.min,
         )
     )
-    chosen = chosen[:MAX_BOOK_CANDIDATES]
+    chosen = chosen[: max_book_candidates()]
     in_book = {recipe.pk for recipe, _ in chosen}
     shared = base.filter(visibility=Visibility.SHARED).exclude(pk__in=in_book).order_by("?")
     discover = [(r, facts(r, False)) for r in shared[: MAX_DISCOVER_CANDIDATES * 3] if usable(r)]
@@ -486,14 +508,16 @@ def apply_proposal(context: Context, proposal: dict[str, Any]) -> None:
     menu.save(update_fields=["rationale", "updated_at"])
 
 
-def ask(context: Context, chat: ChatProvider) -> dict[str, Any]:
+def ask(
+    context: Context, chat: ChatProvider, max_tokens: int = MAX_ANSWER_TOKENS
+) -> dict[str, Any]:
     """One call to the model, retried once if the answer is not usable."""
     last_error: Exception | None = None
     for _ in range(2):
         result = chat.chat(
             context.messages,
             temperature=0.7,
-            max_tokens=MAX_ANSWER_TOKENS,
+            max_tokens=max_tokens,
             response_format={
                 "type": "json_schema",
                 "json_schema": {"name": "weekly_menu", "schema": ANSWER_SCHEMA},
@@ -512,8 +536,11 @@ def run_generation(generation: MenuGeneration, chat: ChatProvider | None = None)
     try:
         context = build_context(generation)
         generation.rules = context.rules
-        generation.save(update_fields=["rules"])
-        proposal = ask(context, chat or get_chat_provider())
+        generation.thinking = use_thinking()
+        generation.save(update_fields=["rules", "thinking"])
+        if chat is None:
+            chat = get_reasoning_chat_provider() if generation.thinking else get_chat_provider()
+        proposal = ask(context, chat, max_answer_tokens(generation.thinking))
         apply_proposal(context, proposal)
     except (AIError, GenerationError) as exc:
         log.warning("menu generation %s failed: %s", generation.pk, exc)

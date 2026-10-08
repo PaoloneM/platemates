@@ -340,7 +340,8 @@
     "title": "Management",
     "section": {
       "ingredients": "Ingredients",
-      "rules": "System rules"
+      "rules": "System rules",
+      "settings": "Settings"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -502,7 +503,7 @@
   },
   "generation": {
     "running": "Planning the menu…",
-    "runningHint": "It usually takes less than a minute. You can leave the page: the proposal will wait for you here.",
+    "runningHint": "It may take a few minutes. You can leave the page: the proposal will wait for you here.",
     "failed": "The menu could not be planned",
     "retry": "Try again",
     "done": "Here is the week's proposal",
@@ -521,5 +522,28 @@
     "replaceConfirm": "Proposals not accepted yet will be replaced. The dishes you chose stay. Continue?",
     "mealProposal": "The generator proposes this meal: accept it to keep it, or reject it.",
     "peopleChange": "People: from {{from}} to {{to}}"
+  },
+  "settings": {
+    "hint": "Application settings, for every team. They take effect at once, with no restart; only administrators see them.",
+    "group": {
+      "llm": "Language model",
+      "menu": "Menu generation"
+    },
+    "item": {
+      "llm_context_tokens": {
+        "label": "Model context (tokens)",
+        "hint": "The context size the model is loaded with in Unsloth Studio. It sets how much text prompts may carry (the assistant's conversations, candidate recipes for the menu). Never more than the loaded model really has."
+      },
+      "menu_thinking": {
+        "label": "Model reasoning",
+        "hint": "The model reasons before proposing the week: it follows the rules better, but takes about four times as long (2-3 minutes instead of 30-40 seconds). Needs a context of at least 32,768 tokens."
+      }
+    },
+    "on": "on",
+    "off": "off",
+    "isDefault": "Default value",
+    "changed": "Changed by {{who}} on {{date}} (default: {{default}})",
+    "reset": "Back to the default ({{value}})",
+    "saved": "Setting saved"
   }
 }

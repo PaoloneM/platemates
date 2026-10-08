@@ -209,6 +209,8 @@ class MenuGeneration(models.Model):
     use_week_settings = models.BooleanField(default=False)
     # The language the proposal is written in (new dishes, notes, rationale).
     language = models.CharField(max_length=10, default="it")
+    # Whether the model reasoned before answering (setting `menu.thinking` at the time).
+    thinking = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.QUEUED)
     # {"system": [...], "team": [...], "week": "..."}: the rules as they were.
     rules = models.JSONField(default=dict, blank=True)

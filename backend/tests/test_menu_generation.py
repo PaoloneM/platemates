@@ -436,3 +436,36 @@ def test_the_worker_fails_generations_left_running(menu):
 
 def test_membership_fixture_is_an_owner(team, user):
     assert Membership.objects.get(team=team, user=user).role == "owner"
+
+
+def test_thinking_follows_the_setting(menu, book, monkeypatch):
+    from apps.siteconfig.models import ConfigVar
+
+    ConfigVar.objects.create(key="menu.thinking", value=True)
+    ConfigVar.objects.create(key="llm.context_tokens", value=65536)
+    generation = queued(menu)
+    context = engine.build_context(generation)
+    chat = FakeChat(answer(meals=[meal(MONDAY, "lunch", dish(ref_of(context, book[0])))]))
+    monkeypatch.setattr(engine, "get_reasoning_chat_provider", lambda: chat)
+    monkeypatch.setattr(engine, "get_chat_provider", lambda: pytest.fail("plain chat used"))
+    engine.run_generation(generation)
+    generation.refresh_from_db()
+    assert generation.status == "done" and generation.thinking is True
+    assert chat.calls[0]["max_tokens"] == engine.MAX_THINKING_TOKENS
+
+
+def test_thinking_needs_a_large_enough_context(db):
+    from apps.siteconfig.models import ConfigVar
+
+    ConfigVar.objects.create(key="menu.thinking", value=True)
+    assert engine.use_thinking() is False
+    ConfigVar.objects.create(key="llm.context_tokens", value=32768)
+    assert engine.use_thinking() is True
+
+
+def test_more_candidates_with_a_larger_context(db):
+    from apps.siteconfig.models import ConfigVar
+
+    assert engine.max_book_candidates() == 40
+    ConfigVar.objects.create(key="llm.context_tokens", value=65536)
+    assert engine.max_book_candidates() == 200

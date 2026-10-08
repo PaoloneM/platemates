@@ -28,6 +28,9 @@ class UserProfile(models.Model):
     # Interface language. Blank until known: the SPA then adopts the browser's language and
     # saves it here, so the first device a user signs in from decides the default.
     language = models.CharField(max_length=8, choices=settings.LANGUAGES, blank=True)
+    # Holds Keycloak's realm role `admin` (assigned from APP_ADMINS by setup_keycloak), copied
+    # from the ID token at every login: application settings are theirs to change.
+    is_admin = models.BooleanField(default=False)
 
     def __str__(self) -> str:
         return f"{self.user} profile"

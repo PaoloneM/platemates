@@ -23,18 +23,20 @@ from dataclasses import dataclass
 from typing import Any
 
 from ai import ChatProvider, get_chat_provider, get_vision_provider, get_web_search_provider
+from apps.siteconfig.registry import prompt_budget_chars
 
 from . import search
 from .draft import DRAFT_SCHEMA, normalize_draft
 from .models import AssistantSession, Attachment, Mode
-from .web import TEXT_BUDGET_CHARS, PageError, PageRecipe, find_url, read_recipe_page
+from .web import PageError, PageRecipe, find_url, read_recipe_page
 
 log = logging.getLogger(__name__)
 
 LANGUAGE_NAMES = {"it": "Italian", "en": "English"}
 
-# The chat model currently runs with an 8k-token context: keep the history well below it,
-# leaving room for the system prompt, the tool schema and the answer.
+# The history is kept well below the model's context, leaving room for the system prompt, the
+# tool schema and the answer: `prompt_budget_chars` scales it with the context (setting
+# `llm.context_tokens`); this is the size at an 8k context.
 HISTORY_BUDGET_CHARS = 9000
 
 PROPOSE_RECIPE = {
@@ -159,14 +161,16 @@ def _for_model(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{k: v for k, v in m.items() if k in _MESSAGE_KEYS} for m in messages]
 
 
-def _trim(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _trim(
+    history: list[dict[str, Any]], budget: int = HISTORY_BUDGET_CHARS
+) -> list[dict[str, Any]]:
     """Drop the oldest exchanges until the history fits the budget.
 
     Cuts only before a user message, so tool calls and their results stay paired. The current
     draft is never lost: it is re-sent as a system note by `run_turn`.
     """
     size = lambda msgs: sum(len(json.dumps(m, ensure_ascii=False)) for m in msgs)  # noqa: E731
-    while size(history) > HISTORY_BUDGET_CHARS:
+    while size(history) > budget:
         cuts = [i for i, m in enumerate(history) if m["role"] == "user" and i > 0]
         if not cuts:
             break
@@ -213,7 +217,7 @@ def run_turn(
     system = SYSTEM_PROMPTS[session.mode].format(language=language_name)
     session.messages = [*session.messages, {"role": "user", "content": text.strip()}]
 
-    history = _trim(session.messages)
+    history = _trim(session.messages, prompt_budget_chars())
     prompt = [{"role": "system", "content": system}]
     if session.draft and len(history) < len(session.messages):
         # Older turns were trimmed away: keep the current draft in view.
@@ -310,7 +314,7 @@ def _import_photo(session, text, photo, language_name, chat, vision) -> TurnResu
         else:
             # Every photo of the session: a recipe may span several pages.
             pages = [a.transcription for a in session.attachments.all() if a.transcription]
-            combined = "\n\n--- next photo ---\n\n".join(pages)[:TEXT_BUDGET_CHARS]
+            combined = "\n\n--- next photo ---\n\n".join(pages)[: prompt_budget_chars()]
             draft = extract_draft(
                 PageRecipe(url="", text=combined, structured=False), language_name, chat
             )

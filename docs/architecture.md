@@ -396,8 +396,10 @@ says in its rationale how it resolved a conflict):
   meal names are in the rules' language ("venerdì cena"), so rules match meals. Validation
   keeps only what may be proposed: meals of this week that are open, recipes from the
   candidates, at most 3 dishes per meal, people from 0 to 50; ids in free text become titles.
-  An unusable answer is retried once. The model's own thinking stays off: with an 8k context it
-  used up the tokens before answering (84 s, no answer).
+  An unusable answer is retried once. The model's own reasoning is the `menu.thinking` setting:
+  with an 8k context it used up the tokens before answering (84 s, no answer); at 64k it works,
+  takes 2-2.5 min instead of 25-40 s, and reasons better about the rules (it put the recipes
+  longer than the 20-minute lunch limit at dinner, and said so).
 - **New dishes.** With a small recipe book a week cannot be planned from it alone, so a dish
   may be a title without a recipe (`SlotDish.title`, `recipe` null), proposed as "new". The
   user can also write such a dish in. Dishes without a recipe add nothing to the shopping list.
@@ -409,6 +411,25 @@ says in its rationale how it resolved a conflict):
   the shopping list until accepted. Editing a meal keeps the proposals left in it; setting a
   meal's people settles the proposed change.
 - Measured on Qwen3.6-35B-A3B (Studio, M-series Mac): 25-40 s for a week of 14 meals.
+
+## Application settings (decided with Paolo 2026-10-08)
+
+Settings that tune how the app behaves live in the database (`apps/siteconfig`), so an
+administrator changes them live, without a release or a restart; `.env` keeps what belongs to
+the deployment (addresses, secrets, who the administrators are).
+
+- What can be set is defined in code (`siteconfig/registry.py`: key, type, default, limits);
+  `ConfigVar` stores only values that differ from the default, with who changed them and when.
+  `registry.get` falls back to the default when a stored value no longer fits its definition.
+- Administrators are users with Keycloak's realm role `admin` (see `docs/authentication.md`);
+  the page is Management > Settings (`/manage/settings`), the API `/api/config/`, both
+  refused to anyone else. The management section shows each user only the sections of their
+  roles: staff the catalogs and system rules, administrators the settings.
+- Settings so far: `llm.context_tokens`, the context the chat model is loaded with, from which
+  the assistant's history and photo text budgets and the menu's candidate count follow (9000
+  characters and 40 recipes at 8k, the size they were tuned at); `menu.thinking`, the model's
+  own reasoning when planning a week (used only with a context of at least 32k, where it has
+  room to answer; each generation records whether it used it).
 
 ## Adding recipes (decided with Paolo 2026-10-06)
 

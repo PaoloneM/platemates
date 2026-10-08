@@ -137,6 +137,7 @@ class MenuGenerationSerializer(serializers.ModelSerializer):
             "week_start",
             "status",
             "use_week_settings",
+            "thinking",
             "rules",
             "result",
             "error",

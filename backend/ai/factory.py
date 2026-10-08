@@ -73,5 +73,21 @@ def get_web_search_provider() -> ChatProvider | None:
 
 
 @lru_cache(maxsize=1)
+def get_reasoning_chat_provider() -> ChatProvider:
+    """The chat provider with the model's own reasoning on, where the provider has a switch
+    for it (Unsloth Studio's `enable_thinking`); otherwise the plain chat provider."""
+    config = settings.AI["CHAT"]
+    if config["PROVIDER"] != "unsloth_studio":
+        return get_chat_provider()
+    return StudioChat(
+        base_url=config["BASE_URL"],
+        model=config["MODEL"],
+        api_key=config["API_KEY"],
+        timeout_seconds=config["TIMEOUT_SECONDS"],
+        enable_thinking=True,
+    )
+
+
+@lru_cache(maxsize=1)
 def get_embedding_provider() -> EmbeddingProvider:
     return _build(EMBEDDING_PROVIDERS, settings.AI["EMBEDDINGS"], "embeddings")

@@ -340,7 +340,8 @@
     "title": "Gestione",
     "section": {
       "ingredients": "Ingredienti",
-      "rules": "Regole di sistema"
+      "rules": "Regole di sistema",
+      "settings": "Impostazioni"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -502,7 +503,7 @@
   },
   "generation": {
     "running": "Sto preparando il menu…",
-    "runningHint": "Di solito ci vuole meno di un minuto. Puoi lasciare la pagina: la proposta ti aspetta qui.",
+    "runningHint": "Può richiedere qualche minuto. Puoi lasciare la pagina: la proposta ti aspetta qui.",
     "failed": "Non sono riuscito a preparare il menu",
     "retry": "Riprova",
     "done": "Ecco la proposta per la settimana",
@@ -521,5 +522,28 @@
     "replaceConfirm": "Le proposte non ancora accettate verranno sostituite. I piatti che hai scelto tu restano. Continuare?",
     "mealProposal": "Il generatore propone questo pasto: accettalo per tenerlo, oppure scartalo.",
     "peopleChange": "Persone: da {{from}} a {{to}}"
+  },
+  "settings": {
+    "hint": "Impostazioni dell'applicazione, valide per tutti i team. Hanno effetto subito, senza riavvii; solo gli amministratori le vedono.",
+    "group": {
+      "llm": "Modello linguistico",
+      "menu": "Generazione del menu"
+    },
+    "item": {
+      "llm_context_tokens": {
+        "label": "Contesto del modello (token)",
+        "hint": "La dimensione del contesto con cui il modello è caricato in Unsloth Studio. Da questo dipende quanto testo entra nei prompt (conversazioni dell'assistente, ricette candidate per il menu). Non superare quella reale del modello caricato."
+      },
+      "menu_thinking": {
+        "label": "Ragionamento del modello",
+        "hint": "Il modello ragiona prima di proporre la settimana: rispetta meglio le regole, ma ci mette circa quattro volte tanto (2-3 minuti invece di 30-40 secondi). Serve un contesto di almeno 32.768 token."
+      }
+    },
+    "on": "attivo",
+    "off": "spento",
+    "isDefault": "Valore predefinito",
+    "changed": "Modificato da {{who}} il {{date}} (predefinito: {{default}})",
+    "reset": "Torna al predefinito ({{value}})",
+    "saved": "Impostazione salvata"
   }
 }

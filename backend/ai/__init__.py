@@ -17,6 +17,7 @@ from .base import (
 from .factory import (
     get_chat_provider,
     get_embedding_provider,
+    get_reasoning_chat_provider,
     get_vision_provider,
     get_web_search_provider,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "ModelNotLoadedError",
     "get_chat_provider",
     "get_embedding_provider",
+    "get_reasoning_chat_provider",
     "get_vision_provider",
     "get_web_search_provider",
 ]

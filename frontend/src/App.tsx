@@ -9,8 +9,9 @@ import { AssistantPage } from './pages/AssistantPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { InvitePage } from './pages/InvitePage'
 import { IngredientsPage } from './pages/manage/IngredientsPage'
+import { SettingsPage } from './pages/manage/SettingsPage'
 import { SystemRulesPage } from './pages/manage/SystemRulesPage'
-import { ManageLayout } from './pages/manage/ManageLayout'
+import { ManageIndex, ManageLayout } from './pages/manage/ManageLayout'
 import { LoginPage } from './pages/LoginPage'
 import { MealPage } from './pages/MealPage'
 import { NoTeamPage } from './pages/NoTeamPage'
@@ -43,9 +44,10 @@ function Protected() {
           <Route path="/assistant/:id" element={<AssistantPage />} />
           <Route path="/team" element={<TeamPage />} />
           <Route path="/week" element={<WeekPage />} />
-          <Route path="/manage" element={<Navigate to="/manage/ingredients" replace />} />
+          <Route path="/manage" element={<ManageIndex />} />
           <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
           <Route path="/manage/rules" element={<ManageLayout><SystemRulesPage /></ManageLayout>} />
+          <Route path="/manage/settings" element={<ManageLayout><SettingsPage /></ManageLayout>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>

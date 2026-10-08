@@ -55,7 +55,15 @@ SPA "Continue with Google"
 | Signed in, no team | See the "waiting for an invitation" screen, accept an invitation link |
 | Team member | Use the team's data |
 | Team owner | Also invite people (`POST /api/invitations/`) and revoke invitations |
-| Staff | Also create teams |
+| Staff | Also create teams, manage the shared catalogs and the system rules for menus |
+| Administrator | Change the application settings (Management > Settings) |
+
+Administrators hold Keycloak's realm role `admin`. It is granted only from `.env`:
+`APP_ADMINS` lists their emails, and `setup_keycloak` gives the role to exactly those accounts
+(once they have registered) and takes it from anyone else. A protocol mapper puts the realm
+roles in the ID token's `roles` claim, and the backend copies the role to
+`UserProfile.is_admin` at every login: a change applies from the user's next login. Staff
+(`is_staff`, from `create_team --staff`) is a separate, Django-side flag.
 
 An invitation is a single-use link, `/invite/<token>`, valid 14 days. Opened while signed out, it
 shows the login screen first and comes back to the invitation afterwards.

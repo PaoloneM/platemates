@@ -75,7 +75,7 @@ function UserMenu() {
           </ListItemIcon>
           <ListItemText>{t('team.menu')}</ListItemText>
         </MenuItem>
-        {me.user.is_staff && (
+        {(me.user.is_staff || me.user.is_admin) && (
           <MenuItem component={RouterLink} to="/manage" onClick={() => setAnchor(null)}>
             <ListItemIcon>
               <SettingsIcon fontSize="small" />
@@ -83,7 +83,7 @@ function UserMenu() {
             <ListItemText>{t('manage.title')}</ListItemText>
           </MenuItem>
         )}
-        {me.user.is_staff && <Divider />}
+        {(me.user.is_staff || me.user.is_admin) && <Divider />}
         <MenuItem onClick={() => logoutForm.current?.submit()}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />

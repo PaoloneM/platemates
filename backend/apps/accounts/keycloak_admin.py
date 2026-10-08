@@ -36,6 +36,24 @@ class SmtpConfig:
     starttls: bool = True
 
 
+# The realm role of application administrators, who change the app's settings. Granted only
+# from APP_ADMINS; the ID token carries the user's realm roles in its `roles` claim.
+ADMIN_ROLE = "admin"
+ROLES_MAPPER = {
+    "name": "realm roles",
+    "protocol": "openid-connect",
+    "protocolMapper": "oidc-usermodel-realm-role-mapper",
+    "config": {
+        "claim.name": "roles",
+        "jsonType.label": "String",
+        "multivalued": "true",
+        "id.token.claim": "true",
+        "access.token.claim": "true",
+        "userinfo.token.claim": "false",
+    },
+}
+
+
 @dataclass(frozen=True)
 class KeycloakConfig:
     realm: str
@@ -45,6 +63,8 @@ class KeycloakConfig:
     smtp: SmtpConfig | None = None
     # alias -> Keycloak identity provider representation (only providers with credentials).
     identity_providers: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Emails of the users who hold ADMIN_ROLE; everyone else loses it.
+    admins: list[str] = field(default_factory=list)
 
 
 def config_from_env(
@@ -107,6 +127,7 @@ def config_from_env(
         app_urls=[u.strip().rstrip("/") for u in get("APP_PUBLIC_URLS").split(",") if u.strip()],
         smtp=smtp,
         identity_providers=providers,
+        admins=[e.strip().lower() for e in get("APP_ADMINS").split(",") if e.strip()],
     )
 
 
@@ -272,6 +293,20 @@ class KeycloakAdmin:
             self._call("POST", f"/realms/{realm}/clients", json=client)
             log.append(f"created client {config.client_id}")
 
+        client_uuid = self._call(
+            "GET", f"/realms/{realm}/clients", params={"clientId": config.client_id}
+        ).json()[0]["id"]
+        mappers = f"/realms/{realm}/clients/{client_uuid}/protocol-mappers/models"
+        current = {m["name"]: m for m in self._call("GET", mappers).json()}
+        if ROLES_MAPPER["name"] in current:
+            mapper = {**ROLES_MAPPER, "id": current[ROLES_MAPPER["name"]]["id"]}
+            self._call("PUT", f"{mappers}/{mapper['id']}", json=mapper)
+        else:
+            self._call("POST", mappers, json=ROLES_MAPPER)
+            log.append("added the realm roles to the ID token")
+
+        log += self._sync_admins(realm, config.admins)
+
         path = f"/realms/{realm}/identity-provider/instances"
         for alias in MANAGED_IDENTITY_PROVIDERS:
             exists = self._call("GET", f"{path}/{alias}").status_code != 404
@@ -286,4 +321,41 @@ class KeycloakAdmin:
             else:
                 self._call("POST", path, json=provider)
                 log.append(f"created identity provider {alias}")
+        return log
+
+    def _sync_admins(self, realm: str, emails: list[str]) -> list[str]:
+        """Give ADMIN_ROLE to exactly the users listed (those registered so far)."""
+        log: list[str] = []
+        role_path = f"/realms/{realm}/roles/{ADMIN_ROLE}"
+        if self._call("GET", role_path).status_code == 404:
+            self._call(
+                "POST",
+                f"/realms/{realm}/roles",
+                json={"name": ADMIN_ROLE, "description": "PlateMates administrator"},
+            )
+            log.append(f"created role {ADMIN_ROLE}")
+        role = self._call("GET", role_path).json()
+        holders = {
+            (u.get("email") or "").lower(): u
+            for u in self._call("GET", f"{role_path}/users", params={"max": 1000}).json()
+        }
+        for email, user in holders.items():
+            if email not in emails:
+                self._call(
+                    "DELETE", f"/realms/{realm}/users/{user['id']}/role-mappings/realm", json=[role]
+                )
+                log.append(f"removed role {ADMIN_ROLE} from {email}")
+        for email in emails:
+            if email in holders:
+                continue
+            found = self._call(
+                "GET", f"/realms/{realm}/users", params={"email": email, "exact": "true"}
+            ).json()
+            if not found:
+                log.append(f"{email} has no account yet: run the setup again once they sign up")
+                continue
+            self._call(
+                "POST", f"/realms/{realm}/users/{found[0]['id']}/role-mappings/realm", json=[role]
+            )
+            log.append(f"gave role {ADMIN_ROLE} to {email}")
         return log

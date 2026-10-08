@@ -88,7 +88,8 @@ Full detail in `README.md`:
 ### Layout
 
 - `backend/`: Django project (`config/`), domain apps in `apps/` (`accounts`, `catalog`,
-  `recipes`, `teams`, `menus`, `assistant`; `core` holds abstract mixins only), AI adapters in `ai/`, tests in `tests/`
+  `recipes`, `teams`, `menus`, `assistant`, `siteconfig`; `core` holds abstract mixins only), AI
+  adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
   `src/api.ts` is the only place that calls `fetch`; enum labels live in `src/labels.ts`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
@@ -157,6 +158,12 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - Menu generation is guided only by the rules (`SystemRule`, `TeamRule`,
   the week's settings on `WeeklyMenu`) plus the structured team data; `Team.notes` is a note for
   users and is never passed to the LLM. Hard constraints are enforced in code, not in rule text
+- Settings that tune behaviour at runtime are `ConfigVar`s defined in
+  `apps/siteconfig/registry.py` and read with `registry.get`, changed only by administrators;
+  `.env` is for the deployment (addresses, secrets). Never hardcode a budget tied to the model's
+  context: derive it from `llm.context_tokens`
+- The administrator role comes only from `APP_ADMINS` through `setup_keycloak`, and reaches the
+  app as the ID token's `roles` claim; never grant it by hand or decide it in Django
 - Whatever the menu generator returns is a proposal (`SlotDish.proposed`,
   `MealSlot.proposed_people`) validated in `apps/menus/generation.py`, and counts only once the
   user accepts it (`apps/menus/review.py`). The generator never writes the calendar; people
