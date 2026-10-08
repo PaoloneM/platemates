@@ -1,4 +1,4 @@
-# WeeklyMenu. Runs unchanged on an ARM64 Mac, a Raspberry Pi or an x86 cloud VM.
+# PlateMates. Runs unchanged on an ARM64 Mac, a Raspberry Pi or an x86 cloud VM.
 #
 # The generative LLM is NOT part of this stack: it is an external OpenAI-compatible service
 # (Unsloth Studio on the host by default) reached through LLM_BASE_URL.
@@ -6,15 +6,15 @@
 #   docker compose up -d db keycloak embeddings  # backing services, for native development
 #   docker compose up -d                    # everything
 
-name: mymenu
+name: platemates
 
 services:
   db:
     image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-mymenu}
-      POSTGRES_USER: ${POSTGRES_USER:-mymenu}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mymenu}
+      POSTGRES_DB: ${POSTGRES_DB:-platemates}
+      POSTGRES_USER: ${POSTGRES_USER:-platemates}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platemates}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -33,9 +33,9 @@ services:
     restart: "no"
     environment:
       PGHOST: db
-      PGUSER: ${POSTGRES_USER:-mymenu}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-mymenu}
-      PGDATABASE: ${POSTGRES_DB:-mymenu}
+      PGUSER: ${POSTGRES_USER:-platemates}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-platemates}
+      PGDATABASE: ${POSTGRES_DB:-platemates}
       KEYCLOAK_DB: ${KEYCLOAK_DB:-keycloak}
     command:
       - sh
@@ -55,8 +55,8 @@ services:
     command: ["start", "--optimized"]
     environment:
       KC_DB_URL: jdbc:postgresql://db:5432/${KEYCLOAK_DB:-keycloak}
-      KC_DB_USERNAME: ${POSTGRES_USER:-mymenu}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-mymenu}
+      KC_DB_USERNAME: ${POSTGRES_USER:-platemates}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-platemates}
       # No fixed hostname: Keycloak builds its URLs from the request, as forwarded by Traefik or the
       # Vite proxy (X-Forwarded-Proto/Host). The app works from whatever address it is opened at
       # (localhost on the Mac, the LAN name or IP from a phone), always under /auth on the app's
@@ -104,7 +104,7 @@ services:
   # .env. Idempotent, safe to re-run after changing provider credentials.
   keycloak-setup:
     # Same image as the backend: built once, by the backend service.
-    image: mymenu-backend
+    image: platemates-backend
     pull_policy: never
     command: ["python", "manage.py", "setup_keycloak"]
     restart: "no"
@@ -113,7 +113,7 @@ services:
         required: false
     environment:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
-      DATABASE_URL: postgres://${POSTGRES_USER:-mymenu}:${POSTGRES_PASSWORD:-mymenu}@db:5432/${POSTGRES_DB:-mymenu}
+      DATABASE_URL: postgres://${POSTGRES_USER:-platemates}:${POSTGRES_PASSWORD:-platemates}@db:5432/${POSTGRES_DB:-platemates}
     # APPLE_PRIVATE_KEY_FILE is relative to the repository root, which is / in the container.
     volumes:
       - ./secrets:/secrets:ro
@@ -123,12 +123,12 @@ services:
 
   backend:
     build: ./backend
-    image: mymenu-backend
+    image: platemates-backend
     env_file:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-mymenu}:${POSTGRES_PASSWORD:-mymenu}@db:5432/${POSTGRES_DB:-mymenu}
+      DATABASE_URL: postgres://${POSTGRES_USER:-platemates}:${POSTGRES_PASSWORD:-platemates}@db:5432/${POSTGRES_DB:-platemates}
       # Inside a container, "127.0.0.1" is the container itself: reach the host instead.
       LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
@@ -217,7 +217,7 @@ services:
   # One-shot, idempotent: embeds recipes whose vector is missing or stale (e.g. saved while the
   # embedding service was down, or after changing EMBEDDINGS_MODEL). Runs on every `up`.
   embed-recipes:
-    image: mymenu-backend
+    image: platemates-backend
     pull_policy: never
     command: ["python", "manage.py", "embed_recipes"]
     restart: "no"
@@ -225,7 +225,7 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-mymenu}:${POSTGRES_PASSWORD:-mymenu}@db:5432/${POSTGRES_DB:-mymenu}
+      DATABASE_URL: postgres://${POSTGRES_USER:-platemates}:${POSTGRES_PASSWORD:-platemates}@db:5432/${POSTGRES_DB:-platemates}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
     depends_on:
       embeddings:

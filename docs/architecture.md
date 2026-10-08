@@ -9,12 +9,12 @@ integration.
 flowchart LR
     user["Browser or phone"]
 
-    subgraph compose["Docker Compose (project mymenu)"]
+    subgraph compose["Docker Compose (project platemates)"]
         traefik["traefik<br/>entry point, routing from labels<br/>:80 = Mac :8080, :443 = LAN :8443"]
         spa["frontend<br/>nginx serving the built SPA"]
         backend["backend<br/>Django + DRF, gunicorn"]
-        keycloak["keycloak<br/>/auth, theme mymenu"]
-        db[("db<br/>PostgreSQL 17 + pgvector<br/>databases mymenu, keycloak")]
+        keycloak["keycloak<br/>/auth, theme platemates"]
+        db[("db<br/>PostgreSQL 17 + pgvector<br/>databases platemates, keycloak")]
         embeddings["embeddings<br/>FastAPI + sentence-transformers"]
         jobs["one-shot jobs<br/>db-init, keycloak-setup, embed-recipes"]
     end
@@ -48,7 +48,7 @@ flowchart LR
 | `backend/` | Django project `config`, domain apps in `apps/`, AI adapters in `ai/` | `backend` container, or `uv run` natively |
 | `frontend/` | React + TypeScript SPA (Vite) | `frontend` container (nginx, static files only), or `npm run dev` |
 | `services/embeddings/` | OpenAI-compatible `/v1/embeddings` around sentence-transformers | `embeddings` container, or `uv run uvicorn` |
-| `keycloak/` | Keycloak image: login theme `mymenu` + Apple provider extension, served under `/auth` | `keycloak` container; realm configured by `keycloak-setup` |
+| `keycloak/` | Keycloak image: login theme `platemates` + Apple provider extension, served under `/auth` | `keycloak` container; realm configured by `keycloak-setup` |
 
 The frontend and backend always share one origin (Vite proxy in development, Traefik in the
 stack), so the API uses Django session auth and CSRF without CORS. Both proxies must keep the
@@ -150,13 +150,20 @@ ingredient never touches a recipe.
 
 ### Decisions worth knowing
 
+- **The product is PlateMates** (2026-10-08; it was "WeeklyMenu" from 2026-10-07, and "Family
+  Menu Planner" before). The technical identifiers follow it: Keycloak realm, theme and client
+  (`platemates`, `platemates-backend`), the Compose project and its volume
+  (`platemates_pgdata`), the database and its user, the backend image. The data was carried
+  over with a dump and restore under the new names, and the Keycloak realm was renamed in
+  place, so accounts and their `sub` survived. `menus.WeeklyMenu` is the domain model of a
+  week's menu, not the product, and keeps its name.
+
 - **Team, not family** (2026-10-07): the app serves whoever shares meals (a family, a person
   living alone, flatmates, friends, a sports team, an office). The model is `Team` (formerly
   `Family`) and the API speaks of teams (`/api/teams/`, `team` fields). The Django app lives in
   `apps/teams` but keeps its original label `families`, which keys the migration history and
   the table names (`families_team`, `families_member`, ...); the rename migrations kept every
-  row. Technical identifiers that users never see (the Keycloak realm and theme `mymenu`, the
-  Compose project `mymenu` and its volume) were left as they are.
+  row.
 
 - **Shared recipes, per-team recipe book** (confirmed by Paolo 2026-10-05). One `Recipe` row can be in many teams' books.
   A recipe has an **owner team** (the one that created it, the only one that can edit it;

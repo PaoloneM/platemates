@@ -1,7 +1,7 @@
 [project]
-name = "mymenu-backend"
+name = "platemates-backend"
 version = "0.1.0"
-description = "WeeklyMenu: Django REST backend"
+description = "PlateMates: Django REST backend"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "dj-database-url>=3.1.2",

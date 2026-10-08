@@ -1,5 +1,5 @@
 [project]
-name = "mymenu-embeddings"
+name = "platemates-embeddings"
 version = "0.1.0"
 description = "Local OpenAI-compatible embedding service (sentence-transformers)"
 requires-python = ">=3.12,<3.14"

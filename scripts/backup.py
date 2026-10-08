@@ -4,7 +4,7 @@
 One backup is one `.tar` file under `backups/` (gitignored: it holds personal data and password
 hashes), containing:
 
-- `mymenu.dump`, `keycloak.dump`: `pg_dump` custom-format dumps of both databases;
+- `platemates.dump`, `keycloak.dump`: `pg_dump` custom-format dumps of both databases;
 - `.env`: the configuration the data belongs with (Keycloak's admin password and the OIDC client
   secret must match what is in the Keycloak database);
 - `manifest.json`: when, which databases, which git commit.
@@ -53,9 +53,13 @@ def read_env(path: Path) -> dict[str, str]:
 def databases(env: dict[str, str]) -> dict[str, str]:
     """Archive member name -> database name."""
     return {
-        "mymenu.dump": env.get("POSTGRES_DB") or "mymenu",
+        "platemates.dump": env.get("POSTGRES_DB") or "platemates",
         "keycloak.dump": env.get("KEYCLOAK_DB") or "keycloak",
     }
+
+
+# Backups taken before the rename to PlateMates (2026-10-08) name the application dump so.
+LEGACY_MEMBERS = {"platemates.dump": "mymenu.dump"}
 
 
 def compose(*args: str, **kwargs) -> subprocess.CompletedProcess:
@@ -63,7 +67,7 @@ def compose(*args: str, **kwargs) -> subprocess.CompletedProcess:
 
 
 def db_exec(env: dict[str, str], *command: str, **kwargs) -> subprocess.CompletedProcess:
-    user = env.get("POSTGRES_USER") or "mymenu"
+    user = env.get("POSTGRES_USER") or "platemates"
     return compose("exec", "-T", "db", *command, "-U", user, **kwargs)
 
 
@@ -115,7 +119,7 @@ def create(keep: int | None = None, label: str = "") -> Path:
     env = read_env(ROOT / ".env")
     BACKUP_DIR.mkdir(exist_ok=True)
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    target = BACKUP_DIR / f"mymenu-{stamp}{('-' + label) if label else ''}.tar"
+    target = BACKUP_DIR / f"platemates-{stamp}{('-' + label) if label else ''}.tar"
 
     with tempfile.TemporaryDirectory() as tmp:
         dumps: dict[str, Path] = {}
@@ -134,14 +138,14 @@ def create(keep: int | None = None, label: str = "") -> Path:
     size = target.stat().st_size / 1024
     print(f"created {target.relative_to(ROOT)} ({size:.0f} KiB)")
     if keep:
-        for old in backups_to_prune(list(BACKUP_DIR.glob("mymenu-*.tar")), keep):
+        for old in backups_to_prune(list(BACKUP_DIR.glob("platemates-*.tar")), keep):
             old.unlink()
             print(f"removed old backup {old.name}")
     return target
 
 
 def list_backups() -> None:
-    backups = sorted(BACKUP_DIR.glob("mymenu-*.tar")) if BACKUP_DIR.exists() else []
+    backups = sorted(BACKUP_DIR.glob("platemates-*.tar")) if BACKUP_DIR.exists() else []
     if not backups:
         print("no backups yet")
     for path in backups:
@@ -166,6 +170,9 @@ def restore(archive: Path, assume_yes: bool) -> None:
     compose("stop", *DB_CLIENTS)
     with tempfile.TemporaryDirectory() as tmp, tarfile.open(archive) as tar:
         tar.extractall(tmp, filter="data")
+        for member, legacy in LEGACY_MEMBERS.items():
+            if not (Path(tmp) / member).exists() and (Path(tmp) / legacy).exists():
+                (Path(tmp) / legacy).rename(Path(tmp) / member)
         for member, database in databases(env).items():
             if not (Path(tmp) / member).exists():
                 raise ValueError(f"{archive.name} lacks {member}")

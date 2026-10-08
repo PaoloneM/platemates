@@ -47,7 +47,7 @@ class EmbeddingRequest(BaseModel):
     model: str | None = None
 
 
-app = FastAPI(title="mymenu embeddings")
+app = FastAPI(title="platemates embeddings")
 
 
 def _check_auth(authorization: str | None) -> None:

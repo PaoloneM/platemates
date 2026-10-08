@@ -488,7 +488,7 @@ function InvitationsSection({ team, owner, onMessage }: {
   // The phone's share sheet (WhatsApp, Messages, mail...) where available, else the clipboard.
   async function share(token: string) {
     if (navigator.share) {
-      await navigator.share({ title: 'WeeklyMenu', text: t('team.invites.shareText', { team: team.name }), url: inviteUrl(token) })
+      await navigator.share({ title: 'PlateMates', text: t('team.invites.shareText', { team: team.name }), url: inviteUrl(token) })
         .catch(() => undefined)
     } else void copy(token)
   }

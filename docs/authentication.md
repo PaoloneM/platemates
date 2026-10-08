@@ -10,7 +10,7 @@ invitation to a team.
 ```
 SPA "Continue with Google"
   └─► /oidc/authenticate/?next=/&lang=it&idp=google           Django (mozilla-django-oidc)
-        └─► /auth/realms/mymenu/.../auth?kc_idp_hint=google&ui_locales=it&code_challenge=...
+        └─► /auth/realms/platemates/.../auth?kc_idp_hint=google&ui_locales=it&code_challenge=...
               └─► Google ──► Keycloak (links or creates the Keycloak account)
         ◄── /oidc/callback/?code=...                            Django exchanges the code (PKCE)
   ◄── session cookie, redirect to `next`                        SPA calls /api/me/
@@ -33,8 +33,8 @@ SPA "Continue with Google"
   email; profile data (email, names) is refreshed from Keycloak on every login.
 - **The login screen is the SPA's own** (`frontend/src/pages/LoginPage.tsx`). Social buttons skip
   Keycloak's page entirely (`kc_idp_hint`). "Sign in with email" shows Keycloak's login form and
-  "Create an account" its registration form (`prompt=create`). Both use the custom `mymenu` theme
-  (`keycloak/themes/mymenu`), which restyles the stock `keycloak.v2` theme with CSS and messages
+  "Create an account" its registration form (`prompt=create`). Both use the custom `platemates` theme
+  (`keycloak/themes/platemates`), which restyles the stock `keycloak.v2` theme with CSS and messages
   only, so Keycloak upgrades do not break it.
 - **Logout** is a POST to `/oidc/logout/`; Django ends its session, then redirects to Keycloak's
   end-session endpoint so the Keycloak session ends too.
@@ -115,8 +115,8 @@ so the login screen shows the new button. Every provider needs this
 **redirect URI** registered on its side:
 
 ```
-<app URL>/auth/realms/mymenu/broker/<google|microsoft|apple>/endpoint
-e.g. http://localhost:8080/auth/realms/mymenu/broker/google/endpoint
+<app URL>/auth/realms/platemates/broker/<google|microsoft|apple>/endpoint
+e.g. http://localhost:8080/auth/realms/platemates/broker/google/endpoint
 ```
 
 **Google**: Google Cloud Console → APIs & Services → Credentials → Create credentials → OAuth

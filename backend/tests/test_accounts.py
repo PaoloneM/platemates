@@ -51,7 +51,7 @@ def test_users_are_matched_by_subject_not_email(db):
 
 
 def test_user_data_comes_from_the_verified_id_token():
-    claims = {**CLAIMS, "iss": "https://phone-facing.example:8443/auth/realms/mymenu"}
+    claims = {**CLAIMS, "iss": "https://phone-facing.example:8443/auth/realms/platemates"}
     # No call to Keycloak's userinfo endpoint, which rejects tokens issued for another address.
     assert KeycloakBackend().get_userinfo("access", "id-token", claims) is claims
 
@@ -79,7 +79,7 @@ def test_logout_also_ends_the_keycloak_session():
     request.session = {"oidc_id_token": "tok"}
     url = keycloak_logout_url(request)
     # Relative: Keycloak is under /auth on the app's own origin, whatever address that is.
-    assert url.startswith("/auth/realms/mymenu/protocol/openid-connect/logout?")
+    assert url.startswith("/auth/realms/platemates/protocol/openid-connect/logout?")
     assert "id_token_hint=tok" in url
     assert "post_logout_redirect_uri=http%3A%2F%2Ftestserver%2F" in url
 
@@ -282,7 +282,7 @@ class FakeKeycloak:
             return httpx.Response(200, json={"access_token": "t"})
         parts = path.removeprefix("/admin/realms").strip("/").split("/")
         if parts == [""]:
-            self.realms.add("mymenu")
+            self.realms.add("platemates")
             return httpx.Response(201)
         if len(parts) == 1:
             if method == "GET":
@@ -320,8 +320,8 @@ def test_setup_keycloak_converges(db):
     google = {**BASE_ENV, "GOOGLE_CLIENT_ID": "g", "GOOGLE_CLIENT_SECRET": "gs"}
 
     first = run_setup(fake, google)
-    assert "created realm mymenu" in first
-    assert "created client mymenu-backend" in first
+    assert "created realm platemates" in first
+    assert "created client platemates-backend" in first
     assert "created identity provider google" in first
 
     second = run_setup(fake, google)

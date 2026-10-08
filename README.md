@@ -1,4 +1,4 @@
-# WeeklyMenu
+# PlateMates
 
 **The weekly menu and the shopping list for people who eat together**: a family, a person living
 alone, flatmates, a group of friends, a sports team, an office canteen. An LLM-driven assistant

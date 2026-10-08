@@ -27,12 +27,12 @@ def test_archive_round_trip(tmp_path):
     archive = tmp_path / "b.tar"
 
     backup.write_archive(
-        archive, {"mymenu.dump": dump, "keycloak.dump": dump}, env, {"created_at": "now"}
+        archive, {"platemates.dump": dump, "keycloak.dump": dump}, env, {"created_at": "now"}
     )
 
     assert backup.read_manifest(archive) == {"created_at": "now"}
     with tarfile.open(archive) as tar:
-        assert set(tar.getnames()) == {"manifest.json", "mymenu.dump", "keycloak.dump", ".env"}
+        assert set(tar.getnames()) == {"manifest.json", "platemates.dump", "keycloak.dump", ".env"}
     # Backups hold personal data and password hashes.
     assert archive.stat().st_mode & 0o077 == 0
 
@@ -47,15 +47,15 @@ def test_archives_without_manifest_are_rejected(tmp_path):
 
 def test_database_names_follow_env():
     assert backup.databases({"POSTGRES_DB": "app", "KEYCLOAK_DB": "kc"}) == {
-        "mymenu.dump": "app",
+        "platemates.dump": "app",
         "keycloak.dump": "kc",
     }
-    assert backup.databases({}) == {"mymenu.dump": "mymenu", "keycloak.dump": "keycloak"}
+    assert backup.databases({}) == {"platemates.dump": "platemates", "keycloak.dump": "keycloak"}
 
 
 def test_pruning_keeps_the_newest():
-    names = [Path(f"mymenu-2026100{d}-000000.tar") for d in (3, 1, 2)]
-    assert backup.backups_to_prune(names, keep=2) == [Path("mymenu-20261001-000000.tar")]
+    names = [Path(f"platemates-2026100{d}-000000.tar") for d in (3, 1, 2)]
+    assert backup.backups_to_prune(names, keep=2) == [Path("platemates-20261001-000000.tar")]
     assert backup.backups_to_prune(names, keep=0) == []
 
 

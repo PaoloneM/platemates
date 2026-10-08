@@ -5,7 +5,7 @@ type Team = { id: number; name: string; role: 'owner' | 'member' }
 type TeamState = { team: Team; teams: Team[]; select: (id: number) => void }
 
 const TeamContext = createContext<TeamState | null>(null)
-const STORAGE_KEY = 'mymenu.team'
+const STORAGE_KEY = 'platemates.team'
 
 function storedTeamId(): number | null {
   try {

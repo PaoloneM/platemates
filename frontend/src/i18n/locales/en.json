@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "WeeklyMenu",
+    "title": "PlateMates",
     "language": "Language"
   },
   "health": {
@@ -432,7 +432,7 @@
       "revoke": "Cancel the invitation",
       "none": "No invitations.",
       "untitled": "Invitation",
-      "shareText": "Join the “{{team}}” team on WeeklyMenu",
+      "shareText": "Join the “{{team}}” team on PlateMates",
       "createdOn": "Created {{date}}, valid until {{until}}",
       "acceptedBy": "Accepted by {{name}} on {{date}}",
       "state": {

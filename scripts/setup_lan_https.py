@@ -10,7 +10,7 @@ needs HTTPS with a certificate it trusts. This script, idempotent:
 3. writes `secrets/tls/tls.yml`, from which Traefik serves that certificate on its HTTPS entry
    point (published as 8443), picking it up without a restart;
 4. adds the HTTPS addresses to `.env` (allowed hosts, CSRF origins, Keycloak redirect URIs);
-5. leaves `secrets/tls/mymenu-local-ca.crt` to install, once, on each phone or tablet.
+5. leaves `secrets/tls/platemates-local-ca.crt` to install, once, on each phone or tablet.
 
 Re-run it when the machine's IP changes: the certificate is reissued for the new address, but
 the certificate authority stays the same, so devices that trust it keep trusting it.
@@ -113,7 +113,7 @@ def main() -> int:
     else:
         print(f"certificate already covers {', '.join(hosts)}")
     (TLS / "key.pem").chmod(0o644)  # read by Traefik inside its container
-    shutil.copyfile(CA_DIR / "rootCA.pem", TLS / "mymenu-local-ca.crt")
+    shutil.copyfile(CA_DIR / "rootCA.pem", TLS / "platemates-local-ca.crt")
     (TLS / "tls.yml").write_text(TRAEFIK_TLS.format(hosts=", ".join(hosts)))
     # Left over from when nginx terminated TLS.
     (TLS / "https.conf").unlink(missing_ok=True)
@@ -136,7 +136,7 @@ def main() -> int:
 Next:
   1. Apply it:  docker compose up -d backend keycloak-setup   (Traefik reloads the certificate itself)
   2. On each phone or tablet, once, trust the certificate authority:
-     send secrets/tls/mymenu-local-ca.crt to it (AirDrop, email to yourself), open it, then
+     send secrets/tls/platemates-local-ca.crt to it (AirDrop, email to yourself), open it, then
      - iPhone/iPad: Settings > General > VPN & Device Management > install the profile, then
        Settings > General > About > Certificate Trust Settings > enable "mkcert ...".
      - Android: Settings > Security > Encryption & credentials > Install a certificate >

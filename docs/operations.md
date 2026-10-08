@@ -2,17 +2,17 @@
 
 ## Where the data lives
 
-All persistent data is in one Docker volume, `mymenu_pgdata`: the PostgreSQL server holding both
-the application database (`mymenu`: teams, recipes, menus) and Keycloak's (`keycloak`:
+All persistent data is in one Docker volume, `platemates_pgdata`: the PostgreSQL server holding both
+the application database (`platemates`: teams, recipes, menus) and Keycloak's (`keycloak`:
 accounts, passwords, links to Google/Microsoft/Apple). The volume name is stable because
-`docker-compose.yml` fixes the project name (`name: mymenu`). `mymenu_hf-cache` only caches the
+`docker-compose.yml` fixes the project name (`name: platemates`). `platemates_hf-cache` only caches the
 embedding model and can always be re-downloaded.
 
 | Command | Data |
 |---|---|
 | `docker compose stop` / `down` / `up --build` | kept |
 | `docker compose down -v` | **deleted**: `-v` removes the volumes, accounts included |
-| `docker volume rm mymenu_pgdata`, `docker system prune --volumes` | **deleted** |
+| `docker volume rm platemates_pgdata`, `docker system prune --volumes` | **deleted** |
 
 After a deletion the stack still starts (every initialization step is repeatable), but empty:
 everyone must register again. Restore a backup instead.
@@ -23,7 +23,7 @@ everyone must register again. Restore a backup instead.
 python3 scripts/backup.py create            # new backup in backups/
 python3 scripts/backup.py create --keep 14  # ... and keep only the 14 newest
 python3 scripts/backup.py list
-python3 scripts/backup.py restore backups/mymenu-20261006-082439.tar
+python3 scripts/backup.py restore backups/platemates-20261006-082439.tar
 ```
 
 A backup is one `.tar` file holding `pg_dump` dumps of both databases, the `.env` the data belongs
@@ -60,7 +60,7 @@ Traefik configuration that serves it on port 8443 (`secrets/tls/tls.yml`); it ad
 addresses to `.env`. Until it has run, port 8443 answers with Traefik's own self-signed
 certificate.
 
-On each phone or tablet, once, trust `secrets/tls/mymenu-local-ca.crt` (AirDrop it or email it):
+On each phone or tablet, once, trust `secrets/tls/platemates-local-ca.crt` (AirDrop it or email it):
 
 - **iPhone/iPad**: open it, then Settings > General > VPN & Device Management > install the
   profile; then Settings > General > About > Certificate Trust Settings > enable full trust.

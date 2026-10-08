@@ -1,0 +1,64 @@
+/* PlateMates colours, kept in step with frontend/src/index.css. */
+:root {
+  --platemates-bg: #fbfaf7;
+  --platemates-fg: #1f2421;
+  --platemates-accent: #2e7d4f;
+  --platemates-accent-hover: #24643f;
+  --platemates-line: #e4e1da;
+  --keycloak-card-top-color: var(--platemates-accent);
+  --pf-v5-global--primary-color--100: var(--platemates-accent);
+  --pf-v5-global--primary-color--200: var(--platemates-accent-hover);
+  --pf-v5-global--active-color--100: var(--platemates-accent);
+  --pf-v5-global--link--Color: var(--platemates-accent);
+  --pf-v5-global--link--Color--hover: var(--platemates-accent-hover);
+  --pf-v5-global--FontFamily--text: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --pf-v5-global--FontFamily--heading: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --platemates-bg: #161917;
+    --platemates-fg: #e8ebe9;
+    --platemates-line: #2c312e;
+  }
+}
+
+.login-pf body {
+  background: var(--platemates-bg);
+}
+
+#kc-header-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--platemates-fg) !important;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#kc-header-wrapper::before {
+  content: "";
+  width: 64px;
+  height: 64px;
+  background: url("../img/logo.svg") no-repeat center / contain;
+}
+
+.pf-v5-c-login__main {
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+}
+
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--platemates-accent);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--platemates-accent-hover);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--platemates-accent-hover);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--platemates-accent-hover);
+  border-radius: 8px;
+}
+
+#kc-social-providers .pf-v5-c-button.pf-m-tertiary {
+  border-radius: 8px;
+}

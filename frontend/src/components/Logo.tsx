@@ -1,6 +1,6 @@
 import { useTheme } from '@mui/material/styles'
 
-// Same mark as the Keycloak login theme (keycloak/themes/mymenu/login/resources/img/logo.svg).
+// Same mark as the Keycloak login theme (keycloak/themes/platemates/login/resources/img/logo.svg).
 // Colours go through CSS variables so the mark follows the light/dark scheme.
 export function Logo({ size = 56 }: { size?: number }) {
   const theme = useTheme()

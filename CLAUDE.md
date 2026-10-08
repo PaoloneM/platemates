@@ -2,10 +2,14 @@
 
 ## Project Context
 
-This is the **WeeklyMenu** project: a web application for the weekly menu and the shopping list
+This is the **PlateMates** project: a web application for the weekly menu and the shopping list
 of people who eat together (a **team**: a family, a person living alone, flatmates, friends, a
 sports team, an office), driven by an LLM that acts in an agentic way. For the full purpose and
 the conceptual model (team, menu, recipe, ingredient catalog), see `README.md`.
+
+The product name is **PlateMates** (it was "WeeklyMenu", and "Family Menu Planner" before), and
+technical identifiers follow it (`platemates` realm, theme, Compose project, volume, database).
+`WeeklyMenu` in the code is the model of a week's menu, not the product: never rename it.
 
 "Team" is the product's word and the code's (`Team`, `/api/teams/`); it was "family" until
 2026-10-07. The Django app keeps its original label `families` and table prefix (see
@@ -154,7 +158,7 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   mirrors configuration, convergent (re-running after a config change applies the change).
   Today: `init_env.py`, migrations and seed data, `db-init`, `setup_keycloak`, `create_team`.
   Verify a new step by running it twice
-- Never run `docker compose down -v` (or remove `mymenu_pgdata`) without a fresh backup: it deletes
+- Never run `docker compose down -v` (or remove `platemates_pgdata`) without a fresh backup: it deletes
   both databases, Keycloak accounts included. `backups/` holds personal data: never commit it
 - Keycloak is configured only through `setup_keycloak` (from `.env`), never by hand in its console
 - Routing lives in Traefik labels on each service in `docker-compose.yml`, one router per entry

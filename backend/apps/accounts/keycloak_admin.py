@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 
-LOGIN_THEME = "mymenu"
+LOGIN_THEME = "platemates"
 # Identity providers this module owns. Any of them present in Keycloak but no longer configured
 # in `.env` is removed; providers added by hand under other aliases are left alone.
 MANAGED_IDENTITY_PROVIDERS = ("google", "microsoft", "apple")
@@ -101,8 +101,8 @@ def config_from_env(
     if not secret:
         raise ValueError("OIDC_RP_CLIENT_SECRET is not set.")
     return KeycloakConfig(
-        realm=get("KEYCLOAK_REALM", "mymenu"),
-        client_id=get("OIDC_RP_CLIENT_ID", "mymenu-backend"),
+        realm=get("KEYCLOAK_REALM", "platemates"),
+        client_id=get("OIDC_RP_CLIENT_ID", "platemates-backend"),
         client_secret=secret,
         app_urls=[u.strip().rstrip("/") for u in get("APP_PUBLIC_URLS").split(",") if u.strip()],
         smtp=smtp,
@@ -115,7 +115,7 @@ def realm_representation(config: KeycloakConfig) -> dict[str, Any]:
     realm: dict[str, Any] = {
         "realm": config.realm,
         "enabled": True,
-        "displayName": "WeeklyMenu",
+        "displayName": "PlateMates",
         "loginTheme": LOGIN_THEME,
         "internationalizationEnabled": True,
         "supportedLocales": SUPPORTED_LOCALES,
@@ -139,7 +139,7 @@ def realm_representation(config: KeycloakConfig) -> dict[str, Any]:
             "host": smtp.host,
             "port": smtp.port,
             "from": smtp.sender,
-            "fromDisplayName": "WeeklyMenu",
+            "fromDisplayName": "PlateMates",
             "starttls": str(smtp.starttls).lower(),
             "auth": str(bool(smtp.user)).lower(),
             "user": smtp.user,
@@ -151,7 +151,7 @@ def realm_representation(config: KeycloakConfig) -> dict[str, Any]:
 def client_representation(config: KeycloakConfig) -> dict[str, Any]:
     return {
         "clientId": config.client_id,
-        "name": "WeeklyMenu backend",
+        "name": "PlateMates backend",
         "protocol": "openid-connect",
         "enabled": True,
         "publicClient": False,

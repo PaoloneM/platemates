@@ -1,4 +1,4 @@
-"""Django settings for the WeeklyMenu backend.
+"""Django settings for the PlateMates backend.
 
 Every value that differs between deployments (local Mac, Raspberry Pi, cloud VM) comes from the
 environment, loaded from a gitignored `.env` at the repository root. Nothing here is specific to a
@@ -96,7 +96,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # PostgreSQL is the only supported database: the schema relies on ArrayField and pgvector.
 DATABASES = {
     "default": dj_database_url.config(
-        default="postgres://mymenu:mymenu@localhost:5432/mymenu",
+        default="postgres://platemates:platemates@localhost:5432/platemates",
         conn_max_age=60,
     )
 }
@@ -142,7 +142,7 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "mymenu")
+KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "platemates")
 # Browsers reach Keycloak under /auth on the app's own origin (Traefik or the Vite proxy forward
 # it), so the endpoints they are sent to are relative paths: login works from whatever address
 # the app was opened at (localhost, the LAN name or IP). The backend calls Keycloak directly on
@@ -152,7 +152,7 @@ KEYCLOAK_INTERNAL_URL = os.getenv("KEYCLOAK_INTERNAL_URL", "http://localhost:818
 _oidc_browser = f"{KEYCLOAK_PATH}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
 _oidc_internal = f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
 
-OIDC_RP_CLIENT_ID = os.getenv("OIDC_RP_CLIENT_ID", "mymenu-backend")
+OIDC_RP_CLIENT_ID = os.getenv("OIDC_RP_CLIENT_ID", "platemates-backend")
 OIDC_RP_CLIENT_SECRET = os.getenv("OIDC_RP_CLIENT_SECRET", "")
 OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_RP_SCOPES = "openid email profile"
