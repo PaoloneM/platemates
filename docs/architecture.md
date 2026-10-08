@@ -380,9 +380,18 @@ says in its rationale how it resolved a conflict):
   partial unique constraint; a second request gets the running one with 409). The `worker`
   compose service runs `manage.py menu_worker`, which claims queued generations with
   `SELECT ... FOR UPDATE SKIP LOCKED`, one at a time, and on start marks as failed any left
-  running by a worker that stopped. No Celery or Redis: the LLM serves one request at a time
-  anyway, and a Raspberry Pi has no room to spare. The SPA polls the week's latest generation
-  every 3 s while it runs (`GET /api/menu-generations/?team=&week_start=`).
+  running by a worker that stopped. No Celery: the LLM serves one request at a time anyway,
+  and a Raspberry Pi has no room to spare.
+- **Woken by PostgreSQL, not by polling** (decided with Paolo 2026-10-08). The API sends
+  `pg_notify('menu_generations')` in the transaction that queues the generation, so it leaves
+  only at commit; the worker waits in `LISTEN` on its connection and starts at once (measured:
+  under 0.1 s), asking the database nothing while idle. A notification is not stored anywhere:
+  one sent while the worker is down or reconnecting is lost, so the worker also looks at the
+  queue on start and every 60 s (measured: a generation queued without notification was taken
+  after 51 s). It reconnects and listens again if the database goes away. The queue stays in
+  PostgreSQL rather than Redis, which is a cache without persistence.
+- The SPA polls the week's latest generation every 3 s while it runs
+  (`GET /api/menu-generations/?team=&week_start=`).
 - **Retrieval first, then one LLM call** (`apps/menus/generation.py`). The code picks the
   candidates: the team's recipe book and own recipes (at most 40), plus a few in-season shared
   recipes to discover, without "never propose" ingredients or cuisines, rejected recipes, or

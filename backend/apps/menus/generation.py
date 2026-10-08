@@ -27,7 +27,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Max, Q
 from django.utils import timezone
 
@@ -572,6 +572,19 @@ def run_generation(generation: MenuGeneration, chat: ChatProvider | None = None)
         generation.result = proposal
     generation.finished_at = timezone.now()
     generation.save(update_fields=["status", "error", "result", "finished_at"])
+
+
+# PostgreSQL channel on which a queued generation wakes the worker up (`menu_worker`).
+CHANNEL = "menu_generations"
+
+
+def notify_worker() -> None:
+    """Wake the worker up. Inside a transaction the notification leaves at commit, so the
+    worker never looks for a generation that is not there yet (or was rolled back). Nothing is
+    stored: if no worker is listening it is lost, and the worker's periodic check finds the
+    generation anyway."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT pg_notify(%s, '')", [CHANNEL])
 
 
 def claim_next() -> MenuGeneration | None:

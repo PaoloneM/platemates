@@ -11,6 +11,7 @@ from apps.core.permissions import StaffWritesPermission
 from apps.teams.permissions import OwnerWritesMixin, TeamScopedMixin
 
 from . import review
+from .generation import notify_worker
 from .models import MealSlot, MenuGeneration, SystemRule, TeamRule, WeeklyMenu
 from .serializers import (
     GenerateSerializer,
@@ -104,6 +105,7 @@ class WeeklyMenuViewSet(TeamScopedMixin, viewsets.ModelViewSet):
                         use_week_settings=data.validated_data["use_week_settings"],
                         language=(translation.get_language() or "it")[:2],
                     )
+                    notify_worker()
                 return Response(
                     MenuGenerationSerializer(generation).data, status=status.HTTP_202_ACCEPTED
                 )

@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import time
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -469,3 +470,54 @@ def test_more_candidates_with_a_larger_context(db):
     assert engine.max_book_candidates() == 40
     ConfigVar.objects.create(key="llm.context_tokens", value=65536)
     assert engine.max_book_candidates() == 200
+
+
+# -- waking the worker -------------------------------------------------------------------------
+
+
+def listener():
+    """A second connection to the test database, listening on the worker's channel."""
+    import psycopg
+    from django.db import connection
+
+    s = connection.settings_dict
+    raw = psycopg.connect(
+        dbname=s["NAME"],
+        user=s["USER"],
+        password=s["PASSWORD"],
+        host=s["HOST"] or None,
+        port=s["PORT"] or None,
+        autocommit=True,
+    )
+    raw.execute(f"LISTEN {engine.CHANNEL}")
+    return raw
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_queuing_a_generation_wakes_the_worker_at_commit(team, api):
+    raw = listener()
+    try:
+        assert generate(api, team).status_code == 202
+        assert [n.channel for n in raw.notifies(timeout=2, stop_after=1)] == [engine.CHANNEL]
+        # A second request finds the running one: no new generation, no new notification.
+        assert generate(api, team).status_code == 409
+        assert list(raw.notifies(timeout=0.5, stop_after=1)) == []
+    finally:
+        raw.close()
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_the_worker_wakes_on_a_notification_and_not_otherwise():
+    from apps.menus.management.commands.menu_worker import listen, wait_for_notification
+
+    listen()
+    assert wait_for_notification(0.3) is False
+    raw = listener()
+    try:
+        raw.execute(f"NOTIFY {engine.CHANNEL}")
+    finally:
+        raw.close()
+    started = time.monotonic()
+    assert wait_for_notification(5) is True
+    assert time.monotonic() - started < 2
+    assert wait_for_notification(5, stopping=lambda: True) is False
