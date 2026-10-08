@@ -73,7 +73,9 @@ home network need HTTPS (Keycloak's login cookies require it outside localhost):
 
 ```bash
 python3 scripts/setup_lan_https.py     # idempotent; needs `brew install mkcert`
-docker compose up -d backend keycloak-setup   # Traefik reloads the certificate by itself
+# The services that read the allowed addresses from .env (backend, realtime, keycloak-setup)
+# must be recreated to see them; Traefik reloads the certificate by itself.
+docker compose up -d --force-recreate backend realtime keycloak-setup
 ```
 
 The script creates a certificate authority for this project (`secrets/tls/ca`, gitignored, not
@@ -92,8 +94,14 @@ On each phone or tablet, once, trust `secrets/tls/platemates-local-ca.crt` (AirD
 Then open `https://<name>.local:8443` (or `https://<LAN IP>:8443`). The camera button of the
 recipe assistant opens the phone's camera directly.
 
-If the Mac's IP changes (DHCP), re-run the script and recreate the containers: the certificate
-is reissued, the authority stays the same, so phones need nothing new. Whoever has
+If the Mac's IP changes (DHCP, or another network interface: on 2026-10-08 it moved from Wi-Fi's
+`.209` to a cable's `.219`), re-run the script and recreate the containers: the certificate is
+reissued, the authority stays the same, so phones need nothing new. `<name>.local` keeps
+working across IP changes, so prefer it on the phones.
+
+If port 8443 answers with "TRAEFIK DEFAULT CERT", Traefik cannot see `secrets/tls`: a container
+created before the repository folder was moved or renamed still mounts the old path, and
+`restart` keeps it. Recreate it: `docker compose up -d --force-recreate traefik`. Whoever has
 `secrets/tls/ca/rootCA-key.pem` can issue certificates your devices will trust: never share it,
 only the `.crt`.
 

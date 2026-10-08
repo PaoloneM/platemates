@@ -134,7 +134,8 @@ def main() -> int:
 
     print(f"""
 Next:
-  1. Apply it:  docker compose up -d backend keycloak-setup   (Traefik reloads the certificate itself)
+  1. Apply it:  docker compose up -d --force-recreate backend realtime keycloak-setup
+     (Traefik reloads the certificate itself)
   2. On each phone or tablet, once, trust the certificate authority:
      send secrets/tls/platemates-local-ca.crt to it (AirDrop, email to yourself), open it, then
      - iPhone/iPad: Settings > General > VPN & Device Management > install the profile, then
