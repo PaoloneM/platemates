@@ -310,6 +310,7 @@ Material 3 adaptive navigation (`components/Navigation.tsx`): a navigation rail 
 desktops, a bottom navigation bar on phones, for the everyday destinations: **Menu** (the weekly menu and calendar, home,
 `/`) and **Recipes** (`/recipes`); the shopping list joins them once it has a screen. The team
 page, the management section and the language stay in the user menu: they are visited rarely.
+Administrators have a small Yoda badge on their avatar.
 The calendar is also the menu screen ("Menu della settimana"): one week at a time
 (`?week=<monday>`), moved by arrows; "Today" appears beside the arrow that leads back to the
 current week (its slot is reserved, so nothing shifts), and the week's dates open a month

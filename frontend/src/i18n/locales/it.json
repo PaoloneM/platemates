@@ -60,7 +60,8 @@
     }
   },
   "shell": {
-    "account": "Account"
+    "account": "Account",
+    "admin": "amministratore"
   },
   "nav": {
     "calendar": "Menu",

@@ -4,6 +4,7 @@ import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import {
   AppBar,
   Avatar,
+  Badge,
   Box,
   Container,
   Divider,
@@ -27,6 +28,7 @@ import { supportedLanguages } from '../i18n'
 import { Flag } from './Flag'
 import { Logo } from './Logo'
 import { BOTTOM_BAR_HEIGHT, BottomBar, NavigationRail } from './Navigation'
+import yoda from '../assets/yoda.png'
 
 function UserMenu() {
   const { t, i18n } = useTranslation()
@@ -39,10 +41,16 @@ function UserMenu() {
 
   return (
     <>
-      <IconButton onClick={(e) => setAnchor(e.currentTarget)} aria-label={t('shell.account')}>
-        <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: 16 }}>
-          {name[0]?.toUpperCase()}
-        </Avatar>
+      <IconButton onClick={(e) => setAnchor(e.currentTarget)}
+        aria-label={me.user.is_admin ? `${t('shell.account')} (${t('shell.admin')})` : t('shell.account')}>
+        {/* Administrators (Keycloak's admin role) carry a badge, so it is clear whose powers are on. */}
+        <Badge invisible={!me.user.is_admin} overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          badgeContent={<Box component="img" src={yoda} alt="" sx={{ width: 28, height: 'auto', display: 'block' }} />}
+          sx={{ '& .MuiBadge-badge': { p: 0, minWidth: 0, height: 'auto', bgcolor: 'transparent', transform: 'translate(45%, 35%)' } }}>
+          <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: 16 }}>
+            {name[0]?.toUpperCase()}
+          </Avatar>
+        </Badge>
       </IconButton>
       <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
         <Box sx={{ px: 2, py: 1 }}>
