@@ -628,7 +628,21 @@
     "sharingHint": "Every new recipe asks: there is no default.",
     "sharedHint": "Every team will see it, and can use it as it is or import it to change it. The team's name shows only if the team chose to sign its recipes (team profile).",
     "systemRecipe": "System recipe (PlateMates)",
-    "systemHint": "System recipes are always in the community and only staff change them."
+    "systemHint": "System recipes are always in the community and only staff change them.",
+    "yourVersion": "Your version",
+    "thisVersion": "This version",
+    "original": "Original",
+    "originalHint": "The original recipe, as it is now. Quantities are for the same people, to compare them.",
+    "openOriginal": "Open the original",
+    "differencesHint": "Differences from the original are marked on the ingredients.",
+    "noDifferences": "Ingredients and steps are the same as the original.",
+    "stepsDiffer": "Steps differ from the original",
+    "mark": {
+      "added": "added",
+      "changed": "different amount",
+      "removed": "removed in the variant"
+    },
+    "editOriginal": "Change the original (staff)"
   },
   "drafts": {
     "hint": "System recipes (PlateMates) written by the model from real recipe pages found on the web. Every draft is reviewed and published by you: nothing becomes a recipe by itself.",

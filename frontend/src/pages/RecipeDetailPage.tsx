@@ -21,6 +21,8 @@ import {
   Link,
   Rating,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from '@mui/material'
 import { useEffect, useState } from 'react'
@@ -30,6 +32,7 @@ import { api, type KitchenTool, type Recipe, type RecipeVariants } from '../api'
 import { AuthorChip } from '../components/RecipeAuthor'
 import { WebRating } from '../components/WebRating'
 import { IngredientList, PeopleStepper, StepList } from '../components/RecipeView'
+import { compareIngredients } from '../recipeDiff'
 import { useTeam } from '../team'
 import { useDescribeMonths, useLabels } from '../labels'
 
@@ -46,10 +49,28 @@ export function RecipeDetailPage() {
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [allTools, setAllTools] = useState<KitchenTool[]>([])
   const [variants, setVariants] = useState<RecipeVariants | null>(null)
+  // A variant shows its original beside it, in a second tab.
+  const [original, setOriginal] = useState<Recipe | null>(null)
+  // The tab chosen, for the recipe it was chosen on: another recipe starts on its own tab.
+  const [chosen, setChosen] = useState<{ recipe: string | undefined; tab: 'this' | 'original' }>({ recipe: id, tab: 'this' })
+  const tab = chosen.recipe === id ? chosen.tab : 'this'
+  const setTab = (value: 'this' | 'original') => setChosen({ recipe: id, tab: value })
 
   useEffect(() => {
     api<KitchenTool[]>('/kitchen-tools/').then(setAllTools).catch(() => undefined)
   }, [])
+
+  const originId = recipe?.origin?.id
+  useEffect(() => {
+    if (originId === undefined) return
+    let cancelled = false
+    api<Recipe>(`/recipes/${originId}/`)
+      .then((r) => !cancelled && setOriginal(r))
+      .catch(() => !cancelled && setOriginal(null))
+    return () => {
+      cancelled = true
+    }
+  }, [originId])
 
   useEffect(() => {
     api<RecipeVariants>(`/recipes/${id}/variants/`).then(setVariants).catch(() => setVariants(null))
@@ -68,12 +89,16 @@ export function RecipeDetailPage() {
   if (!recipe || people == null) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 6 }} />
 
   const entry = recipe.book_entries.find((e) => e.team === team.id)
-  const tools = allTools.filter((tool) => recipe.tools.includes(tool.id))
-  const suitable = recipe.season_months.months.length === 0
-    ? recipe.climate_months.months
-    : recipe.climate_months.months.length === 0
-      ? recipe.season_months.months
-      : recipe.season_months.months.filter((m) => recipe.climate_months.months.includes(m))
+  // What the ingredients and steps show: this recipe, or its original in the second tab.
+  const comparing = original !== null && original.id === recipe.origin?.id
+  const shown = comparing && tab === 'original' ? original : recipe
+  const diff = comparing ? compareIngredients(recipe, original) : null
+  const tools = allTools.filter((tool) => shown.tools.includes(tool.id))
+  const suitable = shown.season_months.months.length === 0
+    ? shown.climate_months.months
+    : shown.climate_months.months.length === 0
+      ? shown.season_months.months
+      : shown.season_months.months.filter((m) => shown.climate_months.months.includes(m))
 
   async function rate(value: number | null) {
     if (!entry) return
@@ -145,15 +170,18 @@ export function RecipeDetailPage() {
           )}
         </Stack>
         <Stack direction="row" spacing={1}>
-          {recipe.can_edit && (
-            <Button variant="contained" startIcon={<EditIcon />} component={RouterLink} to={`/recipes/${recipe.id}/edit`}>
-              {t('common.edit')}
-            </Button>
-          )}
-          {!recipe.can_edit && (
-            <Button variant="outlined" startIcon={<ImportIcon />} component={RouterLink}
+          {/* A recipe that is not the team's own is changed for the team by importing it; only
+              staff may also change the original itself, and the button says so. */}
+          {recipe.author.kind !== 'mine' && (
+            <Button variant="contained" startIcon={<ImportIcon />} component={RouterLink}
               to={`/recipes/new?from=${recipe.id}`}>
               {t('community.import')}
+            </Button>
+          )}
+          {recipe.can_edit && (
+            <Button variant={recipe.author.kind === 'mine' ? 'contained' : 'outlined'} startIcon={<EditIcon />}
+              component={RouterLink} to={`/recipes/${recipe.id}/edit`}>
+              {recipe.author.kind === 'mine' ? t('common.edit') : t('community.editOriginal')}
             </Button>
           )}
           {entry ? (
@@ -168,6 +196,23 @@ export function RecipeDetailPage() {
         </Stack>
       </Stack>
 
+      {comparing && (
+        <Box>
+          <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tab value="this" label={recipe.author.kind === 'mine' ? t('community.yourVersion') : t('community.thisVersion')} />
+            <Tab value="original" label={t('community.original')} />
+          </Tabs>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+            {tab === 'original'
+              ? <>{t('community.originalHint')}{' '}
+                  <Link component={RouterLink} to={`/recipes/${original.id}`}>{t('community.openOriginal')}</Link></>
+              : diff && Object.keys(diff.inVariant).length + Object.keys(diff.inOriginal).length === 0 && diff.sameSteps
+                ? t('community.noDifferences')
+                : t('community.differencesHint')}
+          </Typography>
+        </Box>
+      )}
+
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 5 }}>
           <Card>
@@ -176,7 +221,8 @@ export function RecipeDetailPage() {
                 <Typography variant="h2">{t('recipe.ingredients')}</Typography>
                 <PeopleStepper people={people} onChange={setPeople} />
               </Stack>
-              <IngredientList recipe={recipe} people={people} />
+              <IngredientList recipe={shown} people={people}
+                marks={diff ? (shown === recipe ? diff.inVariant : diff.inOriginal) : undefined} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                 {t('recipe.season')}: {describeMonths(suitable)}
               </Typography>
@@ -192,12 +238,15 @@ export function RecipeDetailPage() {
           <Typography variant="h2" sx={{ mb: 1.5 }}>
             {t('recipe.steps')}
           </Typography>
-          <StepList recipe={recipe} />
-          {recipe.source_url && (
+          {diff && !diff.sameSteps && (
+            <Chip size="small" variant="outlined" color="warning" label={t('community.stepsDiffer')} sx={{ mb: 1.5 }} />
+          )}
+          <StepList recipe={shown} />
+          {shown.source_url && (
             <Typography variant="body2" sx={{ mt: 3 }}>
               {t('recipe.source')}:{' '}
-              <Link href={recipe.source_url} target="_blank" rel="noopener noreferrer">
-                {new URL(recipe.source_url).hostname}
+              <Link href={shown.source_url} target="_blank" rel="noopener noreferrer">
+                {new URL(shown.source_url).hostname}
               </Link>
             </Typography>
           )}

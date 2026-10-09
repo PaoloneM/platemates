@@ -127,6 +127,37 @@ def test_importing_makes_an_editable_copy_linked_to_the_original(api, team, neig
     assert Recipe.objects.get(pk=shared.pk).title == "Ribollita"  # the original is untouched
 
 
+def test_importing_never_touches_the_original(api, team, neighbours, system_recipe):
+    _, _, shared, _ = neighbours
+    for original in (shared, system_recipe):
+        before = (original.title, original.owner_team_id, original.visibility)
+        copy = api.post(
+            "/api/recipes/",
+            new_recipe(team, title="Mia", visibility="private", derived_from=original.pk),
+            format="json",
+        ).json()
+        # Removing the copy from the book deletes the (private, unused) copy, never the original.
+        entry = copy["book_entries"][0]["id"]
+        assert api.delete(f"/api/recipe-book/{entry}/").status_code == 204
+        assert not Recipe.objects.filter(pk=copy["id"]).exists()
+        original.refresh_from_db()
+        assert (original.title, original.owner_team_id, original.visibility) == before
+
+
+def test_staff_importing_a_system_recipe_make_a_copy(api, user, team, system_recipe):
+    user.is_staff = True
+    user.save()
+    assert api.get(f"/api/recipes/{system_recipe.pk}/").json()["can_edit"]  # staff may edit it
+    copy = api.post(
+        "/api/recipes/",
+        new_recipe(team, title="Lasagne mie", visibility="private", derived_from=system_recipe.pk),
+        format="json",
+    ).json()
+    assert copy["author"]["kind"] == "mine" and copy["origin"]["id"] == system_recipe.pk
+    system_recipe.refresh_from_db()
+    assert system_recipe.title == "Lasagne alla bolognese"
+
+
 def test_a_copy_of_a_copy_is_a_variant_of_the_original(api, team, neighbours):
     _, other_client, shared, _ = neighbours
     first = other_client.post(

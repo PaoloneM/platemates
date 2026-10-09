@@ -1,13 +1,20 @@
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
-import { Box, IconButton, List, ListItem, Stack, Typography } from '@mui/material'
+import { Box, Chip, IconButton, List, ListItem, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import type { Recipe, RecipeLine } from '../api'
+import type { LineMark } from '../recipeDiff'
 import { formatQuantity, useLabels } from '../labels'
 
 // The parts of a recipe shown both on its page and in the recipe dialog of a meal.
 
-function LineText({ line, factor }: { line: RecipeLine; factor: number }) {
+const MARK_COLOR: Record<LineMark, 'success' | 'warning' | 'error'> = {
+  added: 'success',
+  changed: 'warning',
+  removed: 'error',
+}
+
+function LineText({ line, factor, mark }: { line: RecipeLine; factor: number; mark?: LineMark }) {
   const { t, i18n } = useTranslation()
   const labels = useLabels()
   let amount = t('unit.tt')
@@ -26,6 +33,10 @@ function LineText({ line, factor }: { line: RecipeLine; factor: number }) {
           <Typography component="span" color="text.secondary">
             {` (${t('recipe.optional')})`}
           </Typography>
+        )}
+        {mark && (
+          <Chip size="small" variant="outlined" color={MARK_COLOR[mark]} label={t(`community.mark.${mark}`)}
+            sx={{ ml: 1, height: 20, '& .MuiChip-label': { px: 0.75 } }} />
         )}
         {line.note && (
           <Typography variant="body2" color="text.secondary">
@@ -53,8 +64,13 @@ export function PeopleStepper({ people, onChange }: { people: number; onChange: 
   )
 }
 
-/** The ingredients, with quantities for `people` (the recipe is written for `servings`). */
-export function IngredientList({ recipe, people }: { recipe: Recipe; people: number }) {
+/** The ingredients, with quantities for `people` (the recipe is written for `servings`), and
+ * optionally how each differs from another version of the recipe. */
+export function IngredientList({ recipe, people, marks }: {
+  recipe: Recipe
+  people: number
+  marks?: Record<number, LineMark>
+}) {
   const { t } = useTranslation()
   if (recipe.ingredients.length === 0) return <Typography color="text.secondary">{t('recipe.noIngredients')}</Typography>
   const factor = people / recipe.servings
@@ -62,7 +78,7 @@ export function IngredientList({ recipe, people }: { recipe: Recipe; people: num
     <List dense disablePadding>
       {recipe.ingredients.map((line) => (
         <ListItem key={line.id} disableGutters divider>
-          <LineText line={line} factor={factor} />
+          <LineText line={line} factor={factor} mark={marks?.[line.ingredient]} />
         </ListItem>
       ))}
     </List>

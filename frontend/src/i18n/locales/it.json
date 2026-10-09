@@ -628,7 +628,21 @@
     "sharingHint": "Ogni nuova ricetta te lo chiede: non c'è una scelta predefinita.",
     "sharedHint": "La vedranno tutti i team, che potranno usarla così com'è o importarla per modificarla. Il nome del team compare solo se il team ha scelto di firmare le sue ricette (profilo del team).",
     "systemRecipe": "Ricetta di sistema (PlateMates)",
-    "systemHint": "Le ricette di sistema sono sempre nella community e le modifica solo lo staff."
+    "systemHint": "Le ricette di sistema sono sempre nella community e le modifica solo lo staff.",
+    "yourVersion": "La tua versione",
+    "thisVersion": "Questa versione",
+    "original": "Originale",
+    "originalHint": "La ricetta originale, così com'è ora. Le dosi sono per le stesse persone, per confrontarle.",
+    "openOriginal": "Apri l'originale",
+    "differencesHint": "Le differenze rispetto all'originale sono segnate sugli ingredienti.",
+    "noDifferences": "Ingredienti e procedimento sono uguali all'originale.",
+    "stepsDiffer": "Procedimento diverso dall'originale",
+    "mark": {
+      "added": "aggiunto",
+      "changed": "dose diversa",
+      "removed": "tolto nella variante"
+    },
+    "editOriginal": "Modifica l'originale (staff)"
   },
   "drafts": {
     "hint": "Ricette di sistema (PlateMates) scritte dal modello partendo da pagine di ricette vere trovate in rete. Ogni bozza va rivista e pubblicata da te: niente diventa una ricetta da solo.",
