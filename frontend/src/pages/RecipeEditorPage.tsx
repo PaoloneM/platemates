@@ -4,6 +4,7 @@ import ArrowUpIcon from '@mui/icons-material/ArrowUpward'
 import AutoIcon from '@mui/icons-material/AutoAwesomeOutlined'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
+import ImportIcon from '@mui/icons-material/ContentCopy'
 import {
   Alert,
   Autocomplete,
@@ -15,11 +16,16 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
+  FormControl,
   FormControlLabel,
+  FormHelperText,
+  FormLabel,
   Grid,
   IconButton,
   InputAdornment,
   MenuItem,
+  Radio,
+  RadioGroup,
   Stack,
   Switch,
   TextField,
@@ -45,6 +51,7 @@ import { IngredientDialog } from '../components/IngredientDialog'
 import { IngredientPicker, type PickedIngredient } from '../components/IngredientPicker'
 import { SeasonPicker } from '../components/SeasonPicker'
 import { ToolDialog } from '../components/ToolDialog'
+import { useAuth } from '../auth/context'
 import { useTeam } from '../team'
 import { COURSES, UNITS, useDescribeMonths, useLabels } from '../labels'
 
@@ -76,8 +83,11 @@ type Form = {
   seasonAuto: boolean
   seasonMonths: number[]
   climateMonths: number[]
-  visibility: Visibility
+  // Null until chosen: a new recipe asks whether it goes to the community.
+  visibility: Visibility | null
   sourceUrl: string
+  // Staff: the recipe belongs to the system team (always shared).
+  system: boolean
 }
 
 const toolFilter = createFilterOptions<KitchenTool | { create: string }>()
@@ -106,8 +116,9 @@ const EMPTY: Form = {
   seasonAuto: true,
   seasonMonths: [],
   climateMonths: [],
-  visibility: 'shared',
+  visibility: null,
   sourceUrl: '',
+  system: false,
 }
 
 /** Same rule as the backend (`Recipe.derive_season_months`), for a live preview. */
@@ -152,6 +163,7 @@ function fromRecipe(r: Recipe, tools: KitchenTool[]): Form {
     climateMonths: r.climate_months.months,
     visibility: r.visibility,
     sourceUrl: r.source_url,
+    system: r.author.kind === 'system',
   }
 }
 
@@ -216,13 +228,18 @@ export function RecipeEditorPage() {
   const { id } = useParams()
   const [params] = useSearchParams()
   const sessionId = params.get('session')
+  // Importing a community recipe to change it: the copy is ours, linked to the original.
+  const importing = params.get('from')
   const { team } = useTeam()
+  const { me } = useAuth()
+  const systemTeam = me?.authenticated ? me.system_team : null
   const editing = id != null
+  const [source, setSource] = useState<Recipe | null>(null)
 
   // Editing or reviewing a draft: show a spinner until the data is loaded, rather than an empty
   // form the user might start typing into.
   const [form, setForm] = useState<Form | null>(
-    editing || sessionId ? null : { ...EMPTY, lines: [newLine()] },
+    editing || sessionId || importing ? null : { ...EMPTY, lines: [newLine()] },
   )
   const [cuisines, setCuisines] = useState<Cuisine[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
@@ -257,10 +274,18 @@ export function RecipeEditorPage() {
           api<Recipe>(`/recipes/${id}/`)
             .then((r) => setForm(fromRecipe(r, all)))
             .catch(() => setErrors({ load: t('recipe.notFound') }))
+        } else if (importing) {
+          api<Recipe>(`/recipes/${importing}/`)
+            .then((r) => {
+              setSource(r)
+              // Everything copied but the sharing choice, which is asked again for the copy.
+              setForm({ ...fromRecipe(r, all), visibility: null, system: false })
+            })
+            .catch(() => setErrors({ load: t('recipe.notFound') }))
         }
       })
       .catch(() => setErrors({ load: t('common.error') }))
-  }, [editing, id, t])
+  }, [editing, id, importing, t])
 
   const derived = useMemo(() => (form ? deriveSeason(form.lines) : []), [form])
 
@@ -298,6 +323,7 @@ export function RecipeEditorPage() {
     if (!form!.title.trim()) problems.title = t('editor.required')
     if (!(Number(form!.servings) >= 1)) problems.servings = t('editor.servingsInvalid')
     if (form!.lines.some((l) => l.suggestion && !l.ingredient)) problems.save = t('editor.unresolved')
+    if (!form!.system && form!.visibility === null) problems.visibility = t('community.chooseSharing')
     if (Object.keys(problems).length) {
       setErrors(problems)
       return
@@ -326,12 +352,13 @@ export function RecipeEditorPage() {
           })),
         steps: f.steps,
         climate_months: { months: f.climateMonths },
-        visibility: f.visibility,
+        visibility: f.system ? 'shared' : f.visibility,
         source_url: f.sourceUrl.trim(),
       }
+      if (importing && !editing) payload.derived_from = Number(importing)
       if (!f.seasonAuto) payload.season_months = { months: f.seasonMonths }
       else if (editing) payload.season_months = { auto: true }
-      if (!editing) payload.team = team.id
+      if (!editing) payload.team = f.system && systemTeam ? systemTeam : team.id
 
       const saved = await api<Recipe>(editing ? `/recipes/${id}/` : '/recipes/', {
         method: editing ? 'PATCH' : 'POST',
@@ -369,6 +396,11 @@ export function RecipeEditorPage() {
           {t('common.save')}
         </Button>
       </Stack>
+      {source && !editing && (
+        <Alert severity="info" icon={<ImportIcon />}>
+          {t('community.importing', { title: source.title })}
+        </Alert>
+      )}
       {sessionId && !editing && (
         <Alert severity="info" icon={<AutoIcon />}
           action={<Button color="inherit" size="small" component={RouterLink} to={`/assistant/${sessionId}`}>
@@ -667,17 +699,27 @@ export function RecipeEditorPage() {
       </Section>
 
       <Section title={t('editor.sharing')}>
-        <Stack spacing={2}>
-          <FormControlLabel
-            control={
-              <Switch checked={form.visibility === 'shared'}
-                onChange={(e) => set('visibility', e.target.checked ? 'shared' : 'private')} />
-            }
-            label={t('editor.shareWithTeams')}
-          />
-          <Typography variant="body2" color="text.secondary">
-            {form.visibility === 'shared' ? t('editor.sharedHint') : t('editor.privateHint')}
-          </Typography>
+        <Stack spacing={2} id="sharing">
+          {systemTeam !== null && (!editing || form.system) && (
+            <FormControlLabel disabled={editing}
+              control={<Switch checked={form.system} onChange={(e) => set('system', e.target.checked)} />}
+              label={t('community.systemRecipe')} />
+          )}
+          {form.system ? (
+            <Typography variant="body2" color="text.secondary">{t('community.systemHint')}</Typography>
+          ) : (
+            <FormControl error={!!errors.visibility}>
+              <FormLabel>{t('community.sharingQuestion')}</FormLabel>
+              <RadioGroup value={form.visibility ?? ''} onChange={(e) => set('visibility', e.target.value as Visibility)}>
+                <FormControlLabel value="shared" control={<Radio />} label={t('community.shareOption')} />
+                <FormControlLabel value="private" control={<Radio />} label={t('community.privateOption')} />
+              </RadioGroup>
+              <FormHelperText>
+                {errors.visibility ?? (form.visibility === 'shared' ? t('community.sharedHint')
+                  : form.visibility === 'private' ? t('editor.privateHint') : t('community.sharingHint'))}
+              </FormHelperText>
+            </FormControl>
+          )}
           <TextField label={t('editor.source')} value={form.sourceUrl} type="url"
             placeholder="https://" onChange={(e) => set('sourceUrl', e.target.value)} />
         </Stack>

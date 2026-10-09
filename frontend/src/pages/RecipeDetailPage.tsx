@@ -2,6 +2,7 @@ import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import EditIcon from '@mui/icons-material/EditOutlined'
+import ImportIcon from '@mui/icons-material/ContentCopy'
 import LockIcon from '@mui/icons-material/LockOutlined'
 import PublicIcon from '@mui/icons-material/PublicOutlined'
 import {
@@ -25,7 +26,8 @@ import {
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
-import { api, type KitchenTool, type Recipe } from '../api'
+import { api, type KitchenTool, type Recipe, type RecipeVariants } from '../api'
+import { AuthorChip } from '../components/RecipeAuthor'
 import { IngredientList, PeopleStepper, StepList } from '../components/RecipeView'
 import { useTeam } from '../team'
 import { useDescribeMonths, useLabels } from '../labels'
@@ -42,10 +44,15 @@ export function RecipeDetailPage() {
   const [people, setPeople] = useState<number | null>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [allTools, setAllTools] = useState<KitchenTool[]>([])
+  const [variants, setVariants] = useState<RecipeVariants | null>(null)
 
   useEffect(() => {
     api<KitchenTool[]>('/kitchen-tools/').then(setAllTools).catch(() => undefined)
   }, [])
+
+  useEffect(() => {
+    api<RecipeVariants>(`/recipes/${id}/variants/`).then(setVariants).catch(() => setVariants(null))
+  }, [id])
 
   useEffect(() => {
     api<Recipe>(`/recipes/${id}/`)
@@ -110,12 +117,21 @@ export function RecipeDetailPage() {
             {recipe.total_minutes != null && (
               <Chip variant="outlined" label={t('recipe.minutes', { count: recipe.total_minutes })} />
             )}
-            <Chip
-              variant="outlined"
-              icon={recipe.visibility === 'private' ? <LockIcon /> : <PublicIcon />}
-              label={recipe.visibility === 'private' ? t('recipe.private') : t('recipe.shared')}
-            />
+            {recipe.author.kind === 'mine' && (
+              <Chip
+                variant="outlined"
+                icon={recipe.visibility === 'private' ? <LockIcon /> : <PublicIcon />}
+                label={recipe.visibility === 'private' ? t('recipe.private') : t('recipe.shared')}
+              />
+            )}
+            <AuthorChip author={recipe.author} size="medium" />
           </Box>
+          {recipe.origin && (
+            <Typography color="text.secondary">
+              {t('community.variantOfPrefix')}{' '}
+              <Link component={RouterLink} to={`/recipes/${recipe.origin.id}`}>{recipe.origin.title}</Link>
+            </Typography>
+          )}
           {recipe.description && <Typography color="text.secondary">{recipe.description}</Typography>}
           {entry && (
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -130,6 +146,12 @@ export function RecipeDetailPage() {
           {recipe.can_edit && (
             <Button variant="contained" startIcon={<EditIcon />} component={RouterLink} to={`/recipes/${recipe.id}/edit`}>
               {t('common.edit')}
+            </Button>
+          )}
+          {!recipe.can_edit && (
+            <Button variant="outlined" startIcon={<ImportIcon />} component={RouterLink}
+              to={`/recipes/new?from=${recipe.id}`}>
+              {t('community.import')}
             </Button>
           )}
           {entry ? (
@@ -179,6 +201,22 @@ export function RecipeDetailPage() {
           )}
         </Grid>
       </Grid>
+
+      {variants && variants.variants.length > 0 && (
+        <Stack spacing={1}>
+          <Typography variant="h2">{t('community.variants', { count: variants.variants.length })}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {recipe.origin ? t('community.variantsOfOriginalHint') : t('community.variantsHint')}
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {variants.variants.map((variant) => (
+              <Chip key={variant.id} component={RouterLink} to={`/recipes/${variant.id}`} clickable
+                label={variant.author.kind === 'team' || variant.author.kind === 'mine'
+                  ? `${variant.title} · ${variant.author.name}` : variant.title} />
+            ))}
+          </Box>
+        </Stack>
+      )}
 
       <Dialog open={confirmRemove} onClose={() => setConfirmRemove(false)}>
         <DialogTitle>{t('recipe.removeTitle')}</DialogTitle>

@@ -437,7 +437,7 @@ says in its rationale how it resolved a conflict):
   meal's people settles the proposed change.
 - Measured on Qwen3.6-35B-A3B (Studio, M-series Mac): 25-40 s for a week of 14 meals.
 
-## Community and system recipes (decided with Paolo 2026-10-08, not built yet)
+## Community and system recipes (decided with Paolo 2026-10-08)
 
 Recipes become a community: the system's own, curated, plus those teams choose to share.
 
@@ -468,6 +468,26 @@ Recipes become a community: the system's own, curated, plus those teams choose t
   variants, recipe book switches), then system drafts with sources and the review queue, then
   the menu generator using community recipes, so that hard constraints and the shopping list
   hold for proposed dishes too, and invented dishes become the exception.
+
+Built so far, the community (2026-10-09):
+
+- `Team.is_system` (one at most, partial unique constraint; created by the data migration
+  `families.0008_system_team`, idempotent) and `Team.sign_shared_recipes` (default anonymous,
+  from the team profile). The system team has no members, so it is never one of a user's
+  teams; staff write its recipes (`/api/me` gives them its id, the editor offers "system
+  recipe"), always shared.
+- `RecipeSerializer.visibility` has no default: creating a recipe without it is refused, and
+  the editor's choice starts empty (an assistant draft and an import included).
+- `Recipe.derived_from` (`SET_NULL`, never itself): set once, on create, by "import and
+  change" (`/recipes/new?from=<id>` opens the editor filled from the original; nothing is
+  saved until the user saves). A copy of a copy is stored as a variant of the original.
+- `author` (system, mine, a signing team, or anonymous community) and `origin` (the original,
+  if the user can see it) on every recipe; `GET /api/recipes/<id>/variants/` gives the
+  original of a variant and the other variants the user can see.
+- `GET /api/recipes/browse/?team=&mine=&community=` serves the recipe book screen: the team's
+  book, the community (shared recipes of the system and of other teams), or both, with each
+  recipe's author, origin and whether it is in the book. The switches are remembered per
+  browser.
 
 ## Application settings (decided with Paolo 2026-10-08)
 

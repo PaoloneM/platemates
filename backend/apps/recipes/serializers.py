@@ -6,7 +6,40 @@ from apps.core.serializers import SeasonalityField, UserDecisionSerializerMixin
 from apps.teams.models import Membership, RecipeBookEntry, Team
 
 from .embeddings import refresh_embedding
-from .models import Cuisine, Recipe, RecipeIngredient
+from .models import Cuisine, Recipe, RecipeIngredient, Visibility
+
+
+def user_team_ids(context) -> set[int]:
+    """The requesting user's teams, computed once per request."""
+    if "user_team_ids" not in context:
+        user = context["request"].user
+        context["user_team_ids"] = set(
+            Membership.objects.filter(user=user).values_list("team_id", flat=True)
+        )
+    return context["user_team_ids"]
+
+
+def author_of(recipe: Recipe, teams: set[int]) -> dict:
+    """Who a recipe is shown as coming from: the system, one of the user's teams, another team
+    that signs its shared recipes, or the community (anonymous)."""
+    team = recipe.owner_team
+    if team is not None and team.is_system:
+        return {"kind": "system", "name": team.name}
+    if team is not None and team.pk in teams:
+        return {"kind": "mine", "name": team.name}
+    if team is not None and team.sign_shared_recipes:
+        return {"kind": "team", "name": team.name}
+    return {"kind": "community", "name": None}
+
+
+def origin_of(recipe: Recipe, teams: set[int]) -> dict | None:
+    """The original a recipe is a variant of, if the user can see it."""
+    original = recipe.derived_from
+    if original is None:
+        return None
+    if original.visibility != Visibility.SHARED and original.owner_team_id not in teams:
+        return None
+    return {"id": original.pk, "title": original.title}
 
 
 class CuisineSerializer(serializers.ModelSerializer):
@@ -53,6 +86,14 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
     team = serializers.PrimaryKeyRelatedField(
         queryset=Team.objects.all(), write_only=True, required=False
     )
+    # No default: whether a new recipe goes to the community is asked at its first save.
+    visibility = serializers.ChoiceField(choices=Visibility.choices)
+    # On create: the recipe this one is imported from and changed (stored as its original).
+    derived_from = serializers.PrimaryKeyRelatedField(
+        queryset=Recipe.objects.all(), required=False, allow_null=True
+    )
+    origin = serializers.SerializerMethodField()
+    author = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     # How the requesting user's teams relate to the recipe.
     book_entries = serializers.SerializerMethodField()
@@ -78,6 +119,9 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             "visibility",
             "owner_team",
             "team",
+            "derived_from",
+            "origin",
+            "author",
             "can_edit",
             "book_entries",
             "ingredients",
@@ -107,14 +151,42 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
     def validate_steps(self, steps):
         return [step.strip() for step in steps if step and step.strip()]
 
+    def get_origin(self, recipe) -> dict | None:
+        return origin_of(recipe, user_team_ids(self.context))
+
+    def get_author(self, recipe) -> dict:
+        return author_of(recipe, user_team_ids(self.context))
+
     def validate_team(self, team):
+        if team.is_system:
+            if not self._user().is_staff:
+                raise serializers.ValidationError("Only staff write system recipes.")
+            return team
         if not Membership.objects.filter(user=self._user(), team=team).exists():
             raise serializers.ValidationError("Not one of your teams.")
         return team
 
+    def validate_derived_from(self, source):
+        """Only a recipe the user can see; a copy of a copy is a variant of the original."""
+        if source is None:
+            return None
+        if not Recipe.objects.visible_to(self._user()).filter(pk=source.pk).exists():
+            raise serializers.ValidationError("Recipe not found.")
+        return source.derived_from or source
+
     def validate(self, attrs):
         if self.instance is None and "team" not in attrs:
             raise serializers.ValidationError({"team": "Required when creating a recipe."})
+        if self.instance is not None:
+            # A recipe's origin is set once, when it is imported.
+            attrs.pop("derived_from", None)
+        owner = attrs.get("team") or (self.instance.owner_team if self.instance else None)
+        if (
+            owner is not None
+            and owner.is_system
+            and attrs.get("visibility", Visibility.SHARED) != (Visibility.SHARED)
+        ):
+            raise serializers.ValidationError({"visibility": "System recipes are shared."})
         return attrs
 
     @transaction.atomic
@@ -156,3 +228,46 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             RecipeIngredient(recipe=recipe, **{**line, "position": index})
             for index, line in enumerate(lines)
         )
+
+
+class RecipeCardSerializer(serializers.ModelSerializer):
+    """A recipe in the recipe book screen: its own book or the community. Expects the queryset
+    of `RecipeViewSet.browse` (book entries of the team prefetched as `team_book`)."""
+
+    cuisine_name = serializers.CharField(source="cuisine.name", read_only=True, default=None)
+    total_minutes = serializers.IntegerField(read_only=True)
+    suitable_months = serializers.SerializerMethodField()
+    author = serializers.SerializerMethodField()
+    origin = serializers.SerializerMethodField()
+    # The team's entry for this recipe, if it is in its recipe book.
+    book = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Recipe
+        fields = [
+            "id",
+            "title",
+            "course",
+            "cuisine_name",
+            "servings",
+            "total_minutes",
+            "suitable_months",
+            "visibility",
+            "author",
+            "origin",
+            "book",
+        ]
+
+    def get_suitable_months(self, recipe) -> list[int]:
+        months = recipe.suitable_months()
+        return [] if len(months) == 12 else sorted(months)
+
+    def get_author(self, recipe) -> dict:
+        return author_of(recipe, user_team_ids(self.context))
+
+    def get_origin(self, recipe) -> dict | None:
+        return origin_of(recipe, user_team_ids(self.context))
+
+    def get_book(self, recipe) -> dict | None:
+        entry = next(iter(getattr(recipe, "team_book", [])), None)
+        return {"id": entry.pk, "rating": entry.rating} if entry else None

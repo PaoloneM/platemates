@@ -35,6 +35,7 @@ def payload(team, *lines, **extra):
         "servings": 2,
         "steps": ["Boil the pasta.", "  ", "Add the sauce."],
         "ingredients": [{"ingredient": i.pk, "quantity": "100", "unit": "g"} for i in lines],
+        "visibility": "shared",
         **extra,
     }
 

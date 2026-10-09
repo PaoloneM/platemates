@@ -221,7 +221,6 @@
     "climateSeason": "Suits the weather",
     "climateHint": "When the dish suits the weather (a hot soup is not for August).",
     "sharing": "Sharing",
-    "sharedHint": "Other teams can see it and add it to their recipe book; only you can change it.",
     "privateHint": "Only your team sees it.",
     "source": "Source link",
     "required": "Required",
@@ -232,8 +231,7 @@
     "similarMatch": "Matched to “{{match}}” (proposed: “{{name}}”): check it",
     "unresolved": "Some proposed ingredients are not in the catalog yet: create them or pick an existing one.",
     "sourcePhotos": "Original photos",
-    "readFromPhoto": "Text read from the photo",
-    "shareWithTeams": "Shared with other teams"
+    "readFromPhoto": "Text read from the photo"
   },
   "ingredient": {
     "newTitle": "New ingredient",
@@ -402,7 +400,10 @@
       "maxMinutesHint": "Preparation + cooking you can manage on an ordinary day",
       "tools": "Kitchen tools available",
       "toolsHint": "Recipes needing other tools will not be suggested",
-      "saved": "Profile saved"
+      "saved": "Profile saved",
+      "signRecipes": "Sign shared recipes with the team's name",
+      "signedHint": "In the community your shared recipes show as \"by {{name}}\".",
+      "anonymousHint": "In the community your shared recipes show without a name, as \"Community\"."
     },
     "people": {
       "title": "People at the table",
@@ -596,5 +597,32 @@
     "hours_other": "{{count}} hours",
     "days_one": "{{count}} day",
     "days_other": "{{count}} days"
+  },
+  "community": {
+    "scope": {
+      "mine": "My recipe book",
+      "community": "Community"
+    },
+    "system": "PlateMates",
+    "byTeam": "by {{name}}",
+    "anonymous": "Community",
+    "inBook": "In the recipe book",
+    "variantOf": "Variant of \"{{title}}\"",
+    "variantOfPrefix": "Variant of",
+    "empty": "No recipes in the community yet.",
+    "import": "Import and change",
+    "importing": "You are importing \"{{title}}\": the copy will be your team's, editable, and stay linked to the original as its variant. The original does not change.",
+    "variants_one": "{{count}} variant",
+    "variants_other": "{{count}} variants",
+    "variantsHint": "Versions of this recipe changed and shared by other teams.",
+    "variantsOfOriginalHint": "The other versions of the same original recipe.",
+    "chooseSharing": "Choose whether to share the recipe with the community.",
+    "sharingQuestion": "Share this recipe with the community?",
+    "shareOption": "Yes, share it with the community",
+    "privateOption": "No, keep it for the team",
+    "sharingHint": "Every new recipe asks: there is no default.",
+    "sharedHint": "Every team will see it, and can use it as it is or import it to change it. The team's name shows only if the team chose to sign its recipes (team profile).",
+    "systemRecipe": "System recipe (PlateMates)",
+    "systemHint": "System recipes are always in the community and only staff change them."
   }
 }

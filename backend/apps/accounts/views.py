@@ -5,7 +5,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from apps.teams.models import Membership
+from apps.teams.models import Membership, Team
 from apps.teams.permissions import TeamScopedMixin
 
 from .models import Invitation, UserProfile, supported_language
@@ -48,6 +48,12 @@ def me(request):
                 "language": profile.language or None,
             },
             "teams": [{"id": m.team_id, "name": m.team.name, "role": m.role} for m in memberships],
+            # Staff write the system team's recipes (the curated part of the community).
+            "system_team": (
+                Team.objects.filter(is_system=True).values_list("pk", flat=True).first()
+                if user.is_staff
+                else None
+            ),
         }
     )
 

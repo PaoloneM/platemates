@@ -53,14 +53,28 @@ class Team(models.Model):
     notes = models.TextField(
         blank=True, help_text="A note for the team's users; not passed to the LLM."
     )
+    # Whether the recipes the team shares show its name in the community; anonymous otherwise.
+    sign_shared_recipes = models.BooleanField(default=False)
+    # The system team, "PlateMates": it owns the curated recipes every team sees in the
+    # community, is edited by staff only and has no members. Created by a data migration.
+    is_system = models.BooleanField(default=False, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name_plural = "teams"
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["is_system"], condition=models.Q(is_system=True), name="one_system_team"
+            )
+        ]
 
     def __str__(self) -> str:
         return self.name
+
+    @classmethod
+    def system(cls) -> Team:
+        return cls.objects.get(is_system=True)
 
     def usual_people(self, weekday: int, meal: str) -> int:
         """People usually at `meal` on `weekday` (0 = Monday); 0 on inactive days."""

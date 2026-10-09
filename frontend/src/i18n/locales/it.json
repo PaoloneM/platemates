@@ -221,7 +221,6 @@
     "climateSeason": "Adatta al clima",
     "climateHint": "Quando il piatto è adatto al tempo che fa (una zuppa calda non è da agosto).",
     "sharing": "Condivisione",
-    "sharedHint": "Gli altri team potranno vederla e aggiungerla al loro ricettario; solo voi potrete modificarla.",
     "privateHint": "La vede solo il vostro team.",
     "source": "Link alla fonte",
     "required": "Obbligatorio",
@@ -232,8 +231,7 @@
     "similarMatch": "Abbinato a «{{match}}» (proposto: «{{name}}»): verifica",
     "unresolved": "Alcuni ingredienti proposti non sono ancora nel catalogo: creali o scegline uno esistente.",
     "sourcePhotos": "Foto originali",
-    "readFromPhoto": "Testo letto dalla foto",
-    "shareWithTeams": "Condivisa con gli altri team"
+    "readFromPhoto": "Testo letto dalla foto"
   },
   "ingredient": {
     "newTitle": "Nuovo ingrediente",
@@ -402,7 +400,10 @@
       "maxMinutesHint": "Preparazione + cottura sostenibile in una giornata normale",
       "tools": "Attrezzi disponibili",
       "toolsHint": "Le ricette che richiedono altri attrezzi non verranno proposte",
-      "saved": "Profilo salvato"
+      "saved": "Profilo salvato",
+      "signRecipes": "Firma le ricette condivise con il nome del team",
+      "signedHint": "Nella community le vostre ricette condivise compaiono come «di {{name}}».",
+      "anonymousHint": "Nella community le vostre ricette condivise compaiono senza nome, come «Community»."
     },
     "people": {
       "title": "Persone a tavola",
@@ -596,5 +597,32 @@
     "hours_other": "{{count}} ore",
     "days_one": "{{count}} giorno",
     "days_other": "{{count}} giorni"
+  },
+  "community": {
+    "scope": {
+      "mine": "Il mio ricettario",
+      "community": "Community"
+    },
+    "system": "PlateMates",
+    "byTeam": "di {{name}}",
+    "anonymous": "Community",
+    "inBook": "Nel ricettario",
+    "variantOf": "Variante di «{{title}}»",
+    "variantOfPrefix": "Variante di",
+    "empty": "Nessuna ricetta nella community, per ora.",
+    "import": "Importa e modifica",
+    "importing": "Stai importando «{{title}}»: la copia sarà del tuo team, modificabile, e resterà collegata all'originale come sua variante. L'originale non cambia.",
+    "variants_one": "{{count}} variante",
+    "variants_other": "{{count}} varianti",
+    "variantsHint": "Versioni di questa ricetta modificate e condivise da altri team.",
+    "variantsOfOriginalHint": "Le altre versioni della stessa ricetta originale.",
+    "chooseSharing": "Scegli se condividere la ricetta con la community.",
+    "sharingQuestion": "Vuoi condividere questa ricetta con la community?",
+    "shareOption": "Sì, condividila con la community",
+    "privateOption": "No, resta solo per il team",
+    "sharingHint": "Ogni nuova ricetta te lo chiede: non c'è una scelta predefinita.",
+    "sharedHint": "La vedranno tutti i team, che potranno usarla così com'è o importarla per modificarla. Il nome del team compare solo se il team ha scelto di firmare le sue ricette (profilo del team).",
+    "systemRecipe": "Ricetta di sistema (PlateMates)",
+    "systemHint": "Le ricette di sistema sono sempre nella community e le modifica solo lo staff."
   }
 }

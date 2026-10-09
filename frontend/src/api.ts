@@ -22,6 +22,8 @@ export type Me =
         language: string | null
       }
       teams: { id: number; name: string; role: 'owner' | 'member' }[]
+      // Staff only: the system team, whose recipes are the curated part of the community.
+      system_team: number | null
     }
 
 export type LoginOptions = { identity_providers: IdentityProvider[] }
@@ -71,6 +73,13 @@ export type RecipeLine = {
 
 export type BookEntryRef = { id: number; team: number; status: string; rating: number | null }
 
+// Where a recipe comes from, as the user may see it: the system (PlateMates), one of their
+// teams, another team that signs its shared recipes, or the community (anonymous).
+export type RecipeAuthor = { kind: 'system' | 'mine' | 'team' | 'community'; name: string | null }
+
+// The original a recipe was imported from and changed (it is a variant of it).
+export type RecipeOrigin = { id: number; title: string }
+
 export type Recipe = {
   id: number
   title: string
@@ -93,6 +102,29 @@ export type Recipe = {
   book_entries: BookEntryRef[]
   ingredients: RecipeLine[]
   provenance: Record<string, Source>
+  derived_from: number | null
+  origin: RecipeOrigin | null
+  author: RecipeAuthor
+}
+
+// A recipe on the recipe book screen: in the team's book (`book`), or in the community.
+export type RecipeCard = {
+  id: number
+  title: string
+  course: Course
+  cuisine_name: string | null
+  servings: number
+  total_minutes: number | null
+  suitable_months: number[]
+  visibility: Visibility
+  author: RecipeAuthor
+  origin: RecipeOrigin | null
+  book: { id: number; rating: number | null } | null
+}
+
+export type RecipeVariants = {
+  original: { id: number; title: string; author: RecipeAuthor } | null
+  variants: { id: number; title: string; author: RecipeAuthor }[]
 }
 
 export type RecipeSummary = {
@@ -256,6 +288,8 @@ export type TeamProfile = {
   typical_week: TypicalDay[]
   max_weekday_minutes: number | null
   notes: string
+  // Whether its shared recipes show its name in the community.
+  sign_shared_recipes: boolean
   members: Person[]
   my_role: Role | null
 }

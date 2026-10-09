@@ -31,7 +31,10 @@ class Command(BaseCommand):
             )
         user = users.get()
         team = Team.objects.filter(
-            name=name, memberships__user=user, memberships__role=Membership.Role.OWNER
+            name=name,
+            is_system=False,
+            memberships__user=user,
+            memberships__role=Membership.Role.OWNER,
         ).first()
         if team is None:
             team = Team.objects.create(name=name)

@@ -15,6 +15,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Grid,
   IconButton,
   InputAdornment,
@@ -24,6 +25,7 @@ import {
   MenuItem,
   Snackbar,
   Stack,
+  Switch,
   TextField,
   Tooltip,
   Typography,
@@ -64,6 +66,7 @@ function ProfileSection({ team, owner, onSaved }: {
   const [minutes, setMinutes] = useState(team.max_weekday_minutes?.toString() ?? '')
   const [allTools, setAllTools] = useState<KitchenTool[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
+  const [sign, setSign] = useState(team.sign_shared_recipes)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -85,6 +88,7 @@ function ProfileSection({ team, owner, onSaved }: {
             name,
             max_weekday_minutes: minutes ? Number(minutes) : null,
             tools: tools.map((tool) => tool.id),
+            sign_shared_recipes: sign,
           }),
         }),
       )
@@ -124,6 +128,14 @@ function ProfileSection({ team, owner, onSaved }: {
                 slotProps={{ ...params.slotProps, inputLabel: { ...params.slotProps?.inputLabel, shrink: tools.length > 0 || undefined } }} />
             )}
           />
+        </Grid>
+        <Grid size={12}>
+          <FormControlLabel disabled={!owner}
+            control={<Switch checked={sign} onChange={(e) => setSign(e.target.checked)} />}
+            label={t('team.profile.signRecipes')} />
+          <Typography variant="body2" color="text.secondary">
+            {sign ? t('team.profile.signedHint', { name }) : t('team.profile.anonymousHint')}
+          </Typography>
         </Grid>
       </Grid>
     </Section>

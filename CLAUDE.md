@@ -206,6 +206,10 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   the fresh one, available all year; never fold them into the fresh product
 - Catalog entries the app ships with (kitchen tools) have a stable `code` and are translated in
   the UI; never show their stored English name to users. User-added entries have no code
+- The system team (`Team.is_system`, "PlateMates") owns the curated community recipes: it has
+  no members, only staff write its recipes, and they are always shared. Whether a team's
+  recipe is shared is the user's choice at creation: never give `visibility` a default in the
+  API or the editor
 - Tests use synthetic data, never real team data
 - Commit messages: imperative summary line, English; one logical change per commit
 

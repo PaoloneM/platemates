@@ -64,6 +64,7 @@ class TeamSerializer(serializers.ModelSerializer):
             "typical_week",
             "max_weekday_minutes",
             "notes",
+            "sign_shared_recipes",
             "members",
             "preferences",
             "my_role",

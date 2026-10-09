@@ -1,12 +1,21 @@
+from django.db.models import Prefetch, Q
 from rest_framework import status, viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.core.permissions import CatalogPermission
 from apps.teams.models import RecipeBookEntry
+from apps.teams.permissions import user_teams
 
-from .models import Cuisine, Recipe
-from .serializers import CuisineSerializer, RecipeSerializer
+from .models import Cuisine, Recipe, Visibility
+from .serializers import (
+    CuisineSerializer,
+    RecipeCardSerializer,
+    RecipeSerializer,
+    author_of,
+    user_team_ids,
+)
 
 
 class CuisineViewSet(viewsets.ModelViewSet):
@@ -37,6 +46,69 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if course := params.get("course"):
             queryset = queryset.filter(course=course)
         return queryset
+
+    @action(detail=False)
+    def browse(self, request):
+        """The recipe book screen: `?team=` and `mine=1` (the team's recipe book) and/or
+        `community=1` (recipes shared by the system and other teams), with `?search=` and
+        `?course=`. Each recipe says where it comes from and whether it is in the book."""
+        try:
+            team = user_teams(request.user).get(pk=int(request.query_params.get("team", "")))
+        except (ValueError, Exception):
+            raise ValidationError({"team": "One of your teams."}) from None
+        params = request.query_params
+        mine, community = params.get("mine", "1") == "1", params.get("community") == "1"
+        if not (mine or community):
+            raise ValidationError({"detail": "Choose the recipe book, the community, or both."})
+        approved = RecipeBookEntry.Status.APPROVED
+        scope = Q()
+        if mine:
+            scope |= Q(book_entries__team=team, book_entries__status=approved)
+        if community:
+            scope |= Q(visibility=Visibility.SHARED) & ~Q(owner_team=team)
+        recipes = (
+            Recipe.objects.visible_to(request.user)
+            .filter(scope)
+            .select_related("cuisine", "owner_team", "derived_from")
+            .prefetch_related(
+                Prefetch(
+                    "book_entries",
+                    queryset=RecipeBookEntry.objects.filter(team=team, status=approved),
+                    to_attr="team_book",
+                )
+            )
+            .distinct()
+            .order_by("title", "pk")
+        )
+        if search := params.get("search", "").strip():
+            recipes = recipes.filter(title__icontains=search)
+        if course := params.get("course"):
+            recipes = recipes.filter(course=course)
+        page = self.paginate_queryset(recipes)
+        return self.get_paginated_response(
+            RecipeCardSerializer(page, many=True, context=self.get_serializer_context()).data
+        )
+
+    @action(detail=True)
+    def variants(self, request, pk=None):
+        """The original of a variant, and the other variants of the same original, as far as
+        the user can see them (a copy nobody shared stays with its team)."""
+        recipe = self.get_object()
+        root = recipe.derived_from or recipe
+        visible = Recipe.objects.visible_to(request.user).select_related("owner_team")
+        teams = user_team_ids(self.get_serializer_context())
+
+        def item(r):
+            return {"id": r.pk, "title": r.title, "author": author_of(r, teams)}
+
+        original = visible.filter(pk=root.pk).first() if root.pk != recipe.pk else None
+        others = visible.filter(derived_from=root).exclude(pk=recipe.pk).order_by("title")
+        return Response(
+            {
+                "original": item(original) if original else None,
+                "variants": [item(r) for r in others],
+            }
+        )
 
     def _check_editable(self, recipe):
         if not Recipe.objects.editable_by(self.request.user).filter(pk=recipe.pk).exists():

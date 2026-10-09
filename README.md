@@ -13,7 +13,9 @@ application.
 
 | Area | Status |
 | --- | --- |
-| **Recipe book**: structured recipes, ingredients scaled to the number of people, two-level seasonality, cuisine, tools, ratings, private or shared with other teams | Built |
+| **Recipe book**: structured recipes, ingredients scaled to the number of people, two-level seasonality, cuisine, tools, ratings | Built |
+| **Community**: system recipes (PlateMates), recipes teams choose to share (signed or anonymous), used as they are or imported and changed as variants of the original; recipe book, community or both in one screen | Built |
+| **System recipes from the web**: LLM drafts grounded on verified recipe pages, with reliability and web rating, reviewed by staff | Next |
 | **Recipe assistant**: add a recipe by telling it in your own words, by pasting a link, by taking a photo of a cookbook page or a handwritten card, or by asking it to search your recipes, other teams' recipes and the web; every draft is reviewed before saving | Built |
 | **Teams**: sign-in with email/password or Google, Microsoft, Apple (Keycloak); invitation-only access; interface in Italian and English, remembered per user | Built |
 | **Team management**: profile (weekday time limit, kitchen tools), people at the table with ages, users and roles, invitation links to copy or share | Built |

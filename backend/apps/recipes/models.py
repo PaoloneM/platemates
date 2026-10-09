@@ -41,7 +41,8 @@ class Course(models.TextChoices):
 
 
 class Visibility(models.TextChoices):
-    # Visible to every team: feeds collaborative recommendation. The default.
+    # In the community: visible to every team. Chosen at every new recipe's first save (the API
+    # has no default); the model's default only covers recipes from before that choice.
     SHARED = "shared", _("Shared with other teams")
     # Visible only to the owner team.
     PRIVATE = "private", _("Private to the team")
@@ -66,7 +67,7 @@ class Recipe(ProvenanceMixin, models.Model):
     description = models.TextField(blank=True)
     # The method, one entry per step.
     steps = ArrayField(models.TextField(), default=list, blank=True)
-    # The team that created the recipe and may edit it. Null for recipes seeded by staff.
+    # The team that created the recipe and may edit it; the system team for the curated ones.
     owner_team = models.ForeignKey(
         "families.Team",
         null=True,
@@ -95,6 +96,12 @@ class Recipe(ProvenanceMixin, models.Model):
     climate_months = month_set_field("Months in which the dish suits the weather.")
 
     source_url = models.URLField(blank=True)
+    # The recipe this one was imported from and changed: a variant of it. Always the original
+    # (a copy of a copy points to the first one), so a recipe's variants are one flat list.
+    # The copy is independent; if the original is deleted, the copy stays without the link.
+    derived_from = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="variants"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -102,6 +109,11 @@ class Recipe(ProvenanceMixin, models.Model):
 
     class Meta:
         ordering = ["title"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(derived_from=models.F("pk")), name="recipe_not_own_variant"
+            )
+        ]
 
     def __str__(self) -> str:
         return self.title
