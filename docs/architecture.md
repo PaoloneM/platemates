@@ -437,6 +437,38 @@ says in its rationale how it resolved a conflict):
   meal's people settles the proposed change.
 - Measured on Qwen3.6-35B-A3B (Studio, M-series Mac): 25-40 s for a week of 14 meals.
 
+## Community and system recipes (decided with Paolo 2026-10-08, not built yet)
+
+Recipes become a community: the system's own, curated, plus those teams choose to share.
+
+- **System recipes** belong to a system team, "PlateMates", edited by staff only; they are
+  always in the community.
+- **Sharing is a choice made at every save**: no default visibility, the editor asks. Recipes
+  shared under the old default (shared) stay shared; their team can make them private.
+- **Signature**: each team chooses in its profile whether its shared recipes show its name or
+  are anonymous ("from the community").
+- **Two ways to use a community recipe**: add it as it is (a reference, as today: it follows
+  the author's changes and is not editable), or import it and change it: a copy owned by the
+  team, linked to the original (`derived_from`), independent from then on.
+- **Variants**: a shared copy is listed as a variant of the original recipe, always of the
+  original (a copy of a copy is a variant of the first one), in one flat list. A copy that is
+  not shared is invisible to others.
+- **Recipe book screen**: two switches, "my recipe book" and "community", on together or
+  apart; each recipe shows where it comes from (mine, system, another team, variant of...).
+- **System recipes from LLM drafts with sources, reviewed by staff**: staff asks for a dish or
+  a batch ("10 autumn first courses"); the worker searches the web, keeps only pages that
+  really hold a recipe (schema.org Recipe, as the assistant's search does), has the model draft
+  the recipe from those sources (or without, if none), through `normalize_draft`, and queues
+  it in the management section for staff to edit and publish or discard. Each draft carries
+  two separate ratings, neither estimated by the model: **reliability** (how many real sources
+  were found and whether they agree; low when the model drafted it with none) and **web
+  rating** (the `aggregateRating` average and count read from the source pages; none for an
+  invented recipe). Staff sees both while reviewing; users see only the web rating.
+- **Order**: first the community (system team, choice at save, signature, import and change,
+  variants, recipe book switches), then system drafts with sources and the review queue, then
+  the menu generator using community recipes, so that hard constraints and the shopping list
+  hold for proposed dishes too, and invented dishes become the exception.
+
 ## Application settings (decided with Paolo 2026-10-08)
 
 Settings that tune how the app behaves live in the database (`apps/siteconfig`), so an
