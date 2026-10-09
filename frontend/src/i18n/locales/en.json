@@ -649,7 +649,9 @@
       "changed": "different amount",
       "removed": "removed in the variant"
     },
-    "editOriginal": "Change the original (staff)"
+    "editOriginal": "Change the original (staff)",
+    "openMyVersion": "Open your version",
+    "haveMyVersion": "Your recipe book has your own version of this recipe, \"{{title}}\": it also compares it with the original."
   },
   "drafts": {
     "hint": "System recipes (PlateMates) written by the model from real recipe pages found on the web. Every draft is reviewed and published by you: nothing becomes a recipe by itself.",

@@ -95,6 +95,8 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
     )
     origin = serializers.SerializerMethodField()
     author = serializers.SerializerMethodField()
+    # The user's own version of this recipe (a variant one of their teams owns), if any.
+    my_version = serializers.SerializerMethodField()
     # Staff, on create: the system recipe draft this recipe publishes (`apps.curation`).
     system_draft = serializers.PrimaryKeyRelatedField(
         queryset=SystemDraft.objects.all(), write_only=True, required=False
@@ -127,6 +129,7 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             "derived_from",
             "origin",
             "author",
+            "my_version",
             "system_draft",
             "web_rating",
             "web_rating_count",
@@ -164,6 +167,18 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
 
     def get_author(self, recipe) -> dict:
         return author_of(recipe, user_team_ids(self.context))
+
+    def get_my_version(self, recipe) -> dict | None:
+        teams = user_team_ids(self.context)
+        if recipe.owner_team_id in teams:
+            return None
+        version = (
+            Recipe.objects.filter(derived_from=recipe, owner_team__in=teams)
+            .order_by("-created_at")
+            .values("id", "title")
+            .first()
+        )
+        return version
 
     def validate_team(self, team):
         if team.is_system:
@@ -219,6 +234,11 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             validated_data["web_rating"] = draft.web_rating
             validated_data["web_rating_count"] = draft.web_rating_count
         recipe = super().create(validated_data)
+        original = recipe.derived_from
+        if original is not None and original.owner_team_id != team.pk:
+            # The team's own version replaces the original it had added as it is; the original
+            # recipe itself is untouched and can be added again.
+            RecipeBookEntry.objects.filter(team=team, recipe=original).delete()
         if draft is not None:
             draft.status = SystemDraft.Status.PUBLISHED
             draft.recipe = recipe

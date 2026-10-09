@@ -172,12 +172,16 @@ export function RecipeDetailPage() {
         <Stack direction="row" spacing={1}>
           {/* A recipe that is not the team's own is changed for the team by importing it; only
               staff may also change the original itself, and the button says so. */}
-          {recipe.author.kind !== 'mine' && (
+          {recipe.author.kind !== 'mine' && (recipe.my_version ? (
+            <Button variant="contained" component={RouterLink} to={`/recipes/${recipe.my_version.id}`}>
+              {t('community.openMyVersion')}
+            </Button>
+          ) : (
             <Button variant="contained" startIcon={<ImportIcon />} component={RouterLink}
               to={`/recipes/new?from=${recipe.id}`}>
               {t('community.import')}
             </Button>
-          )}
+          ))}
           {recipe.can_edit && (
             <Button variant={recipe.author.kind === 'mine' ? 'contained' : 'outlined'} startIcon={<EditIcon />}
               component={RouterLink} to={`/recipes/${recipe.id}/edit`}>
@@ -195,6 +199,15 @@ export function RecipeDetailPage() {
           )}
         </Stack>
       </Stack>
+
+      {recipe.my_version && (
+        <Alert severity="info"
+          action={<Button color="inherit" size="small" component={RouterLink} to={`/recipes/${recipe.my_version.id}`}>
+            {t('community.openMyVersion')}
+          </Button>}>
+          {t('community.haveMyVersion', { title: recipe.my_version.title })}
+        </Alert>
+      )}
 
       {comparing && (
         <Box>

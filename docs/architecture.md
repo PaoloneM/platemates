@@ -484,7 +484,10 @@ Built so far, the community (2026-10-09):
   the editor's choice starts empty (an assistant draft and an import included).
 - `Recipe.derived_from` (`SET_NULL`, never itself): set once, on create, by "import and
   change" (`/recipes/new?from=<id>` opens the editor filled from the original; nothing is
-  saved until the user saves). A copy of a copy is stored as a variant of the original.
+  saved until the user saves). A copy of a copy is stored as a variant of the original. The
+  team's version replaces the original in its book if it had added it as it is (the original
+  recipe is untouched), so the book never shows two cards for one dish; the original's page then
+  points to the team's version (`my_version`) instead of offering a second import.
 - `author` (system, mine, a signing team, or anonymous community) and `origin` (the original,
   if the user can see it) on every recipe; `GET /api/recipes/<id>/variants/` gives the
   original of a variant and the other variants the user can see.

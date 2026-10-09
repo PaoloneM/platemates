@@ -108,6 +108,8 @@ export type Recipe = {
   derived_from: number | null
   origin: RecipeOrigin | null
   author: RecipeAuthor
+  // The user's own version of this recipe (a variant their team made of it), if any.
+  my_version: RecipeOrigin | null
   // The web rating read from the pages a system recipe was drafted from (0-5, and votes).
   web_rating: string | null
   web_rating_count: number | null

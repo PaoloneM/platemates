@@ -649,7 +649,9 @@
       "changed": "dose diversa",
       "removed": "tolto nella variante"
     },
-    "editOriginal": "Modifica l'originale (staff)"
+    "editOriginal": "Modifica l'originale (staff)",
+    "openMyVersion": "Apri la tua versione",
+    "haveMyVersion": "Nel tuo ricettario hai la tua versione di questa ricetta, «{{title}}»: lì trovi anche il confronto con l'originale."
   },
   "drafts": {
     "hint": "Ricette di sistema (PlateMates) scritte dal modello partendo da pagine di ricette vere trovate in rete. Ogni bozza va rivista e pubblicata da te: niente diventa una ricetta da solo.",

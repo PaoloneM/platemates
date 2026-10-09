@@ -158,6 +158,36 @@ def test_staff_importing_a_system_recipe_make_a_copy(api, user, team, system_rec
     assert system_recipe.title == "Lasagne alla bolognese"
 
 
+def test_a_version_replaces_the_original_added_as_it_is(api, team, neighbours):
+    _, _, shared, _ = neighbours
+    api.post("/api/recipe-book/", {"team": team.pk, "recipe": shared.pk, "status": "approved"})
+    assert set(browse(api, team)) == {"Ribollita"}
+    assert api.get(f"/api/recipes/{shared.pk}/").json()["my_version"] is None
+    copy = api.post(
+        "/api/recipes/",
+        new_recipe(team, title="Ribollita mia", visibility="private", derived_from=shared.pk),
+        format="json",
+    ).json()
+    assert set(browse(api, team)) == {"Ribollita mia"}
+    assert api.get(f"/api/recipes/{shared.pk}/").json()["my_version"] == {
+        "id": copy["id"],
+        "title": "Ribollita mia",
+    }
+    shared.refresh_from_db()  # the original itself is untouched, still in its author's book
+    assert shared.book_entries.filter(team=neighbours[0]).exists()
+
+
+def test_the_authors_own_book_keeps_the_original_of_its_copy(api, team):
+    mine = api.post("/api/recipes/", new_recipe(team, visibility="shared"), format="json").json()
+    api.post(
+        "/api/recipes/",
+        new_recipe(team, title="Pasta e ceci bis", visibility="private", derived_from=mine["id"]),
+        format="json",
+    )
+    assert set(browse(api, team)) == {"Pasta e ceci", "Pasta e ceci bis"}
+    assert api.get(f"/api/recipes/{mine['id']}/").json()["my_version"] is None
+
+
 def test_a_copy_of_a_copy_is_a_variant_of_the_original(api, team, neighbours):
     _, other_client, shared, _ = neighbours
     first = other_client.post(
