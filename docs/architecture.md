@@ -155,7 +155,9 @@ erDiagram
 ```
 
 Recipes and team preferences point to ingredients by id, never by name: renaming or merging an
-ingredient never touches a recipe.
+ingredient never touches a recipe. An ingredient may appear on several lines of one recipe
+(flour for the pastry and for the custard, each with its quantity and note): the shopping list
+adds them up, and comparing a variant with its original works on each ingredient's total.
 
 ### Decisions worth knowing
 

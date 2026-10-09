@@ -93,6 +93,21 @@ def test_shopping_list_sums_scaled_quantities(menu, pasta_recipe):
     assert items["tomato"].needed_on == {MONDAY.isoformat()}
 
 
+def test_shopping_list_adds_up_an_ingredient_on_several_lines(menu, pasta_recipe):
+    from apps.recipes.models import RecipeIngredient
+
+    tomato = pasta_recipe.ingredients.get(ingredient__name="tomato").ingredient
+    RecipeIngredient.objects.create(
+        recipe=pasta_recipe, ingredient=tomato, quantity=Decimal("50"), note="per guarnire"
+    )
+    lunch = menu.slots.get(date=MONDAY, meal="lunch")
+    lunch.people = 2
+    lunch.save()
+    SlotDish.objects.create(slot=lunch, recipe=pasta_recipe)
+    items = {i.name: i for i in build_shopping_list(menu)}
+    assert items["tomato"].quantity == Decimal("350")  # 300 + 50, for 2 people as written
+
+
 def test_shopping_list_ignores_empty_and_skipped_slots(menu, pasta_recipe):
     empty, skipped = menu.slots.filter(date=MONDAY).order_by("meal")
     empty.people = 0

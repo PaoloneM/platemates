@@ -215,3 +215,18 @@ def test_users_add_kitchen_tools_in_their_own_words(api):
     }
     duplicate = api.post("/api/kitchen-tools/", {"name": "macchina DEL pane"}, format="json")
     assert duplicate.status_code == 400
+
+
+def test_an_ingredient_may_appear_on_several_lines(api, team, tomato):
+    body = payload(team)
+    body["ingredients"] = [
+        {"ingredient": tomato.pk, "quantity": "300", "unit": "g", "note": "per il sugo"},
+        {"ingredient": tomato.pk, "quantity": "100", "unit": "g", "note": "per guarnire"},
+    ]
+    response = api.post("/api/recipes/", body, format="json")
+    assert response.status_code == 201, response.json()
+    lines = response.json()["ingredients"]
+    assert [(line["quantity"], line["note"]) for line in lines] == [
+        ("300.00", "per il sugo"),
+        ("100.00", "per guarnire"),
+    ]

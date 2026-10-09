@@ -10,20 +10,35 @@ const perPerson = (line: RecipeLine, servings: number) =>
  * quantity (per person, so a different number of servings is not a difference) in the
  * variant, lines removed from it in the original. */
 export function compareIngredients(variant: Recipe, original: Recipe) {
-  const theirs = new Map(original.ingredients.map((line) => [line.ingredient, line]))
-  const ours = new Map(variant.ingredients.map((line) => [line.ingredient, line]))
+  // An ingredient may appear on several lines (flour for the pastry and for the custard):
+  // compare each ingredient's total per person, unit by unit.
+  const totals = (recipe: Recipe) => {
+    const result = new Map<number, Map<string, number | null>>()
+    for (const line of recipe.ingredients) {
+      const units = result.get(line.ingredient) ?? new Map<string, number | null>()
+      const amount = perPerson(line, recipe.servings)
+      const before = units.get(line.unit)
+      units.set(line.unit, amount === null || before === null ? null : (before ?? 0) + amount)
+      result.set(line.ingredient, units)
+    }
+    return result
+  }
+  const ours = totals(variant)
+  const theirs = totals(original)
   const inVariant: Record<number, LineMark> = {}
   const inOriginal: Record<number, LineMark> = {}
-  for (const [id, line] of ours) {
+  for (const [id, units] of ours) {
     const other = theirs.get(id)
     if (!other) {
       inVariant[id] = 'added'
       continue
     }
-    const a = perPerson(line, variant.servings)
-    const b = perPerson(other, original.servings)
-    const differs = line.unit !== other.unit || (a === null) !== (b === null)
-      || (a !== null && b !== null && Math.abs(a - b) > Math.max(a, b) * 0.05)
+    const differs = units.size !== other.size || [...units].some(([unit, a]) => {
+      if (!other.has(unit)) return true
+      const b = other.get(unit)!
+      if (a === null || b === null) return a !== b
+      return Math.abs(a - b) > Math.max(a, b) * 0.05
+    })
     if (differs) inVariant[id] = inOriginal[id] = 'changed'
   }
   for (const id of theirs.keys()) if (!ours.has(id)) inOriginal[id] = 'removed'

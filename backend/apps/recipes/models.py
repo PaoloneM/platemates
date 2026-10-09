@@ -162,12 +162,9 @@ class RecipeIngredient(models.Model):
     position = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
+        # An ingredient may appear on several lines of a recipe: flour for the pastry and for the
+        # custard, each with its own quantity and note. The shopping list adds them up.
         ordering = ["recipe", "position", "id"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["recipe", "ingredient"], name="unique_recipe_ingredient"
-            )
-        ]
 
     def __str__(self) -> str:
         return f"{self.ingredient} ({self.quantity} {self.unit})"
