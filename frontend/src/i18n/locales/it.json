@@ -231,7 +231,11 @@
     "similarMatch": "Abbinato a «{{match}}» (proposto: «{{name}}»): verifica",
     "unresolved": "Alcuni ingredienti proposti non sono ancora nel catalogo: creali o scegline uno esistente.",
     "sourcePhotos": "Foto originali",
-    "readFromPhoto": "Testo letto dalla foto"
+    "readFromPhoto": "Testo letto dalla foto",
+    "titleMissing": "Manca il titolo della ricetta.",
+    "unresolvedCount_one": "Un ingrediente non è nel catalogo: crealo o scegline uno esistente.",
+    "unresolvedCount_other": "{{count}} ingredienti non sono nel catalogo: creali o scegline di esistenti.",
+    "saveFailed": "Salvataggio non riuscito: vedi il messaggio in alto."
   },
   "ingredient": {
     "newTitle": "Nuovo ingrediente",

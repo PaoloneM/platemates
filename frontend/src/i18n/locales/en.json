@@ -231,7 +231,11 @@
     "similarMatch": "Matched to “{{match}}” (proposed: “{{name}}”): check it",
     "unresolved": "Some proposed ingredients are not in the catalog yet: create them or pick an existing one.",
     "sourcePhotos": "Original photos",
-    "readFromPhoto": "Text read from the photo"
+    "readFromPhoto": "Text read from the photo",
+    "titleMissing": "The recipe has no title.",
+    "unresolvedCount_one": "One ingredient is not in the catalog: create it or pick an existing one.",
+    "unresolvedCount_other": "{{count}} ingredients are not in the catalog: create them or pick existing ones.",
+    "saveFailed": "Could not save: see the message at the top."
   },
   "ingredient": {
     "newTitle": "New ingredient",

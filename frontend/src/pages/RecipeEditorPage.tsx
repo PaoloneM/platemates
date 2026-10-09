@@ -27,6 +27,7 @@ import {
   MenuItem,
   Radio,
   RadioGroup,
+  Snackbar,
   Stack,
   Switch,
   TextField,
@@ -255,6 +256,7 @@ export function RecipeEditorPage() {
   >(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   // Photos the draft was read from, shown beside it for comparison.
   const [photos, setPhotos] = useState<AssistantSession['attachments']>([])
 
@@ -336,14 +338,44 @@ export function RecipeEditorPage() {
     return created.id
   }
 
+  /** Bring a problem into view: scroll to it, put the cursor in it when it is a field, and say
+   * what is wrong in a notification, since the message next to it may be off screen. */
+  function reveal(target: string, message: string) {
+    setNotice(message)
+    // After the render that shows the error state.
+    requestAnimationFrame(() => {
+      const element = document.getElementById(target)
+      if (!element) return
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const field = element.matches('input, textarea') ? element : element.querySelector('input, textarea')
+      ;(field as HTMLElement | null)?.focus({ preventScroll: true })
+    })
+  }
+
   async function save() {
     const problems: Record<string, string> = {}
-    if (!form!.title.trim()) problems.title = t('editor.required')
-    if (!(Number(form!.servings) >= 1)) problems.servings = t('editor.servingsInvalid')
-    if (form!.lines.some((l) => l.suggestion && !l.ingredient)) problems.save = t('editor.unresolved')
-    if (!form!.system && form!.visibility === null) problems.visibility = t('community.chooseSharing')
-    if (Object.keys(problems).length) {
+    // In the order they appear on the page: the first one is shown.
+    const where: [string, string][] = []
+    if (!form!.title.trim()) {
+      problems.title = t('editor.required')
+      where.push(['field-title', t('editor.titleMissing')])
+    }
+    if (!(Number(form!.servings) >= 1)) {
+      problems.servings = t('editor.servingsInvalid')
+      where.push(['field-servings', t('editor.servingsInvalid')])
+    }
+    const unresolved = form!.lines.filter((l) => l.suggestion && !l.ingredient)
+    if (unresolved.length) {
+      problems.save = t('editor.unresolved')
+      where.push([`line-${unresolved[0].key}`, t('editor.unresolvedCount', { count: unresolved.length })])
+    }
+    if (!form!.system && form!.visibility === null) {
+      problems.visibility = t('community.chooseSharing')
+      where.push(['sharing', t('community.chooseSharing')])
+    }
+    if (where.length) {
       setErrors(problems)
+      reveal(...where[0])
       return
     }
     setSaving(true)
@@ -393,9 +425,9 @@ export function RecipeEditorPage() {
     } catch (e) {
       const body = e instanceof ApiError ? (e.body as Record<string, unknown>) : null
       const first = body && Object.entries(body)[0]
-      setErrors({
-        save: first ? `${first[0]}: ${JSON.stringify(first[1])}` : t('common.error'),
-      })
+      const message = first ? `${first[0]}: ${JSON.stringify(first[1])}` : t('common.error')
+      setErrors({ save: message })
+      reveal('editor-errors', t('editor.saveFailed'))
       setSaving(false)
     }
   }
@@ -440,7 +472,7 @@ export function RecipeEditorPage() {
           {t('editor.fromAssistant')}
         </Alert>
       )}
-      {errors.save && <Alert severity="error">{errors.save}</Alert>}
+      {errors.save && <Alert id="editor-errors" severity="error">{errors.save}</Alert>}
 
       {photos.length > 0 && (
         <Section title={t('editor.sourcePhotos')}>
@@ -474,6 +506,7 @@ export function RecipeEditorPage() {
         <Grid container spacing={2}>
           <Grid size={12}>
             <TextField
+              id="field-title"
               label={t('editor.title')}
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
@@ -515,7 +548,7 @@ export function RecipeEditorPage() {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField label={t('editor.servings')} type="number" value={form.servings}
+            <TextField id="field-servings" label={t('editor.servings')} type="number" value={form.servings}
               onChange={(e) => set('servings', e.target.value)} error={!!errors.servings}
               helperText={errors.servings ?? t('editor.servingsHint')}
               slotProps={{ htmlInput: { min: 1 } }} />
@@ -580,8 +613,8 @@ export function RecipeEditorPage() {
             <Typography color="text.secondary">{t('recipe.noIngredients')}</Typography>
           )}
           {form.lines.map((line, index) => (
-            <Grid container spacing={1} key={line.key}
-              sx={{ alignItems: 'center', pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Grid container spacing={1} key={line.key} id={`line-${line.key}`}
+              sx={{ scrollMarginTop: 96, alignItems: 'center', pb: 2, borderBottom: 1, borderColor: 'divider' }}>
               <Grid size={{ xs: 12, md: 5 }}>
                 <IngredientPicker
                   value={line.ingredient}
@@ -791,6 +824,10 @@ export function RecipeEditorPage() {
           }}
         />
       )}
+      <Snackbar open={!!notice} autoHideDuration={6000} onClose={() => setNotice(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="error" variant="filled" onClose={() => setNotice(null)} sx={{ width: '100%' }}>{notice}</Alert>
+      </Snackbar>
     </Stack>
   )
 }
