@@ -61,7 +61,13 @@
   },
   "shell": {
     "account": "Account",
-    "admin": "administrator"
+    "admin": "administrator",
+    "theme": "Theme",
+    "mode": {
+      "light": "Light",
+      "system": "Automatic (as the device)",
+      "dark": "Dark"
+    }
   },
   "nav": {
     "calendar": "Menu",

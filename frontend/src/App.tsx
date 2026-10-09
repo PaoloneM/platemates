@@ -2,6 +2,7 @@ import { CircularProgress } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AuthProvider } from './auth/AuthProvider'
+import { ThemeSync } from './components/ThemeMode'
 import { useAuth } from './auth/context'
 import { AppShell } from './components/AppShell'
 import { RealtimeProvider } from './realtime'
@@ -66,6 +67,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ThemeSync />
         <Routes>
           <Route path="/invite/:token" element={<InvitePage />} />
           <Route path="*" element={<Protected />} />

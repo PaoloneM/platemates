@@ -192,7 +192,8 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   point (`web`, and `websecure` with `tls=true`); the `frontend` container only serves files
 - Keycloak has no fixed hostname and lives under `/auth` on the app's origin: never hardcode a
   Keycloak URL that the browser follows; browser-facing OIDC endpoints stay relative
-- The interface language is a per-user preference saved in the backend, not only in the browser
+- The interface language and the theme (light, dark, or following the device) are per-user
+  preferences saved in the backend, not only in the browser
 - Users are matched on the OIDC `sub` claim, never on email; no OIDC token is ever sent to the
   browser
 - No dependency that requires CUDA: the stack must run on a Raspberry Pi

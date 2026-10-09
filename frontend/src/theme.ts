@@ -1,9 +1,11 @@
 import { createTheme } from '@mui/material/styles'
 
 // The app's palette, shared with the Keycloak login theme
-// (keycloak/themes/platemates/login/resources/css/platemates.css). Light and dark follow the system.
+// (keycloak/themes/platemates/login/resources/css/platemates.css). Light or dark is the user's
+// choice (components/ThemeMode.tsx), "system" following the device; MUI puts it in a data
+// attribute on <html>.
 export const theme = createTheme({
-  cssVariables: { colorSchemeSelector: 'media' },
+  cssVariables: { colorSchemeSelector: 'data' },
   colorSchemes: {
     light: {
       palette: {

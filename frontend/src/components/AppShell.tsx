@@ -26,6 +26,7 @@ import { saveLanguage } from '../auth/language'
 import { useTeam } from '../team'
 import { supportedLanguages } from '../i18n'
 import { Flag } from './Flag'
+import { ThemeModeSwitch } from './ThemeMode'
 import { Logo } from './Logo'
 import { BOTTOM_BAR_HEIGHT, BottomBar, NavigationRail } from './Navigation'
 import yoda from '../assets/yoda.png'
@@ -76,6 +77,7 @@ function UserMenu() {
             <ListItemText>{label}</ListItemText>
           </MenuItem>
         ))}
+        <ThemeModeSwitch />
         <Divider />
         <MenuItem component={RouterLink} to="/team" onClick={() => setAnchor(null)}>
           <ListItemIcon>

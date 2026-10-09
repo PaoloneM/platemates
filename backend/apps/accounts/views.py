@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from apps.teams.models import Membership, Team
 from apps.teams.permissions import TeamScopedMixin
 
-from .models import Invitation, UserProfile, supported_language
+from .models import THEMES, Invitation, UserProfile, supported_language
 from .oidc import enabled_identity_providers
 from .serializers import InvitationPreviewSerializer, InvitationSerializer
 
@@ -20,7 +20,8 @@ def me(request):
     """Who is signed in, and into which teams. Also sets the CSRF cookie the SPA needs.
 
     Answers 200 for anonymous visitors too (`authenticated: false`), so the SPA can tell "not
-    signed in" from "something is broken". PATCH updates the user's preferences (`language`).
+    signed in" from "something is broken". PATCH updates the user's preferences (`language`,
+    `theme`).
     """
     user = request.user
     if not user.is_authenticated:
@@ -29,11 +30,21 @@ def me(request):
         return Response({"authenticated": False})
     profile = UserProfile.of(user)
     if request.method == "PATCH":
-        language = supported_language(request.data.get("language"))
-        if not language:
-            raise serializers.ValidationError({"language": "Unsupported language."})
-        profile.language = language
-        profile.save(update_fields=["language"])
+        changed = []
+        if "language" in request.data:
+            language = supported_language(request.data.get("language"))
+            if not language:
+                raise serializers.ValidationError({"language": "Unsupported language."})
+            profile.language = language
+            changed.append("language")
+        if "theme" in request.data:
+            if request.data["theme"] not in dict(THEMES):
+                raise serializers.ValidationError({"theme": "system, light or dark."})
+            profile.theme = request.data["theme"]
+            changed.append("theme")
+        if not changed:
+            raise serializers.ValidationError("Nothing to change.")
+        profile.save(update_fields=changed)
     memberships = Membership.objects.filter(user=user).select_related("team")
     return Response(
         {
@@ -46,6 +57,7 @@ def me(request):
                 "is_staff": user.is_staff,
                 "is_admin": profile.is_admin,
                 "language": profile.language or None,
+                "theme": profile.theme,
             },
             "teams": [{"id": m.team_id, "name": m.team.name, "role": m.role} for m in memberships],
             # Staff write the system team's recipes (the curated part of the community).

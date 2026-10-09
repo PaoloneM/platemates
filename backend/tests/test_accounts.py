@@ -236,6 +236,18 @@ def test_language_is_saved_per_user(api):
     assert api.get("/api/me/").json()["user"]["language"] == "en"
 
 
+def test_theme_is_saved_per_user(api):
+    assert api.get("/api/me/").json()["user"]["theme"] == "system"
+    assert api.patch("/api/me/", {"theme": "dark"}, format="json").json()["user"]["theme"] == "dark"
+    both = api.patch("/api/me/", {"theme": "light", "language": "en"}, format="json").json()
+    assert (both["user"]["theme"], both["user"]["language"]) == ("light", "en")
+
+
+@pytest.mark.parametrize("body", [{"theme": "blue"}, {}])
+def test_bad_theme_changes_are_rejected(api, body):
+    assert api.patch("/api/me/", body, format="json").status_code == 400
+
+
 def test_unsupported_language_is_rejected(api):
     assert api.patch("/api/me/", {"language": "klingon"}, format="json").status_code == 400
 

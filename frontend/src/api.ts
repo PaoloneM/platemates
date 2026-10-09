@@ -20,11 +20,14 @@ export type Me =
         // Holds Keycloak's `admin` role: changes the application settings.
         is_admin: boolean
         language: string | null
+        theme: ThemeChoice
       }
       teams: { id: number; name: string; role: 'owner' | 'member' }[]
       // Staff only: the system team, whose recipes are the curated part of the community.
       system_team: number | null
     }
+
+export type ThemeChoice = 'system' | 'light' | 'dark'
 
 export type LoginOptions = { identity_providers: IdentityProvider[] }
 export type IdentityProvider = 'google' | 'microsoft' | 'apple'

@@ -19,6 +19,9 @@ from apps.teams.models import Membership, Team
 INVITATION_VALIDITY = dt.timedelta(days=14)
 
 
+THEMES = [("system", "System"), ("light", "Light"), ("dark", "Dark")]
+
+
 class UserProfile(models.Model):
     """Per-user preferences that must follow the user across browsers and devices."""
 
@@ -28,6 +31,8 @@ class UserProfile(models.Model):
     # Interface language. Blank until known: the SPA then adopts the browser's language and
     # saves it here, so the first device a user signs in from decides the default.
     language = models.CharField(max_length=8, choices=settings.LANGUAGES, blank=True)
+    # Light or dark interface, or "system" to follow the device's own setting.
+    theme = models.CharField(max_length=6, choices=THEMES, default="system")
     # Holds Keycloak's realm role `admin` (assigned from APP_ADMINS by setup_keycloak), copied
     # from the ID token at every login: application settings are theirs to change.
     is_admin = models.BooleanField(default=False)
