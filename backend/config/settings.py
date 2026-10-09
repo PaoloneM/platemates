@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "apps.menus",
     "apps.assistant",
     "apps.siteconfig",
+    "apps.curation",
 ]
 
 MIDDLEWARE = [

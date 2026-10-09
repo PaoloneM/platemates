@@ -4,7 +4,7 @@
 # (Unsloth Studio on the host by default) reached through LLM_BASE_URL.
 #
 #   docker compose up -d db keycloak redis embeddings  # backing services, for native development
-#   (then runserver, menu_worker and the realtime service natively: see CLAUDE.md)
+#   (then runserver, the worker and the realtime service natively: see CLAUDE.md)
 #   docker compose up -d                    # everything
 
 name: platemates
@@ -263,16 +263,17 @@ services:
       retries: 20
       start_period: 30s
 
-  # Runs menu generations in the background, one at a time (`menu_worker`). Waits for the
-  # backend's migrations before starting. On stop it finishes the generation in progress, if
-  # the LLM answers within the grace period; otherwise that one is marked failed on restart.
+  # Runs menu generations and system recipe drafts in the background, one at a time
+  # (`manage.py worker`, generations first), woken by PostgreSQL's NOTIFY. Waits for the
+  # backend's migrations before starting. On stop it interrupts the task in progress, which
+  # is marked failed and can be run again.
   worker:
     image: platemates-backend
     pull_policy: never
     command:
       - sh
       - -c
-      - until python manage.py migrate --check >/dev/null 2>&1; do sleep 2; done; exec python manage.py menu_worker
+      - until python manage.py migrate --check >/dev/null 2>&1; do sleep 2; done; exec python manage.py worker
     stop_grace_period: 90s
     env_file:
       - path: .env

@@ -659,7 +659,7 @@ def run_generation(
     announce(generation, generation.status, error=generation.error)
 
 
-# PostgreSQL channel on which a queued generation wakes the worker up (`menu_worker`).
+# PostgreSQL channel on which a queued generation wakes the worker up (`manage.py worker`).
 CHANNEL = "menu_generations"
 
 

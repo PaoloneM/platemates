@@ -27,6 +27,7 @@ import { Link as RouterLink, useNavigate } from 'react-router'
 import { api, type Paginated, type RecipeCard as RecipeCardData } from '../api'
 import { AddRecipeFab } from '../components/AddRecipeFab'
 import { AuthorChip } from '../components/RecipeAuthor'
+import { WebRating } from '../components/WebRating'
 import { useTeam } from '../team'
 import { COURSES, useLabels } from '../labels'
 
@@ -91,6 +92,7 @@ function RecipeCard({ recipe: r, showInBook }: { recipe: RecipeCardData; showInB
                 </Stack>
               )}
               <Typography variant="body2">{t('recipe.servings', { count: r.servings })}</Typography>
+              <WebRating rating={r.web_rating} count={r.web_rating_count} />
               {r.book?.rating != null && <Rating size="small" value={r.book.rating} readOnly />}
             </Stack>
           </Stack>

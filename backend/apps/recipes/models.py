@@ -102,6 +102,11 @@ class Recipe(ProvenanceMixin, models.Model):
     derived_from = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="variants"
     )
+    # How the recipe is rated on the web (system recipes drafted from recipe pages): the
+    # average of the sources' own ratings on a 0-5 scale, and the number of votes. Read from
+    # the pages, never estimated.
+    web_rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    web_rating_count = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

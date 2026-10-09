@@ -423,14 +423,14 @@ def test_the_worker_runs_queued_generations(menu, book, monkeypatch):
     pasta = ref_of(context, book[0])
     chat = FakeChat(answer(meals=[meal(MONDAY, "lunch", dish(pasta))]))
     monkeypatch.setattr(engine, "get_chat_provider", lambda: chat)
-    call_command("menu_worker", "--once")
+    call_command("worker", "--once")
     generation.refresh_from_db()
     assert generation.status == "done" and generation.started_at is not None
 
 
 def test_the_worker_fails_generations_left_running(menu):
     generation = queued(menu, status=MenuGeneration.Status.RUNNING)
-    call_command("menu_worker", "--once")
+    call_command("worker", "--once")
     generation.refresh_from_db()
     assert generation.status == "failed" and "Interrupted" in generation.error
 
@@ -508,7 +508,7 @@ def test_queuing_a_generation_wakes_the_worker_at_commit(team, api):
 
 @pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_the_worker_wakes_on_a_notification_and_not_otherwise():
-    from apps.menus.management.commands.menu_worker import listen, wait_for_notification
+    from apps.menus.management.commands.worker import listen, wait_for_notification
 
     listen()
     assert wait_for_notification(0.3) is False

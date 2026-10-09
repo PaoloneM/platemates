@@ -127,7 +127,7 @@ cd backend && uv run python manage.py setup_keycloak    # configure the Keycloak
 cd backend && uv run python manage.py create_team "Name" --owner you@example.com --staff  # bootstrap
 cd backend && uv run python manage.py migrate           # apply migrations
 cd backend && uv run python manage.py runserver         # API on :8000, admin on /admin/
-cd backend && uv run python manage.py menu_worker       # runs menu generations (the `worker` service in compose)
+cd backend && uv run python manage.py worker            # menu generations and system recipe drafts (`worker` in compose)
 cd backend && uv run uvicorn apps.realtime.asgi:app --port 8001 --ws wsproto   # Socket.IO at /websocket/ (`realtime`)
 cd backend && uv run pytest                             # backend tests (needs the db running)
 cd backend && uv run ruff check --fix . && uv run ruff format .
@@ -210,6 +210,9 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   no members, only staff write its recipes, and they are always shared. Whether a team's
   recipe is shared is the user's choice at creation: never give `visibility` a default in the
   API or the editor
+- System recipe drafts (`apps/curation`) never become recipes by themselves: staff publish them
+  from the recipe editor (`system_draft` on create). Their ratings are computed from the
+  verified source pages, never asked of the model
 - Tests use synthetic data, never real team data
 - Commit messages: imperative summary line, English; one logical change per commit
 

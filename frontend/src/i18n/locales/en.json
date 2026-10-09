@@ -342,7 +342,8 @@
       "ingredients": "Ingredients",
       "rules": "System rules",
       "settings": "Settings",
-      "cache": "Cache"
+      "cache": "Cache",
+      "drafts": "System drafts"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -624,5 +625,68 @@
     "sharedHint": "Every team will see it, and can use it as it is or import it to change it. The team's name shows only if the team chose to sign its recipes (team profile).",
     "systemRecipe": "System recipe (PlateMates)",
     "systemHint": "System recipes are always in the community and only staff change them."
+  },
+  "drafts": {
+    "hint": "System recipes (PlateMates) written by the model from real recipe pages found on the web. Every draft is reviewed and published by you: nothing becomes a recipe by itself.",
+    "request": "Request drafts",
+    "byName": "By name",
+    "byTheme": "By theme",
+    "dishes": "Dishes",
+    "dishesPlaceholder": "Ribollita\nPasta alla Norma\nVitello tonnato",
+    "dishesHint": "One per line, at most {{max}}.",
+    "theme": "Theme",
+    "themePlaceholder": "E.g. \"autumn first courses\", \"quick fish main courses\"",
+    "themeHint": "The model suggests the dishes, leaving out existing system recipes.",
+    "count": "How many",
+    "queue": "Queue",
+    "thinking": "Choosing the dishes…",
+    "modelDown": "The model is not answering right now.",
+    "queued_one": "{{count}} draft queued",
+    "queued_other": "{{count}} drafts queued",
+    "view": {
+      "review": "To review",
+      "progress": "In progress",
+      "published": "Published",
+      "closed": "Failed or discarded"
+    },
+    "none": "No drafts here.",
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "ready": "To review",
+      "failed": "Failed",
+      "published": "Published",
+      "discarded": "Discarded"
+    },
+    "reliability": {
+      "high": "High reliability",
+      "medium": "Medium reliability",
+      "low": "Low reliability"
+    },
+    "phase": {
+      "queued": "queued",
+      "searching": "searching the web for recipes…",
+      "drafting_one": "drafting from {{count}} source…",
+      "drafting_other": "drafting from {{count}} sources…",
+      "drafting_zero": "no source: the model writes it…",
+      "ready": "ready",
+      "failed": "failed"
+    },
+    "asked": "Asked for: \"{{dish}}\"",
+    "sources": "Sources",
+    "agreement": "{{value}}% agreement",
+    "noSources": "No source found: written by the model without checks, review it carefully.",
+    "review": "Review and publish",
+    "openRecipe": "Open the recipe",
+    "discard": "Discard",
+    "retry": "Try again",
+    "reviewing": "System draft for \"{{dish}}\".",
+    "webRatingHint": "The average rating the recipe has on the pages it was drafted from, weighted by number of votes.",
+    "webRating_one": "{{value}} · {{formattedCount}} vote on the web",
+    "webRating_other": "{{value}} · {{formattedCount}} votes on the web",
+    "editRetry": "Change and try again",
+    "editRetryHint": "Change or narrow the dish (e.g. \"pasta e fagioli alla veneta\"), then try again: the previous result is replaced.",
+    "dish": "Dish",
+    "restore": "Restore"
   }
 }

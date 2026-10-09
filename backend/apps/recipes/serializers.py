@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.core.provenance import Source
 from apps.core.serializers import SeasonalityField, UserDecisionSerializerMixin
+from apps.curation.models import SystemDraft
 from apps.teams.models import Membership, RecipeBookEntry, Team
 
 from .embeddings import refresh_embedding
@@ -94,6 +95,10 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
     )
     origin = serializers.SerializerMethodField()
     author = serializers.SerializerMethodField()
+    # Staff, on create: the system recipe draft this recipe publishes (`apps.curation`).
+    system_draft = serializers.PrimaryKeyRelatedField(
+        queryset=SystemDraft.objects.all(), write_only=True, required=False
+    )
     can_edit = serializers.SerializerMethodField()
     # How the requesting user's teams relate to the recipe.
     book_entries = serializers.SerializerMethodField()
@@ -122,12 +127,15 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             "derived_from",
             "origin",
             "author",
+            "system_draft",
+            "web_rating",
+            "web_rating_count",
             "can_edit",
             "book_entries",
             "ingredients",
             "provenance",
         ]
-        read_only_fields = ["provenance", "owner_team"]
+        read_only_fields = ["provenance", "owner_team", "web_rating", "web_rating_count"]
         tracked_fields = ["course", "cuisine", "season_months", "climate_months", "tools"]
 
     def _user(self):
@@ -174,7 +182,18 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             raise serializers.ValidationError("Recipe not found.")
         return source.derived_from or source
 
+    def validate_system_draft(self, draft):
+        if draft.status != SystemDraft.Status.READY:
+            raise serializers.ValidationError("This draft is not ready to publish.")
+        return draft
+
     def validate(self, attrs):
+        if attrs.get("system_draft") is not None and (
+            self.instance is not None or not getattr(attrs.get("team"), "is_system", False)
+        ):
+            raise serializers.ValidationError(
+                {"system_draft": "A draft is published as a new system recipe."}
+            )
         if self.instance is None and "team" not in attrs:
             raise serializers.ValidationError({"team": "Required when creating a recipe."})
         if self.instance is not None:
@@ -193,8 +212,17 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
     def create(self, validated_data):
         team = validated_data.pop("team")
         lines = validated_data.pop("ingredients", [])
+        draft = validated_data.pop("system_draft", None)
         validated_data["owner_team"] = team
+        if draft is not None:
+            # The web rating comes from the draft's sources: read from the pages, never edited.
+            validated_data["web_rating"] = draft.web_rating
+            validated_data["web_rating_count"] = draft.web_rating_count
         recipe = super().create(validated_data)
+        if draft is not None:
+            draft.status = SystemDraft.Status.PUBLISHED
+            draft.recipe = recipe
+            draft.save(update_fields=["status", "recipe"])
         self._replace_lines(recipe, lines)
         self._derive(recipe)
         RecipeBookEntry.objects.create(
@@ -256,6 +284,8 @@ class RecipeCardSerializer(serializers.ModelSerializer):
             "author",
             "origin",
             "book",
+            "web_rating",
+            "web_rating_count",
         ]
 
     def get_suitable_months(self, recipe) -> list[int]:

@@ -23,6 +23,7 @@ import {
   Grid,
   IconButton,
   InputAdornment,
+  Link,
   MenuItem,
   Radio,
   RadioGroup,
@@ -44,12 +45,14 @@ import {
   type DraftLine,
   type KitchenTool,
   type Recipe,
+  type SystemDraft,
   type Unit,
   type Visibility,
 } from '../api'
 import { IngredientDialog } from '../components/IngredientDialog'
 import { IngredientPicker, type PickedIngredient } from '../components/IngredientPicker'
 import { SeasonPicker } from '../components/SeasonPicker'
+import { WebRating } from '../components/WebRating'
 import { ToolDialog } from '../components/ToolDialog'
 import { useAuth } from '../auth/context'
 import { useTeam } from '../team'
@@ -230,6 +233,9 @@ export function RecipeEditorPage() {
   const sessionId = params.get('session')
   // Importing a community recipe to change it: the copy is ours, linked to the original.
   const importing = params.get('from')
+  // Staff reviewing a system recipe draft: publishing it is saving this form.
+  const draftId = params.get('draft')
+  const [systemDraft, setSystemDraft] = useState<SystemDraft | null>(null)
   const { team } = useTeam()
   const { me } = useAuth()
   const systemTeam = me?.authenticated ? me.system_team : null
@@ -239,7 +245,7 @@ export function RecipeEditorPage() {
   // Editing or reviewing a draft: show a spinner until the data is loaded, rather than an empty
   // form the user might start typing into.
   const [form, setForm] = useState<Form | null>(
-    editing || sessionId || importing ? null : { ...EMPTY, lines: [newLine()] },
+    editing || sessionId || importing || draftId ? null : { ...EMPTY, lines: [newLine()] },
   )
   const [cuisines, setCuisines] = useState<Cuisine[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
@@ -251,6 +257,18 @@ export function RecipeEditorPage() {
   const [saving, setSaving] = useState(false)
   // Photos the draft was read from, shown beside it for comparison.
   const [photos, setPhotos] = useState<AssistantSession['attachments']>([])
+
+  useEffect(() => {
+    if (!draftId || editing) return
+    Promise.all([api<SystemDraft>(`/system-drafts/${draftId}/`), api<Cuisine[]>('/cuisines/')])
+      .then(([loaded, all]) => {
+        setSystemDraft(loaded)
+        // Same shape as an assistant draft: the editor resolves its ingredients the same way.
+        const asSession = { draft: loaded.draft, matches: loaded.matches ?? [] } as unknown as AssistantSession
+        setForm({ ...fromDraft(asSession, all), system: true, visibility: 'shared' })
+      })
+      .catch(() => setErrors({ load: t('recipe.notFound') }))
+  }, [draftId, editing, t])
 
   useEffect(() => {
     if (!sessionId || editing) return
@@ -356,6 +374,7 @@ export function RecipeEditorPage() {
         source_url: f.sourceUrl.trim(),
       }
       if (importing && !editing) payload.derived_from = Number(importing)
+      if (systemDraft && !editing) payload.system_draft = systemDraft.id
       if (!f.seasonAuto) payload.season_months = { months: f.seasonMonths }
       else if (editing) payload.season_months = { auto: true }
       if (!editing) payload.team = f.system && systemTeam ? systemTeam : team.id
@@ -396,6 +415,18 @@ export function RecipeEditorPage() {
           {t('common.save')}
         </Button>
       </Stack>
+      {systemDraft && !editing && (
+        <Alert severity={systemDraft.reliability === 'high' ? 'success' : systemDraft.reliability === 'low' ? 'error' : 'warning'}>
+          {t('drafts.reviewing', { dish: systemDraft.dish })}{' '}
+          {t(`drafts.reliability.${systemDraft.reliability || 'low'}`)}.{' '}
+          {systemDraft.sources.length > 0
+            ? <>{t('drafts.sources')}: {systemDraft.sources.map((s, i) => (
+                <span key={s.url}>{i > 0 && ', '}<Link href={s.url} target="_blank" rel="noopener noreferrer">{s.site}</Link></span>
+              ))}.</>
+            : t('drafts.noSources')}
+          <Box sx={{ mt: 0.5 }}><WebRating rating={systemDraft.web_rating} count={systemDraft.web_rating_count} /></Box>
+        </Alert>
+      )}
       {source && !editing && (
         <Alert severity="info" icon={<ImportIcon />}>
           {t('community.importing', { title: source.title })}

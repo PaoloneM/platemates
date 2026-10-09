@@ -105,6 +105,9 @@ export type Recipe = {
   derived_from: number | null
   origin: RecipeOrigin | null
   author: RecipeAuthor
+  // The web rating read from the pages a system recipe was drafted from (0-5, and votes).
+  web_rating: string | null
+  web_rating_count: number | null
 }
 
 // A recipe on the recipe book screen: in the team's book (`book`), or in the community.
@@ -120,7 +123,36 @@ export type RecipeCard = {
   author: RecipeAuthor
   origin: RecipeOrigin | null
   book: { id: number; rating: number | null } | null
+  web_rating: string | null
+  web_rating_count: number | null
 }
+
+export type DraftStatus = 'queued' | 'running' | 'ready' | 'failed' | 'published' | 'discarded'
+export type Reliability = 'high' | 'medium' | 'low'
+
+// A system recipe draft (staff): researched on the web, drafted by the LLM, to review.
+export type SystemDraft = {
+  id: number
+  dish: string
+  language: string
+  status: DraftStatus
+  sources: { url: string; site: string; title: string; rating: number | null; rating_count: number | null }[]
+  draft: Draft | null
+  reliability: Reliability | ''
+  agreement: number | null
+  web_rating: string | null
+  web_rating_count: number | null
+  error: string
+  recipe: number | null
+  requested_by_name: string | null
+  created_at: string
+  finished_at: string | null
+  // Detail only: each draft ingredient's catalog match.
+  matches?: IngredientMatch[]
+}
+
+// The worker's progress on a draft, sent to staff in real time.
+export type SystemDraftEvent = { id: number; dish: string; status: DraftStatus; phase: string; sources?: number }
 
 export type RecipeVariants = {
   original: { id: number; title: string; author: RecipeAuthor } | null

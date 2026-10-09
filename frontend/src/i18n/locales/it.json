@@ -342,7 +342,8 @@
       "ingredients": "Ingredienti",
       "rules": "Regole di sistema",
       "settings": "Impostazioni",
-      "cache": "Cache"
+      "cache": "Cache",
+      "drafts": "Bozze di sistema"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -624,5 +625,68 @@
     "sharedHint": "La vedranno tutti i team, che potranno usarla così com'è o importarla per modificarla. Il nome del team compare solo se il team ha scelto di firmare le sue ricette (profilo del team).",
     "systemRecipe": "Ricetta di sistema (PlateMates)",
     "systemHint": "Le ricette di sistema sono sempre nella community e le modifica solo lo staff."
+  },
+  "drafts": {
+    "hint": "Ricette di sistema (PlateMates) scritte dal modello partendo da pagine di ricette vere trovate in rete. Ogni bozza va rivista e pubblicata da te: niente diventa una ricetta da solo.",
+    "request": "Richiedi bozze",
+    "byName": "Per nome",
+    "byTheme": "Per tema",
+    "dishes": "Piatti",
+    "dishesPlaceholder": "Ribollita\nPasta alla Norma\nVitello tonnato",
+    "dishesHint": "Uno per riga, al massimo {{max}}.",
+    "theme": "Tema",
+    "themePlaceholder": "Es. «primi autunnali», «secondi di pesce veloci»",
+    "themeHint": "Il modello propone i piatti, evitando le ricette di sistema già esistenti.",
+    "count": "Quanti",
+    "queue": "Metti in coda",
+    "thinking": "Scelgo i piatti…",
+    "modelDown": "Il modello non risponde in questo momento.",
+    "queued_one": "{{count}} bozza in coda",
+    "queued_other": "{{count}} bozze in coda",
+    "view": {
+      "review": "Da rivedere",
+      "progress": "In lavorazione",
+      "published": "Pubblicate",
+      "closed": "Non riuscite o scartate"
+    },
+    "none": "Nessuna bozza qui.",
+    "status": {
+      "queued": "In coda",
+      "running": "In corso",
+      "ready": "Da rivedere",
+      "failed": "Non riuscita",
+      "published": "Pubblicata",
+      "discarded": "Scartata"
+    },
+    "reliability": {
+      "high": "Affidabilità alta",
+      "medium": "Affidabilità media",
+      "low": "Affidabilità bassa"
+    },
+    "phase": {
+      "queued": "in coda",
+      "searching": "cerco ricette in rete…",
+      "drafting_one": "scrivo la bozza da {{count}} fonte…",
+      "drafting_other": "scrivo la bozza da {{count}} fonti…",
+      "drafting_zero": "nessuna fonte: la scrive il modello…",
+      "ready": "pronta",
+      "failed": "non riuscita"
+    },
+    "asked": "Richiesto: «{{dish}}»",
+    "sources": "Fonti",
+    "agreement": "concordanza {{value}}%",
+    "noSources": "Nessuna fonte trovata: scritta dal modello senza riscontri, da verificare con attenzione.",
+    "review": "Rivedi e pubblica",
+    "openRecipe": "Apri la ricetta",
+    "discard": "Scarta",
+    "retry": "Riprova",
+    "reviewing": "Bozza di sistema per «{{dish}}».",
+    "webRatingHint": "Il voto medio che la ricetta ha sulle pagine da cui è stata tratta, pesato sul numero di voti.",
+    "webRating_one": "{{value}} · {{formattedCount}} voto in rete",
+    "webRating_other": "{{value}} · {{formattedCount}} voti in rete",
+    "editRetry": "Modifica e riprova",
+    "editRetryHint": "Cambia o precisa il piatto (es. «pasta e fagioli alla veneta»), poi riprova: il risultato precedente viene sostituito.",
+    "dish": "Piatto",
+    "restore": "Ripristina"
   }
 }

@@ -31,8 +31,16 @@ def _emit(event: str, data: dict[str, Any], room: str) -> None:
     _manager().emit(event, data, room=room)
 
 
+# Staff's own room: the progress of system recipe drafts.
+STAFF_ROOM = "staff"
+
+
 def publish(team_id: int, event: str, data: dict[str, Any]) -> None:
+    publish_to(team_room(team_id), event, data)
+
+
+def publish_to(room: str, event: str, data: dict[str, Any]) -> None:
     try:
-        _emit(event, data, team_room(team_id))
+        _emit(event, data, room)
     except Exception as exc:
-        log.warning("realtime: could not send %s to team %s (%s)", event, team_id, exc)
+        log.warning("realtime: could not send %s to %s (%s)", event, room, exc)

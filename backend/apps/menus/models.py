@@ -189,7 +189,7 @@ class SlotDish(models.Model):
 
 
 class MenuGeneration(models.Model):
-    """One request to generate a week's menu, run in the background by `menu_worker`.
+    """One request to generate a week's menu, run in the background by `manage.py worker`.
 
     Keeps a snapshot of the rules it used and what came back, so the user sees what a proposal
     was based on, and later generations can learn from the history.

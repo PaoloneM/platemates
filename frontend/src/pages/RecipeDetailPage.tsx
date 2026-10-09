@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
 import { api, type KitchenTool, type Recipe, type RecipeVariants } from '../api'
 import { AuthorChip } from '../components/RecipeAuthor'
+import { WebRating } from '../components/WebRating'
 import { IngredientList, PeopleStepper, StepList } from '../components/RecipeView'
 import { useTeam } from '../team'
 import { useDescribeMonths, useLabels } from '../labels'
@@ -132,6 +133,7 @@ export function RecipeDetailPage() {
               <Link component={RouterLink} to={`/recipes/${recipe.origin.id}`}>{recipe.origin.title}</Link>
             </Typography>
           )}
+          <WebRating rating={recipe.web_rating} count={recipe.web_rating_count} />
           {recipe.description && <Typography color="text.secondary">{recipe.description}</Typography>}
           {entry && (
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>

@@ -386,7 +386,8 @@ says in its rationale how it resolved a conflict):
 - **A queue in the database, a worker beside the backend.** `POST /api/menus/generate/` creates
   the week's menu if needed and queues a `MenuGeneration` (one active per week, enforced by a
   partial unique constraint; a second request gets the running one with 409). The `worker`
-  compose service runs `manage.py menu_worker`, which claims queued generations with
+  compose service runs `manage.py worker` (it also drafts system recipes, after any
+  generation waiting), which claims queued generations with
   `SELECT ... FOR UPDATE SKIP LOCKED`, one at a time, and on start marks as failed any left
   running by a worker that stopped. No Celery: the LLM serves one request at a time anyway,
   and a Raspberry Pi has no room to spare.
@@ -488,6 +489,30 @@ Built so far, the community (2026-10-09):
   book, the community (shared recipes of the system and of other teams), or both, with each
   recipe's author, origin and whether it is in the book. The switches are remembered per
   browser.
+
+System drafts with sources (2026-10-09), `apps/curation`:
+
+- `SystemDraft`, one per dish, queued by staff from Management > System drafts (dishes by name,
+  or a theme and a count, for which the model suggests names leaving out existing system
+  recipes) and run by the worker (`manage.py worker`, the former `menu_worker`: menu
+  generations first, then drafts), woken by `NOTIFY system_drafts`. Phases reach staff live in
+  the realtime service's `staff` room.
+- Sources: one web search per dish (Studio's own), every URL opened and kept only if it holds
+  exactly one complete schema.org Recipe, at most two, from different sites. Pages already
+  imported by a team are not excluded here, unlike the assistant's search.
+- The draft: one source is extracted faithfully (as a link import, structured facts winning);
+  two are combined by the model, keeping what they agree on; none, and the model writes the
+  usual version from what it knows (if it does not know the dish it says so and the draft
+  fails, rather than inventing one). Always through `normalize_draft`.
+- Ratings, computed by code: reliability high (two sources whose ingredient words overlap at
+  least 35%, Jaccard), medium (one source, or two that differ), low (none); web rating, the
+  sources' `aggregateRating` brought to five stars and averaged by votes. Measured: ribollita
+  high, 4.3 from 309 votes; pasta alla Norma medium (two different versions), 4.1 from 465;
+  20-30 s a dish.
+- Review and publish: "Review and publish" opens the recipe editor with the draft, as an
+  assistant draft (unknown ingredients to create or pick), "system recipe" on; saving it with
+  `system_draft` creates the system recipe, copies the web rating (`Recipe.web_rating`, read
+  only, shown to everyone) and marks the draft published. Drafts can be discarded and retried.
 
 ## Application settings (decided with Paolo 2026-10-08)
 

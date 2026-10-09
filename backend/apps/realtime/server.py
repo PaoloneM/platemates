@@ -20,7 +20,7 @@ from django.db import close_old_connections
 
 from apps.teams.models import Membership
 
-from .events import team_room
+from .events import STAFF_ROOM, team_room
 
 
 def user_from_cookies(cookie_header: str):
@@ -44,7 +44,8 @@ def rooms_of(cookie_header: str) -> tuple[int, list[str]] | None:
         if user is None:
             return None
         teams = Membership.objects.filter(user=user).values_list("team_id", flat=True)
-        return user.pk, [team_room(team) for team in teams]
+        rooms = [team_room(team) for team in teams]
+        return user.pk, [*rooms, STAFF_ROOM] if user.is_staff else rooms
     finally:
         close_old_connections()
 
