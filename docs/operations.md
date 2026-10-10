@@ -177,6 +177,12 @@ pgBackRest (decided with Paolo 2026-10-10), in the database image `platemates-db
   GNU rsync (FreeNAS/TrueNAS, Linux): macOS's openrsync sends `--delete` to the server even
   when pulling, and `rrsync -ro` refuses it. Verified 2026-10-10: a first pull of 2348 files
   (7.7 MB), a second one transferring nothing.
+- **The home FreeNAS (11.3)**, set up 2026-10-10: user `platemates`, an rsync task (Pull, SSH,
+  `nasbackup@2.29.107.140`, remote path `/`, every 2 hours at :15, Delete on) into
+  `/mnt/RaidoZzo/paoloBkup/platemates/server`, with `--filter='P .ssh/'` as an extra option.
+  Learned the hard way: FreeNAS 11.3 cannot read ed25519 keys when it saves the task (use
+  RSA); "Validate Remote Path" must be off, since it runs a shell command rrsync refuses; and
+  the task's path must not be the user's home, which `--delete` emptied twice, keys included.
 - **State**: `systemctl list-timers platemates-backup.timer`, `journalctl -u platemates-backup`,
   `docker compose exec -u postgres db pgbackrest --stanza=platemates info`.
 
