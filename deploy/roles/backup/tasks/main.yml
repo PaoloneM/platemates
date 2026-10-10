@@ -21,6 +21,12 @@
     key: "{{ backup_pull_keys | map('regex_replace', '^', 'restrict,command=\"/usr/bin/rrsync -ro ' ~ backup_dir ~ '\" ') | join('\n') }}"
   when: backup_pull_keys | length > 0
 
+- name: Remove every key when none is configured
+  ansible.builtin.file:
+    path: /home/nasbackup/.ssh/authorized_keys
+    state: absent
+  when: backup_pull_keys | length == 0
+
 - name: Create the backup folders
   ansible.builtin.file:
     path: "{{ item.path }}"
@@ -36,28 +42,20 @@
     label: "{{ item.path }}"
 
 # The repository is written by the database container's postgres user; the NAS account reads
-# it: what is there now, and what is written later (default ACLs, set on folders only).
+# the folders, and everything written in them later through their default ACLs (the folders are
+# created empty, so nothing needs a recursive pass, which Ansible would report as a change on
+# every run).
 - name: Let the NAS account read the backups
   ansible.posix.acl:
-    path: "{{ backup_dir }}"
+    path: "{{ item.0 }}"
     entity: nasbackup
     etype: user
-    permissions: rX
-    recursive: true
+    permissions: rx
+    default: "{{ item.1 }}"
     state: present
-
-- name: Let it read what is written later
-  ansible.posix.acl:
-    path: "{{ item }}"
-    entity: nasbackup
-    etype: user
-    permissions: rX
-    default: true
-    state: present
-  loop:
-    - "{{ backup_dir }}"
-    - "{{ backup_dir }}/pgbackrest"
-    - "{{ backup_dir }}/env"
+  loop: "{{ [backup_dir, backup_dir ~ '/pgbackrest', backup_dir ~ '/env'] | product([false, true]) | list }}"
+  loop_control:
+    label: "{{ item.0 }}{{ ' (default)' if item.1 else '' }}"
 
 - name: Install the backup script
   ansible.builtin.template:

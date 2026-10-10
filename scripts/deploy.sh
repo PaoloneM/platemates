@@ -8,6 +8,9 @@
 #   scripts/deploy.sh --check --diff                    # what would change
 #   scripts/deploy.sh vault edit                        # change the encrypted personal values
 #
+# The image's entrypoint passes arguments on unquoted: an extra variable with spaces in it goes
+# in a file under deploy/ instead, `-e @file.yml`.
+#
 # SSH keys come from the Mac's ssh-agent (unlocked by the keychain); the vault password from
 # ~/.config/platemates/ansible-vault-password, outside the repository.
 set -euo pipefail

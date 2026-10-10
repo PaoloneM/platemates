@@ -171,7 +171,10 @@ pgBackRest (decided with Paolo 2026-10-10), in the database image `platemates-db
   transfer, so home needs no fixed address. Files in the repository never change once written,
   so each run moves only what is new; run it every few hours, with `--delete` to follow the
   retention, and keep ZFS snapshots of the target dataset so a deletion on the server cannot
-  erase the copies.
+  erase the copies. `rrsync -ro` refuses `--remove-source-files` and any write. The copy needs
+  GNU rsync (FreeNAS/TrueNAS, Linux): macOS's openrsync sends `--delete` to the server even
+  when pulling, and `rrsync -ro` refuses it. Verified 2026-10-10: a first pull of 2348 files
+  (7.7 MB), a second one transferring nothing.
 - **State**: `systemctl list-timers platemates-backup.timer`, `journalctl -u platemates-backup`,
   `docker compose exec -u postgres db pgbackrest --stanza=platemates info`.
 
