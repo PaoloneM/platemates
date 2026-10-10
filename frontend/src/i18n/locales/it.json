@@ -357,7 +357,8 @@
       "rules": "Regole di sistema",
       "settings": "Impostazioni",
       "cache": "Cache",
-      "drafts": "Bozze di sistema"
+      "drafts": "Bozze di sistema",
+      "transfer": "Esporta / importa"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -739,5 +740,65 @@
     "editRetryHint": "Cambia o precisa il piatto (es. «pasta e fagioli alla veneta»), poi riprova: il risultato precedente viene sostituito.",
     "dish": "Piatto",
     "restore": "Ripristina"
+  },
+  "transfer": {
+    "hint": "Sposta dati tra installazioni di PlateMates (per esempio dal Mac al server) con un file JSON. Gli utenti non viaggiano: un team importato appartiene a chi lo importa, o va in un team che esiste già.",
+    "export": "Esporta",
+    "import": "Importa",
+    "scope": {
+      "team": "Un team",
+      "recipes": "Ricette",
+      "system": "Dati di sistema",
+      "ingredients": "Ingredienti di sistema"
+    },
+    "scopeHint": {
+      "team": "Persone, preferenze, regole, calendario, ricettario con i voti, le ricette del team (versioni comprese) e i suoi ingredienti, i menu. Le ricette di sistema o della community nel ricettario sono solo citate: esporta anche i dati di sistema.",
+      "recipes": "Le ricette scelte, con i loro ingredienti, attrezzi e cucina.",
+      "system": "Ingredienti di sistema, attrezzi, cucine, regole di sistema e le ricette di PlateMates.",
+      "ingredients_one": "L'ingrediente di sistema ({{count}}).",
+      "ingredients_other": "Tutti gli ingredienti di sistema ({{count}})."
+    },
+    "team": "Team",
+    "teamOption": "{{name}} · {{recipes}} ricette, {{users}} utenti",
+    "recipes": "Ricette (cerca per titolo)",
+    "download": "Scarica il file",
+    "exported": "Scaricato {{name}}.",
+    "importHint": "Prima l'anteprima: dice cosa verrebbe creato, aggiornato o saltato, senza cambiare nulla. Importare di nuovo lo stesso file non crea doppioni.",
+    "chooseFile": "Scegli il file",
+    "target": "Team di destinazione",
+    "targetAuto": "Automatico: lo stesso team, o uno nuovo",
+    "targetHint": "Per portare il team in uno che esiste già qui (per esempio creato per le stesse persone).",
+    "mode": {
+      "skip": "Lascia gli esistenti",
+      "update": "Aggiorna gli esistenti"
+    },
+    "modeHint": {
+      "skip": "Ciò che esiste già resta com'è; si aggiunge solo ciò che manca.",
+      "update": "Ciò che esiste già prende i valori del file (anche se qui era stato cambiato dopo)."
+    },
+    "preview": "Anteprima",
+    "confirm": "Importa",
+    "previewOf": "Anteprima del file «{{scope}}» esportato il {{date}}: nulla è stato ancora cambiato.",
+    "done": "Importazione completata.",
+    "teamNew": "Il team «{{name}}» verrà creato, con te come proprietario.",
+    "teamInto": "Il team «{{name}}» va in «{{into}}».",
+    "empty": "Il file non contiene nulla da importare.",
+    "created": "Nuovi",
+    "updated": "Aggiornati",
+    "skipped": "Già presenti",
+    "kind": {
+      "kitchen_tools": "Attrezzi",
+      "cuisines": "Cucine",
+      "teams": "Team",
+      "ingredients": "Ingredienti",
+      "system_rules": "Regole di sistema",
+      "recipes": "Ricette",
+      "members": "Persone",
+      "preferences": "Preferenze",
+      "calendar_days": "Giorni del calendario",
+      "team_rules": "Regole del team",
+      "book_entries": "Voci del ricettario",
+      "menus": "Menu settimanali"
+    }
   }
 }

@@ -876,6 +876,32 @@ The public server has no local model: Claude answers (`LLM_PROVIDER=anthropic`, 
   re-embeds every recipe through `embed-recipes`; measured: "pasta al pomodoro" is 0.64 from
   "spaghetti al sugo" and 0.37 from "tiramisù".
 
+## Export and import (decided with Paolo 2026-10-10)
+
+Data moves between installations (the Mac to the public server, a team to another server) as a
+JSON document, from Management > Export / import (administrators) or `manage.py export_data` /
+`import_data`. `backup.py` restores a whole installation, accounts included; this merges into
+one that already has its own users.
+
+- **Scopes**: chosen recipes (with their ingredients, tools, cuisine); system ingredients; a
+  team (people, preferences, rules, calendar, book with ratings, its own recipes and versions,
+  its ingredients, menus); the system data (system ingredients, kitchen tools, cuisines, system
+  rules, the system team's recipes). Never exported: users, accounts, invitations (identities
+  are Keycloak's), embeddings (recomputed), assistant conversations, generation logs.
+- **Identity**: `uid` (UUID) on teams, people, recipes, ingredients, team and system rules,
+  carried by the file; imported objects keep it, so importing the same file again changes
+  nothing. Catalog entries are also matched by name (ingredients by name or alias among what the
+  owner can use, tools by code then name, cuisines and system rules by name/code): two
+  installations seed the same catalog separately, with different uids.
+- **Existing objects** are skipped by default; "update" overwrites them with the file's values.
+  A team goes into the chosen target team, else the one with its uid, else a new team owned by
+  the importing administrator. Recipes in a book that are not here (system or community
+  recipes not imported yet) are reported and left out; a version whose original is missing is
+  imported without the link. Order of a move: system data first, then the team.
+- **Preview**: the import runs in a transaction and, for a preview, is rolled back, so the
+  preview is exactly what the import will do. Values are restored as stored, provenance
+  included (data moved, not decisions taken); embeddings are refreshed after commit.
+
 ## Future: translated ingredient names (recorded 2026-10-07)
 
 Ingredient names are stored in a single language (Italian, the first deployment's). A team

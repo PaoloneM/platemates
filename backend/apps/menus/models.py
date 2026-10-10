@@ -6,6 +6,8 @@ optional ratings feeds the RAG context of future generations.
 
 from __future__ import annotations
 
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -31,6 +33,8 @@ class SystemRule(models.Model):
     no code.
     """
 
+    # Stable identity across installations: what an export file refers to (apps/transfer).
+    uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     code = models.SlugField(max_length=40, unique=True, null=True, blank=True, editable=False)
     text_it = models.CharField(max_length=300)
     text_en = models.CharField(max_length=300)
@@ -49,6 +53,8 @@ class TeamRule(models.Model):
     """One of the team's standing rules for planning its weeks, in natural language
     ("fish at least twice", "pizza on friday evening"). See `SystemRule`."""
 
+    # Stable identity across installations: what an export file refers to (apps/transfer).
+    uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="rules")
     text = models.CharField(max_length=300)
     created_at = models.DateTimeField(auto_now_add=True)

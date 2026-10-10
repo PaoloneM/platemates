@@ -495,6 +495,26 @@ export function loginUrl(options: { next?: string; idp?: IdentityProvider; signu
   return `/oidc/authenticate/?${params}`
 }
 
+/** GET a file and hand it to the browser to save, under the name the backend gives it. */
+export async function apiDownload(path: string): Promise<string> {
+  const response = await fetch(`/api${path}`, {
+    credentials: 'same-origin',
+    headers: { 'Accept-Language': i18n.resolvedLanguage ?? 'it' },
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new ApiError(response.status, `GET ${path}: ${response.status}`, body)
+  }
+  const name = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] ?? 'export.json'
+  const url = URL.createObjectURL(await response.blob())
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  link.click()
+  URL.revokeObjectURL(url)
+  return name
+}
+
 /** POST multipart form data (files). The browser sets the multipart boundary itself. */
 export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -508,4 +528,20 @@ export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
     throw new ApiError(response.status, `POST ${path}: ${response.status}`, body)
   }
   return response.json()
+}
+
+// Export / import (Management, administrators): what can be exported, and an import's report.
+export type TransferChoices = {
+  teams: { id: number; name: string; recipes: number; users: number }[]
+  recipes: { id: number; title: string; team: string | null }[]
+  system_ingredients: number
+}
+export type ImportReport = {
+  dry_run: boolean
+  created: Record<string, number>
+  updated: Record<string, number>
+  skipped: Record<string, number>
+  warnings: string[]
+  teams: { file: string; into: string; new: boolean }[]
+  document: { scope: string; exported_at: string }
 }

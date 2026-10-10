@@ -6,6 +6,8 @@ default number of diners per meal all live here and are editable at any time.
 
 from __future__ import annotations
 
+import uuid
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -40,6 +42,8 @@ def default_typical_week() -> list[dict]:
 
 
 class Team(models.Model):
+    # Stable identity across installations: what an export file refers to (apps/transfer).
+    uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     name = models.CharField(max_length=120)
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL, through="Membership", related_name="teams"
@@ -124,6 +128,8 @@ class Membership(models.Model):
 class Member(models.Model):
     """A person who eats at the team table. Not necessarily an application user."""
 
+    # Stable identity across installations: what an export file refers to (apps/transfer).
+    uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="members")
     name = models.CharField(max_length=80, blank=True)
     # Birth year rather than age: it does not go stale. Used for similarity between teams.

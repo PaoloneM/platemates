@@ -25,6 +25,7 @@ from apps.teams.views import (
     RecipeBookEntryViewSet,
     TeamViewSet,
 )
+from apps.transfer.views import choices_view, export_view, import_view
 
 router = DefaultRouter()
 router.register("ingredients", IngredientViewSet, basename="ingredient")
@@ -55,6 +56,9 @@ urlpatterns = [
     path("api/cache/", cache_stats),
     path("api/cache/clear/", cache_clear),
     path("api/config/<str:key>/", config_detail),
+    path("api/transfer/export/", export_view),
+    path("api/transfer/import/", import_view),
+    path("api/transfer/choices/", choices_view),
     path("api/calendar/", CalendarView.as_view()),
     path("api/calendar/<str:date>/", CalendarDayView.as_view()),
     path("api/", include(router.urls)),

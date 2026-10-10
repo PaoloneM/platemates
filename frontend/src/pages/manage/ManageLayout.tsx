@@ -3,6 +3,7 @@ import DraftIcon from '@mui/icons-material/AutoStoriesOutlined'
 import EggIcon from '@mui/icons-material/EggOutlined'
 import RuleIcon from '@mui/icons-material/RuleOutlined'
 import TuneIcon from '@mui/icons-material/Tune'
+import TransferIcon from '@mui/icons-material/SwapVert'
 import {
   Box,
   List,
@@ -33,6 +34,7 @@ const SECTIONS = [
   { key: 'drafts', path: '/manage/drafts', icon: <DraftIcon />, who: 'staff' },
   { key: 'settings', path: '/manage/settings', icon: <TuneIcon />, who: 'admin' },
   { key: 'cache', path: '/manage/cache', icon: <CachedIcon />, who: 'admin' },
+  { key: 'transfer', path: '/manage/transfer', icon: <TransferIcon />, who: 'admin' },
 ] as const
 
 function useSections() {

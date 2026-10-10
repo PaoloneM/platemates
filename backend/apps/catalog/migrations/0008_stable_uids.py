@@ -1,0 +1,36 @@
+"""A stable `uid` for objects export files refer to (apps/transfer).
+
+In three steps, because a default on a new unique column would give every existing row the same
+value: add it empty, give each row its own, then make it unique and required.
+"""
+
+import uuid
+
+from django.db import migrations, models
+
+MODELS = ["ingredient"]
+
+
+def fill(apps, schema_editor):
+    for model_name in MODELS:
+        model = apps.get_model("catalog", model_name)
+        for pk in model.objects.filter(uid__isnull=True).values_list("pk", flat=True):
+            model.objects.filter(pk=pk).update(uid=uuid.uuid4())
+
+
+class Migration(migrations.Migration):
+    dependencies = [("catalog", "0007_restore_base_ingredients")]
+
+    operations = [
+        migrations.AddField(
+            model_name="ingredient",
+            name="uid",
+            field=models.UUIDField(null=True, editable=False),
+        ),
+        migrations.RunPython(fill, migrations.RunPython.noop),
+        migrations.AlterField(
+            model_name="ingredient",
+            name="uid",
+            field=models.UUIDField(default=uuid.uuid4, unique=True, editable=False),
+        ),
+    ]

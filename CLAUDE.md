@@ -88,7 +88,8 @@ Full detail in `README.md`:
 ### Layout
 
 - `backend/`: Django project (`config/`), domain apps in `apps/` (`accounts`, `catalog`,
-  `recipes`, `teams`, `menus`, `assistant`, `siteconfig`; `core` holds abstract mixins and the
+  `recipes`, `teams`, `menus`, `assistant`, `siteconfig`, `curation`, `transfer` (export and
+  import between installations); `core` holds abstract mixins and the
   cache manager), AI
   adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
@@ -228,6 +229,9 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - System recipe drafts (`apps/curation`) never become recipes by themselves: staff publish them
   from the recipe editor (`system_draft` on create). Their ratings are computed from the
   verified source pages, never asked of the model
+- Data moves between installations through `apps/transfer` (export/import by stable `uid`,
+  catalogs matched by name too), never by copying database ids. A model whose objects travel in
+  export files has a `uid`; add new fields to `exporting.py` and `importing.py` together
 - Tests use synthetic data, never real team data
 - Commit messages: imperative summary line, English; one logical change per commit
 

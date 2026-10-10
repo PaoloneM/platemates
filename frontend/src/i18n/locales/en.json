@@ -357,7 +357,8 @@
       "rules": "System rules",
       "settings": "Settings",
       "cache": "Cache",
-      "drafts": "System drafts"
+      "drafts": "System drafts",
+      "transfer": "Export / import"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -739,5 +740,65 @@
     "editRetryHint": "Change or narrow the dish (e.g. \"pasta e fagioli alla veneta\"), then try again: the previous result is replaced.",
     "dish": "Dish",
     "restore": "Restore"
+  },
+  "transfer": {
+    "hint": "Move data between PlateMates installations (from the Mac to the server, say) as a JSON file. Users do not travel: an imported team belongs to whoever imports it, or goes into a team that already exists.",
+    "export": "Export",
+    "import": "Import",
+    "scope": {
+      "team": "A team",
+      "recipes": "Recipes",
+      "system": "System data",
+      "ingredients": "System ingredients"
+    },
+    "scopeHint": {
+      "team": "People, preferences, rules, calendar, the recipe book with its ratings, the team's own recipes (versions included) and ingredients, the menus. System or community recipes in the book are only referred to: export the system data too.",
+      "recipes": "The chosen recipes, with their ingredients, kitchen tools and cuisine.",
+      "system": "System ingredients, kitchen tools, cuisines, system rules and PlateMates' recipes.",
+      "ingredients_one": "The system ingredient ({{count}}).",
+      "ingredients_other": "Every system ingredient ({{count}})."
+    },
+    "team": "Team",
+    "teamOption": "{{name}} · {{recipes}} recipes, {{users}} users",
+    "recipes": "Recipes (search by title)",
+    "download": "Download the file",
+    "exported": "Downloaded {{name}}.",
+    "importHint": "Preview first: it says what would be created, updated or skipped, changing nothing. Importing the same file again creates no duplicates.",
+    "chooseFile": "Choose the file",
+    "target": "Target team",
+    "targetAuto": "Automatic: the same team, or a new one",
+    "targetHint": "To bring the team into one that already exists here (e.g. created for the same people).",
+    "mode": {
+      "skip": "Keep existing",
+      "update": "Update existing"
+    },
+    "modeHint": {
+      "skip": "What already exists stays as it is; only what is missing is added.",
+      "update": "What already exists takes the file's values (even if it was changed here since)."
+    },
+    "preview": "Preview",
+    "confirm": "Import",
+    "previewOf": "Preview of the “{{scope}}” file exported on {{date}}: nothing has changed yet.",
+    "done": "Import complete.",
+    "teamNew": "Team “{{name}}” will be created, with you as owner.",
+    "teamInto": "Team “{{name}}” goes into “{{into}}”.",
+    "empty": "The file has nothing to import.",
+    "created": "New",
+    "updated": "Updated",
+    "skipped": "Already here",
+    "kind": {
+      "kitchen_tools": "Kitchen tools",
+      "cuisines": "Cuisines",
+      "teams": "Teams",
+      "ingredients": "Ingredients",
+      "system_rules": "System rules",
+      "recipes": "Recipes",
+      "members": "People",
+      "preferences": "Preferences",
+      "calendar_days": "Calendar days",
+      "team_rules": "Team rules",
+      "book_entries": "Recipe book entries",
+      "menus": "Weekly menus"
+    }
   }
 }

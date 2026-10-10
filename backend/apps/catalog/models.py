@@ -12,6 +12,8 @@ Kitchen tools are global.
 
 from __future__ import annotations
 
+import uuid
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -91,6 +93,8 @@ class IngredientQuerySet(models.QuerySet):
 
 
 class Ingredient(ProvenanceMixin, models.Model):
+    # Stable identity across installations: what an export file refers to (apps/transfer).
+    uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     # Normalized, singular, lowercase. Variants people type ("tomatoes", "pomodori") live in
     # `aliases` and resolve here. Unique among system ingredients, and within a team's own.
     name = models.CharField(max_length=120)

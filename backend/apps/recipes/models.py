@@ -6,6 +6,7 @@ a candidate, how much they like it) lives in `teams.RecipeBookEntry`.
 
 from __future__ import annotations
 
+import uuid
 from decimal import Decimal
 
 from django.contrib.postgres.fields import ArrayField
@@ -63,6 +64,8 @@ class RecipeQuerySet(models.QuerySet):
 
 
 class Recipe(ProvenanceMixin, models.Model):
+    # Stable identity across installations: what an export file refers to (apps/transfer).
+    uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     # The method, one entry per step.
