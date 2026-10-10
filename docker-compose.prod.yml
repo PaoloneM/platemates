@@ -180,6 +180,10 @@ services:
       - --log.level=WARN
     environment:
       HOSTINGER_API_TOKEN: ${HOSTINGER_API_TOKEN:?set HOSTINGER_API_TOKEN in .env}
+      # Hostinger's nameservers take minutes to publish a record (60 s, the default, failed
+      # with NXDOMAIN on 2026-10-11).
+      HOSTINGER_PROPAGATION_TIMEOUT: "900"
+      HOSTINGER_POLLING_INTERVAL: "15"
       PLATEMATES_ADMIN_DOMAIN: ${PLATEMATES_ADMIN_DOMAIN:?set PLATEMATES_ADMIN_DOMAIN in .env}
     ports:
       - "127.0.0.1:9443:443"
