@@ -295,11 +295,15 @@ services:
         condition: service_started
 
   # One-shot, idempotent: embeds recipes whose vector is missing or stale (e.g. saved while the
-  # embedding service was down, or after changing EMBEDDINGS_MODEL). Runs on every `up`.
+  # embedding service was down, or after changing EMBEDDINGS_MODEL). Runs on every `up`, once the
+  # backend's migrations are applied (on a fresh database the tables do not exist before).
   embed-recipes:
     image: platemates-backend
     pull_policy: never
-    command: ["python", "manage.py", "embed_recipes"]
+    command:
+      - sh
+      - -c
+      - until python manage.py migrate --check >/dev/null 2>&1; do sleep 2; done; exec python manage.py embed_recipes
     restart: "no"
     env_file:
       - path: .env
