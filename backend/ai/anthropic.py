@@ -13,10 +13,11 @@ translates it, so nothing outside `ai/` knows which provider answers:
 - `image_url` data URLs become base64 image blocks.
 
 Verified against the API documentation on 2026-10-10: on Claude 4.7 and later a temperature
-other than the default is refused, so none is sent; thinking is off unless asked for (adaptive
-when on, its summary streamed as progress). "Off" is `disabled` on most models, but newer ones (Sonnet 5.5, 2026-10-10) refuse it
-and ask for `between_tools`: the adapter switches when told so, once per model. The web
-search is Anthropic's server-side tool, capped like Studio's to one search per message.
+other than the default is refused, so none is sent. Thinking is off unless asked for (adaptive
+when on, its summary streamed as progress). "Off" is `disabled` on most models, but newer ones
+(Sonnet 5.5, 2026-10-10) refuse it and ask for `between_tools`: the adapter switches when told
+so, once per model. The web search is Anthropic's server-side tool, capped like Studio's to one
+search per message.
 """
 
 from __future__ import annotations
