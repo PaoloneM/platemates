@@ -169,7 +169,9 @@ pgBackRest (decided with Paolo 2026-10-10), in the database image `platemates-db
   `nasbackup` user, whose key (`backup_pull_keys` in `deploy/group_vars/platemates/main.yml`)
   can only run a read-only rsync of that folder (`rrsync -ro`). The home connection starts the
   transfer, so home needs no fixed address. Files in the repository never change once written,
-  so each run moves only what is new; run it every few hours, with `--delete` to follow the
+  so each run moves only what is new. The target is a folder of its own, never the copying
+  user's home: `--delete` makes it match the server, and would delete the user's SSH key along
+  with everything else (happened once, 2026-10-10). Run it every few hours, with `--delete` to follow the
   retention, and keep ZFS snapshots of the target dataset so a deletion on the server cannot
   erase the copies. `rrsync -ro` refuses `--remove-source-files` and any write. The copy needs
   GNU rsync (FreeNAS/TrueNAS, Linux): macOS's openrsync sends `--delete` to the server even
