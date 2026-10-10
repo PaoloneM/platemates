@@ -263,3 +263,16 @@ def test_a_file_that_is_not_json_is_refused(api, admin):
     upload.name = "x.json"
     response = api.post("/api/transfer/import/", {"file": upload}, format="multipart")
     assert response.status_code == 400
+
+
+def test_creating_a_second_team_with_the_same_name_is_flagged(user, world):
+    document = export_team(world["team"])
+    forget_team(world["team"])
+    # On the server, a team was created for the same people, but the target was left on
+    # automatic.
+    mine = Team.objects.create(name="Test team")
+    mine.users.add(user)
+
+    report = import_document(document, user=user, dry_run=True)
+
+    assert any("already have a team named «Test team»" in w for w in report.warnings)

@@ -178,6 +178,13 @@ class Importer:
             if team is None:
                 team = Team.objects.filter(uid=data["uid"], is_system=False).first()
             if team is None:
+                if Team.objects.filter(users=self.user, name=data["name"]).exists():
+                    # Easy to miss in a preview, and two teams with one name are hard to tell
+                    # apart afterwards.
+                    self.report.warnings.append(
+                        f"You already have a team named «{data['name']}»: this creates a second "
+                        "one. To import into yours, choose it as the target team."
+                    )
                 team = Team.objects.create(uid=data["uid"], name=data["name"])
                 Membership.objects.create(user=self.user, team=team, role=Membership.Role.OWNER)
                 new = True
