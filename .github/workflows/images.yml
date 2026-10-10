@@ -1,0 +1,110 @@
+# Tests, then the images the server runs (docker-compose.prod.yml), published to GitHub's
+# container registry: ghcr.io/<owner>/platemates-{backend,frontend,keycloak,embeddings}.
+#
+# Tags: `sha-<short commit>` for every build (what a deploy pins, PLATEMATES_VERSION), `main`
+# and `latest` for the default branch, `<version>` for a `v<version>` tag.
+name: images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: platemates
+          POSTGRES_USER: platemates
+          POSTGRES_PASSWORD: platemates
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U platemates"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://platemates:platemates@localhost:5432/platemates
+      DJANGO_DEBUG: "true"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check . && uv run ruff format --check .
+      - run: uv run pytest -q
+
+  frontend-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  images:
+    needs: [backend-tests, frontend-checks]
+    # Pull requests are tested, not published.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: backend, context: backend }
+          - { name: frontend, context: frontend }
+          - { name: keycloak, context: keycloak }
+          - { name: embeddings, context: services/embeddings }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # Lowercased by the action: registry names cannot have capitals.
+          images: ghcr.io/${{ github.repository_owner }}/platemates-${{ matrix.name }}
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          # The server is an x86 VM; add linux/arm64 here for a Raspberry Pi.
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
