@@ -1,8 +1,8 @@
 import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import CheckIcon from '@mui/icons-material/Check'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import EditIcon from '@mui/icons-material/EditOutlined'
-import ImportIcon from '@mui/icons-material/ContentCopy'
 import LockIcon from '@mui/icons-material/LockOutlined'
 import PublicIcon from '@mui/icons-material/PublicOutlined'
 import {
@@ -18,17 +18,22 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
+  IconButton,
   Link,
   Rating,
   Stack,
   Tab,
   Tabs,
+  Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link as RouterLink, useNavigate, useParams } from 'react-router'
+import { Link as RouterLink, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { api, type KitchenTool, type Recipe, type RecipeVariants } from '../api'
+import { useAuth } from '../auth/context'
 import { AuthorChip } from '../components/RecipeAuthor'
 import { WebRating } from '../components/WebRating'
 import { IngredientList, PeopleStepper, StepList } from '../components/RecipeView'
@@ -36,31 +41,83 @@ import { compareIngredients } from '../recipeDiff'
 import { useTeam } from '../team'
 import { useDescribeMonths, useLabels } from '../labels'
 
+type Tab = 'mine' | 'original'
+
+// A page action: a labelled button, or an icon with a tooltip in compact mode.
+type Action = {
+  key: string
+  label: string
+  icon: ReactNode
+  to?: string
+  onClick?: () => void
+  color?: 'primary' | 'error'
+  primary?: boolean
+}
+
+function ActionBar({ actions, compact }: { actions: Action[]; compact: boolean }) {
+  return (
+    // Right-aligned, in a fixed order: the last action keeps its place when an earlier one is
+    // missing or changes label (switching tab, phone layout).
+    <Stack direction="row" spacing={compact ? 0.5 : 1}
+      sx={{ flexWrap: 'wrap', rowGap: 1, justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0 }}>
+      {actions.map((action) => {
+        const link = action.to ? { component: RouterLink, to: action.to } : { onClick: action.onClick }
+        return compact ? (
+          <Tooltip key={action.key} title={action.label}>
+            <IconButton aria-label={action.label} color={action.color ?? 'primary'} {...link}>
+              {action.icon}
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Button key={action.key} variant={action.primary ? 'contained' : 'outlined'}
+            color={action.color ?? 'primary'} startIcon={action.icon} {...link}>
+            {action.label}
+          </Button>
+        )
+      })}
+    </Stack>
+  )
+}
+
+/**
+ * A recipe, as the team sees it:
+ * - its own recipe: edit it, remove it from the book;
+ * - a community recipe not in the book: add it to the book (staff may also edit the original);
+ * - a community recipe in the book: two tabs, "your version" (the default) and "original". The
+ *   version is the original itself until the team changes it ("edit" then creates the team's
+ *   copy); after that it is the team's copy, and the original's page leads here,
+ *   on "your version". Removing it
+ *   from the book warns that the changes would be lost.
+ */
 export function RecipeDetailPage() {
   const { t } = useTranslation()
   const labels = useLabels()
   const describeMonths = useDescribeMonths()
   const navigate = useNavigate()
   const { id } = useParams()
+  const [params, setParams] = useSearchParams()
   const { team } = useTeam()
+  const { me } = useAuth()
+  const phone = useMediaQuery(useTheme().breakpoints.down('sm'))
+  const compactMode = me?.authenticated ? me.settings['ui.compact_actions'] : undefined
+  const compact = compactMode === 'always' || (compactMode === 'mobile' && phone)
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [error, setError] = useState(false)
   const [people, setPeople] = useState<number | null>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [allTools, setAllTools] = useState<KitchenTool[]>([])
   const [variants, setVariants] = useState<RecipeVariants | null>(null)
-  // A variant shows its original beside it, in a second tab.
+  // The original of the team's copy, shown in the second tab.
   const [original, setOriginal] = useState<Recipe | null>(null)
-  // The tab chosen, for the recipe it was chosen on: another recipe starts on its own tab.
-  const [chosen, setChosen] = useState<{ recipe: string | undefined; tab: 'this' | 'original' }>({ recipe: id, tab: 'this' })
-  const tab = chosen.recipe === id ? chosen.tab : 'this'
-  const setTab = (value: 'this' | 'original') => setChosen({ recipe: id, tab: value })
+  const tab: Tab = params.get('tab') === 'original' ? 'original' : 'mine'
+  const setTab = (value: Tab) => setParams(value === 'original' ? { tab: 'original' } : {}, { replace: true })
 
   useEffect(() => {
     api<KitchenTool[]>('/kitchen-tools/').then(setAllTools).catch(() => undefined)
   }, [])
 
-  const originId = recipe?.origin?.id
+  // The team's copy of a community recipe: its original is the second tab.
+  const originId = recipe?.author.kind === 'mine' ? recipe.origin?.id : undefined
   useEffect(() => {
     if (originId === undefined) return
     let cancelled = false
@@ -87,12 +144,22 @@ export function RecipeDetailPage() {
 
   if (error) return <Alert severity="error">{t('recipe.notFound')}</Alert>
   if (!recipe || people == null) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 6 }} />
+  // The original of a recipe the team has changed: the team's page for it is its version.
+  if (recipe.author.kind !== 'mine' && recipe.my_version) {
+    return <Navigate to={`/recipes/${recipe.my_version.id}`} replace />
+  }
 
   const entry = recipe.book_entries.find((e) => e.team === team.id)
-  // What the ingredients and steps show: this recipe, or its original in the second tab.
-  const comparing = original !== null && original.id === recipe.origin?.id
-  const shown = comparing && tab === 'original' ? original : recipe
-  const diff = comparing ? compareIngredients(recipe, original) : null
+  // When the recipe is the team's changed copy: its original, once loaded.
+  const originalOfCopy = recipe.author.kind === 'mine' && recipe.origin
+    ? (original?.id === recipe.origin.id ? original : null) : null
+  const isCopy = originalOfCopy !== null
+  const reference = recipe.author.kind !== 'mine' && !!entry
+  const tabbed = isCopy || reference
+  // In the tabs: the team's version, and the original (the same recipe until it is changed).
+  const theOriginal = originalOfCopy ?? recipe
+  const shown = tabbed && tab === 'original' ? theOriginal : recipe
+  const diff = originalOfCopy ? compareIngredients(recipe, originalOfCopy) : null
   const tools = allTools.filter((tool) => shown.tools.includes(tool.id))
   const suitable = shown.season_months.months.length === 0
     ? shown.climate_months.months
@@ -123,8 +190,35 @@ export function RecipeDetailPage() {
   async function removeFromBook() {
     if (!entry) return
     await api(`/recipe-book/${entry.id}/`, { method: 'DELETE' })
-    navigate('/recipes', { replace: true })
+    // The team's copy is gone with it: back to the original, still in the community.
+    navigate(originalOfCopy ? `/recipes/${originalOfCopy.id}` : '/recipes', { replace: true })
   }
+
+  // Changing the team's version: its copy, or the first change, which creates the copy.
+  const editMine = isCopy ? `/recipes/${recipe.id}/edit` : `/recipes/new?from=${recipe.id}`
+  const canEditOriginal = tabbed ? theOriginal.can_edit : recipe.can_edit
+  // Always "edit" first, then "remove" or "add": only the edit action depends on the tab.
+  const actions: Action[] = []
+  if (tabbed && tab === 'mine') {
+    actions.push({
+      key: 'edit', to: editMine, icon: <EditIcon />, primary: true,
+      label: canEditOriginal ? t('community.editMineStaff') : t('common.edit'),
+    })
+  } else if (recipe.author.kind === 'mine' && !tabbed) {
+    actions.push({ key: 'edit', to: `/recipes/${recipe.id}/edit`, icon: <EditIcon />, primary: true, label: t('common.edit') })
+  } else if (canEditOriginal) {
+    actions.push({ key: 'edit', to: `/recipes/${theOriginal.id}/edit`, icon: <EditIcon />, label: t('community.editOriginal') })
+  }
+  if (entry) {
+    actions.push({
+      key: 'remove', color: 'error', icon: <DeleteIcon />, label: t('recipe.removeFromBook'),
+      onClick: () => setConfirmRemove(true),
+    })
+  } else if (recipe.author.kind !== 'mine') {
+    actions.push({ key: 'add', icon: <AddIcon />, primary: true, label: t('recipe.addToBook'), onClick: () => void addToBook() })
+  }
+  // Compact mode: the icons sit beside the tabs, or beside the title on a page without tabs.
+  const actionBar = <ActionBar actions={actions} compact={compact} />
 
   return (
     <Stack spacing={3}>
@@ -134,32 +228,37 @@ export function RecipeDetailPage() {
         </Button>
       </Box>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'flex-start' } }}>
-        <Stack spacing={1.5} sx={{ flex: 1 }}>
+      <Stack direction={compact ? 'row' : { xs: 'column', sm: 'row' }} spacing={2}
+        sx={{ alignItems: compact ? 'flex-start' : { sm: 'flex-start' } }}>
+        {/* The header describes the recipe the team has (its version): it stays put across tabs. */}
+        <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h1">{recipe.title}</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            <Chip label={labels.course(recipe.course)} />
+            <Chip variant="outlined" label={labels.course(recipe.course)} />
             {recipe.cuisine_name && <Chip variant="outlined" label={recipe.cuisine_name} />}
             {recipe.total_minutes != null && (
               <Chip variant="outlined" label={t('recipe.minutes', { count: recipe.total_minutes })} />
             )}
-            {recipe.author.kind === 'mine' && (
+            {recipe.author.kind === 'mine' && !isCopy && (
               <Chip
                 variant="outlined"
                 icon={recipe.visibility === 'private' ? <LockIcon /> : <PublicIcon />}
                 label={recipe.visibility === 'private' ? t('recipe.private') : t('recipe.shared')}
               />
             )}
-            <AuthorChip author={recipe.author} size="medium" />
+            <AuthorChip author={theOriginal.author} size="medium" />
+            {tabbed && (
+              <Chip icon={isCopy ? <EditIcon /> : <CheckIcon />}
+                label={isCopy ? t('community.changedVersion') : t('community.sameAsOriginal')} />
+            )}
           </Box>
-          {recipe.origin && (
+          {recipe.origin && !isCopy && (
             <Typography color="text.secondary">
               {t('community.variantOfPrefix')}{' '}
               <Link component={RouterLink} to={`/recipes/${recipe.origin.id}`}>{recipe.origin.title}</Link>
             </Typography>
           )}
-          <WebRating rating={recipe.web_rating} count={recipe.web_rating_count} />
-          {recipe.description && <Typography color="text.secondary">{recipe.description}</Typography>}
+          <WebRating rating={theOriginal.web_rating} count={theOriginal.web_rating_count} />
           {entry && (
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <Typography variant="body2" color="text.secondary">
@@ -169,60 +268,30 @@ export function RecipeDetailPage() {
             </Stack>
           )}
         </Stack>
-        <Stack direction="row" spacing={1}>
-          {/* A recipe that is not the team's own is changed for the team by importing it; only
-              staff may also change the original itself, and the button says so. */}
-          {recipe.author.kind !== 'mine' && (recipe.my_version ? (
-            <Button variant="contained" component={RouterLink} to={`/recipes/${recipe.my_version.id}`}>
-              {t('community.openMyVersion')}
-            </Button>
-          ) : (
-            <Button variant="contained" startIcon={<ImportIcon />} component={RouterLink}
-              to={`/recipes/new?from=${recipe.id}`}>
-              {t('community.import')}
-            </Button>
-          ))}
-          {recipe.can_edit && (
-            <Button variant={recipe.author.kind === 'mine' ? 'contained' : 'outlined'} startIcon={<EditIcon />}
-              component={RouterLink} to={`/recipes/${recipe.id}/edit`}>
-              {recipe.author.kind === 'mine' ? t('common.edit') : t('community.editOriginal')}
-            </Button>
-          )}
-          {entry ? (
-            <Button color="error" startIcon={<DeleteIcon />} onClick={() => setConfirmRemove(true)}>
-              {t('recipe.removeFromBook')}
-            </Button>
-          ) : (
-            <Button variant="outlined" startIcon={<AddIcon />} onClick={() => void addToBook()}>
-              {t('recipe.addToBook')}
-            </Button>
-          )}
-        </Stack>
+        {!(compact && tabbed) && actionBar}
       </Stack>
 
-      {recipe.my_version && (
-        <Alert severity="info"
-          action={<Button color="inherit" size="small" component={RouterLink} to={`/recipes/${recipe.my_version.id}`}>
-            {t('community.openMyVersion')}
-          </Button>}>
-          {t('community.haveMyVersion', { title: recipe.my_version.title })}
-        </Alert>
-      )}
-
-      {comparing && (
+      {!tabbed && recipe.description && <Typography color="text.secondary">{recipe.description}</Typography>}
+      {tabbed && (
         <Box>
-          <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tab value="this" label={recipe.author.kind === 'mine' ? t('community.yourVersion') : t('community.thisVersion')} />
-            <Tab value="original" label={t('community.original')} />
-          </Tabs>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ flex: 1, minWidth: 0 }}>
+              <Tab value="mine" label={t('community.yourVersion')} />
+              <Tab value="original" label={t('community.original')} />
+            </Tabs>
+            {compact && actionBar}
+          </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
             {tab === 'original'
-              ? <>{t('community.originalHint')}{' '}
-                  <Link component={RouterLink} to={`/recipes/${original.id}`}>{t('community.openOriginal')}</Link></>
-              : diff && Object.keys(diff.inVariant).length + Object.keys(diff.inOriginal).length === 0 && diff.sameSteps
-                ? t('community.noDifferences')
-                : t('community.differencesHint')}
+              ? t('community.originalHint')
+              : !isCopy
+                ? t('community.notChangedYet')
+                : diff && Object.keys(diff.inVariant).length + Object.keys(diff.inOriginal).length === 0 && diff.sameSteps
+                  ? t('community.noDifferences')
+                  : t('community.differencesHint')}
           </Typography>
+          {/* What the tabs switch: the description, the ingredients and the steps. */}
+          {shown.description && <Typography color="text.secondary" sx={{ mt: 1.5 }}>{shown.description}</Typography>}
         </Box>
       )}
 
@@ -286,7 +355,11 @@ export function RecipeDetailPage() {
         <DialogTitle>{t('recipe.removeTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            {recipe.visibility === 'private' ? t('recipe.removePrivate') : t('recipe.removeShared')}
+            {isCopy
+              ? t('community.removeChanged')
+              : reference
+                ? t('community.removeReference')
+                : recipe.visibility === 'private' ? t('recipe.removePrivate') : t('recipe.removeShared')}
           </Typography>
         </DialogContent>
         <DialogActions>

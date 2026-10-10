@@ -453,14 +453,29 @@ Recipes become a community: the system's own, curated, plus those teams choose t
   shared under the old default (shared) stay shared; their team can make them private.
 - **Signature**: each team chooses in its profile whether its shared recipes show its name or
   are anonymous ("from the community").
-- **Two ways to use a community recipe**: add it as it is (a reference, as today: it follows
-  the author's changes and is not editable), or import it and change it: a copy owned by the
-  team, linked to the original (`derived_from`), independent from then on.
-- **Variants**: a shared copy is listed as a variant of the original recipe, always of the
-  original (a copy of a copy is a variant of the first one), in one flat list. A copy that is
-  not shared is invisible to others.
+- **The team's version of a community recipe** (decided with Paolo 2026-10-10). Adding a
+  community recipe to the book makes it the team's version, which is the original itself (a
+  reference: it follows the author's changes). The first change ("edit your version") creates
+  the team's copy, linked to the original (`derived_from`), which takes the original's place
+  in the book; later changes edit the copy. The original never changes, except by its author
+  (or staff, labelled "edit the original").
 - **Recipe book screen**: two switches, "my recipe book" and "community", on together or
-  apart; each recipe shows where it comes from (mine, system, another team, variant of...).
+  apart, and one card per dish whatever they are: a community recipe in the book shows once,
+  and the team's copy stands for its original. Chips say where it comes from (system, another
+  team, community) and whether the team changed it. Chip style says what kind of fact it is:
+  outlined for what the recipe is (course, cuisine), green outline for what PlateMates says
+  (system recipe, in season), filled for where it stands in the team's book ("changed by
+  you", "in my book"). "In my book" shows whenever the community switch is on, versions
+  included; with "my recipe book" alone it would be on every card, so it is left out.
+- **Recipe page**: a community recipe not in the book offers "add to my book" (and, to staff,
+  "edit the original"). In the book it has two tabs, "your version" (the default) and
+  "original": the first offers "edit" (labelled as the version's for staff) and "remove from
+  the book", the second "remove from the book" (and "edit the original" for staff). Actions
+  keep a fixed order, edit first, aligned right, so "remove" never moves when the edit action
+  changes or disappears. The header (title, chips such as "changed by you") describes the
+  team's recipe and stays the same on both tabs; the tabs switch description, ingredients and
+  steps. Removing a changed version warns that the changes are lost. However the team reaches
+  a recipe it changed, including through the original's link, it lands on its version.
 - **System recipes from LLM drafts with sources, reviewed by staff**: staff asks for a dish or
   a batch ("10 autumn first courses"); the worker searches the web, keeps only pages that
   really hold a recipe (schema.org Recipe, as the assistant's search does), has the model draft

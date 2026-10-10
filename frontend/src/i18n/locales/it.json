@@ -632,8 +632,7 @@
     "variantOf": "Variante di «{{title}}»",
     "variantOfPrefix": "Variante di",
     "empty": "Nessuna ricetta nella community, per ora.",
-    "import": "Importa e modifica",
-    "importing": "Stai importando «{{title}}»: la copia sarà del tuo team, modificabile, e resterà collegata all'originale come sua variante. L'originale non cambia.",
+    "importing": "Stai creando la tua versione di «{{title}}»: la salvi nel tuo ricettario al posto dell'originale, che non cambia e resta nella community.",
     "variants_one": "{{count}} variante",
     "variants_other": "{{count}} varianti",
     "variantsHint": "Versioni di questa ricetta modificate e condivise da altri team.",
@@ -647,10 +646,8 @@
     "systemRecipe": "Ricetta di sistema (PlateMates)",
     "systemHint": "Le ricette di sistema sono sempre nella community e le modifica solo lo staff.",
     "yourVersion": "La tua versione",
-    "thisVersion": "Questa versione",
     "original": "Originale",
     "originalHint": "La ricetta originale, così com'è ora. Le dosi sono per le stesse persone, per confrontarle.",
-    "openOriginal": "Apri l'originale",
     "differencesHint": "Le differenze rispetto all'originale sono segnate sugli ingredienti.",
     "noDifferences": "Ingredienti e procedimento sono uguali all'originale.",
     "stepsDiffer": "Procedimento diverso dall'originale",
@@ -660,8 +657,12 @@
       "removed": "tolto nella variante"
     },
     "editOriginal": "Modifica l'originale (staff)",
-    "openMyVersion": "Apri la tua versione",
-    "haveMyVersion": "Nel tuo ricettario hai la tua versione di questa ricetta, «{{title}}»: lì trovi anche il confronto con l'originale."
+    "changedVersion": "Modificata da te",
+    "sameAsOriginal": "Uguale all'originale",
+    "editMineStaff": "Modifica (la tua versione)",
+    "notChangedYet": "Non l'hai ancora modificata: è uguale all'originale. Modificandola crei la tua versione, e l'originale non cambia.",
+    "removeChanged": "Hai modificato questa ricetta: rimuovendola dal ricettario la tua versione e le modifiche andranno perse. L'originale resta nella community.",
+    "removeReference": "La ricetta resta nella community: potrai aggiungerla di nuovo quando vuoi."
   },
   "drafts": {
     "hint": "Ricette di sistema (PlateMates) scritte dal modello partendo da pagine di ricette vere trovate in rete. Ogni bozza va rivista e pubblicata da te: niente diventa una ricetta da solo.",

@@ -1,4 +1,5 @@
 import AddIcon from '@mui/icons-material/Add'
+import ChangedIcon from '@mui/icons-material/EditOutlined'
 import CheckIcon from '@mui/icons-material/Check'
 import InSeasonIcon from '@mui/icons-material/Grass'
 import LockIcon from '@mui/icons-material/LockOutlined'
@@ -70,16 +71,24 @@ function RecipeCard({ recipe: r, showInBook }: { recipe: RecipeCardData; showInB
               )}
             </Stack>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-              <Chip size="small" label={labels.course(r.course)} />
+              {/* Chips: outlined for what the recipe is, green outline for what PlateMates says
+                  (system recipe, in season), filled for where it stands in the team's book. */}
+              <Chip size="small" variant="outlined" label={labels.course(r.course)} />
               {r.cuisine_name && <Chip size="small" variant="outlined" label={r.cuisine_name} />}
               {inSeasonNow(r.suitable_months) && (
                 <Chip size="small" color="primary" variant="outlined" icon={<InSeasonIcon />}
                   label={t('book.inSeason')} />
               )}
-              <AuthorChip author={r.author} />
-              {showInBook && r.book && <Chip size="small" icon={<CheckIcon />} label={t('community.inBook')} />}
+              {/* The team's version of a community recipe shows where the original comes from. */}
+              <AuthorChip author={r.author.kind === 'mine' && r.origin?.author ? r.origin.author : r.author} />
+              {r.author.kind === 'mine' && r.origin && (
+                <Chip size="small" icon={<ChangedIcon />} label={t('community.changedVersion')} />
+              )}
+              {showInBook && r.book && (
+                <Chip size="small" icon={<CheckIcon />} label={t('community.inBook')} />
+              )}
             </Box>
-            {r.origin && (
+            {r.origin && r.author.kind !== 'mine' && (
               <Typography variant="body2" color="text.secondary">
                 {t('community.variantOf', { title: r.origin.title })}
               </Typography>

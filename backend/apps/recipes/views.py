@@ -61,15 +61,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if not (mine or community):
             raise ValidationError({"detail": "Choose the recipe book, the community, or both."})
         approved = RecipeBookEntry.Status.APPROVED
+        in_book = Q(book_entries__team=team, book_entries__status=approved)
+        # The team's own versions of other teams' recipes: each stands for its original, which
+        # is then never listed beside it. One card per dish, whatever the switches.
+        versions = Recipe.objects.filter(in_book, owner_team=team, derived_from__isnull=False)
+        versions = versions.exclude(derived_from__owner_team=team)
+        replaced = versions.values("derived_from")
         scope = Q()
         if mine:
-            scope |= Q(book_entries__team=team, book_entries__status=approved)
+            scope |= in_book
         if community:
             scope |= Q(visibility=Visibility.SHARED) & ~Q(owner_team=team)
+            scope |= Q(pk__in=versions.values("pk"))
         recipes = (
             Recipe.objects.visible_to(request.user)
             .filter(scope)
-            .select_related("cuisine", "owner_team", "derived_from")
+            .exclude(pk__in=replaced)
+            .select_related("cuisine", "owner_team", "derived_from__owner_team")
             .prefetch_related(
                 Prefetch(
                     "book_entries",

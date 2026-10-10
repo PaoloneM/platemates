@@ -78,7 +78,7 @@ export function RecipeDialog({ dishes, people, initial = 0, onClose }: {
         ) : (
           <Stack spacing={2.5}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              <Chip size="small" label={labels.course(recipe.course)} />
+              <Chip size="small" variant="outlined" label={labels.course(recipe.course)} />
               {recipe.cuisine_name && <Chip size="small" variant="outlined" label={recipe.cuisine_name} />}
               {recipe.total_minutes != null && (
                 <Chip size="small" variant="outlined" label={t('recipe.minutes', { count: recipe.total_minutes })} />

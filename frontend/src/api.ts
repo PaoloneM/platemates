@@ -84,8 +84,9 @@ export type BookEntryRef = { id: number; team: number; status: string; rating: n
 // teams, another team that signs its shared recipes, or the community (anonymous).
 export type RecipeAuthor = { kind: 'system' | 'mine' | 'team' | 'community'; name: string | null }
 
-// The original a recipe was imported from and changed (it is a variant of it).
-export type RecipeOrigin = { id: number; title: string }
+// The original a recipe was imported from and changed (it is a variant of it), and where that
+// original comes from.
+export type RecipeOrigin = { id: number; title: string; author?: RecipeAuthor }
 
 export type Recipe = {
   id: number

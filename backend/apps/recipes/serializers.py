@@ -40,7 +40,7 @@ def origin_of(recipe: Recipe, teams: set[int]) -> dict | None:
         return None
     if original.visibility != Visibility.SHARED and original.owner_team_id not in teams:
         return None
-    return {"id": original.pk, "title": original.title}
+    return {"id": original.pk, "title": original.title, "author": author_of(original, teams)}
 
 
 class CuisineSerializer(serializers.ModelSerializer):

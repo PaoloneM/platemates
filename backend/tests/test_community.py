@@ -119,9 +119,11 @@ def test_importing_makes_an_editable_copy_linked_to_the_original(api, team, neig
         team, title="Ribollita della nonna", visibility="shared", derived_from=shared.pk
     )
     copy = api.post("/api/recipes/", body, format="json").json()
-    assert copy["derived_from"] == shared.pk and copy["origin"] == {
+    assert copy["derived_from"] == shared.pk
+    assert copy["origin"] == {
         "id": shared.pk,
         "title": "Ribollita",
+        "author": {"kind": "community", "name": None},
     }
     assert copy["can_edit"] and copy["author"]["kind"] == "mine"
     assert Recipe.objects.get(pk=shared.pk).title == "Ribollita"  # the original is untouched
@@ -186,6 +188,29 @@ def test_the_authors_own_book_keeps_the_original_of_its_copy(api, team):
     )
     assert set(browse(api, team)) == {"Pasta e ceci", "Pasta e ceci bis"}
     assert api.get(f"/api/recipes/{mine['id']}/").json()["my_version"] is None
+
+
+def test_one_card_per_dish_whatever_the_switches(api, team, neighbours, system_recipe):
+    _, _, shared, _ = neighbours
+    # Added as it is: listed once in each view, as the original, marked as in the book.
+    api.post("/api/recipe-book/", {"team": team.pk, "recipe": shared.pk, "status": "approved"})
+    for params in ({}, {"mine": 0, "community": 1}, {"community": 1}):
+        cards = browse(api, team, **params)
+        assert list(cards).count("Ribollita") == 1 and cards["Ribollita"]["book"] is not None
+    # Changed: the team's version stands for the original in every view.
+    copy = api.post(
+        "/api/recipes/",
+        new_recipe(team, title="Ribollita mia", visibility="private", derived_from=shared.pk),
+        format="json",
+    ).json()
+    for params in ({}, {"mine": 0, "community": 1}, {"community": 1}):
+        cards = browse(api, team, **params)
+        assert "Ribollita" not in cards and "Ribollita mia" in cards
+        assert cards["Ribollita mia"]["origin"]["author"]["kind"] == "community"
+    # A community recipe not in the book shows only in the community view.
+    assert "Lasagne alla bolognese" not in browse(api, team)
+    assert "Lasagne alla bolognese" in browse(api, team, mine=0, community=1)
+    assert copy["id"]
 
 
 def test_a_copy_of_a_copy_is_a_variant_of_the_original(api, team, neighbours):
