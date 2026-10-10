@@ -554,7 +554,8 @@
     "hint": "Application settings, for every team. They take effect at once, with no restart; only administrators see them.",
     "group": {
       "llm": "Language model",
-      "menu": "Menu generation"
+      "menu": "Menu generation",
+      "ui": "Interface"
     },
     "item": {
       "llm_context_tokens": {
@@ -568,6 +569,15 @@
       "menu_max_seconds": {
         "label": "Longest a generation may take (seconds)",
         "hint": "Past this time, attempts included, the generation is stopped and marked failed. With reasoning on, a week takes 2-3 minutes."
+      },
+      "ui_compact_actions": {
+        "label": "Compact actions",
+        "hint": "On a recipe's page, the actions (edit, remove, add) become icons only, aligned right beside the tabs or the title. Applies to every user.",
+        "choices": {
+          "off": "Never",
+          "mobile": "Phones only",
+          "always": "Always"
+        }
       }
     },
     "on": "on",

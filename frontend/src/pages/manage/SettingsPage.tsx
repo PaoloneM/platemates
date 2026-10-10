@@ -9,12 +9,15 @@ import {
   Stack,
   Switch,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api, ApiError, type ConfigSetting } from '../../api'
+import { useAuth } from '../../auth/context'
 
 // Keys are dotted ("menu.thinking"); translation keys use the same path under `settings.item`.
 const itemKey = (key: string) => `settings.item.${key.replace('.', '_')}`
@@ -27,6 +30,7 @@ function SettingRow({ setting, onSaved, onError }: {
   const { t, i18n } = useTranslation()
   const [draft, setDraft] = useState(String(setting.value))
   const [busy, setBusy] = useState(false)
+  const { refresh } = useAuth()
 
   async function send(init: RequestInit) {
     setBusy(true)
@@ -34,6 +38,8 @@ function SettingRow({ setting, onSaved, onError }: {
       const saved = await api<ConfigSetting>(`/config/${setting.key}/`, init)
       setDraft(String(saved.value))
       onSaved(saved)
+      // Some settings shape the interface (`/api/me`): this one follows at once.
+      void refresh()
     } catch (error) {
       const detail = error instanceof ApiError ? (error.body as { value?: string[] } | null)?.value?.[0] : undefined
       onError(detail ?? t('common.error'))
@@ -41,14 +47,18 @@ function SettingRow({ setting, onSaved, onError }: {
       setBusy(false)
     }
   }
-  const save = (value: boolean | number) => send({ method: 'PUT', body: JSON.stringify({ value }) })
+  const save = (value: boolean | number | string) => send({ method: 'PUT', body: JSON.stringify({ value }) })
 
   const number = Number(draft)
   const validNumber = /^\d+$/.test(draft)
     && (setting.minimum === null || number >= setting.minimum)
     && (setting.maximum === null || number <= setting.maximum)
-  const format = (value: boolean | number) =>
-    typeof value === 'boolean' ? t(value ? 'settings.on' : 'settings.off') : value.toLocaleString(i18n.resolvedLanguage)
+  const format = (value: boolean | number | string) =>
+    typeof value === 'boolean'
+      ? t(value ? 'settings.on' : 'settings.off')
+      : typeof value === 'string'
+        ? t(`${itemKey(setting.key)}.choices.${value}`)
+        : value.toLocaleString(i18n.resolvedLanguage)
 
   return (
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ p: 2, alignItems: { sm: 'center' } }}>
@@ -66,7 +76,15 @@ function SettingRow({ setting, onSaved, onError }: {
         </Typography>
       </Stack>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flex: 'none' }}>
-        {setting.kind === 'bool' ? (
+        {setting.kind === 'choice' ? (
+          <ToggleButtonGroup exclusive size="small" value={setting.value} disabled={busy}
+            onChange={(_, value: string | null) => value !== null && void save(value)}
+            aria-label={t(`${itemKey(setting.key)}.label`)}>
+            {setting.choices.map((choice) => (
+              <ToggleButton key={choice} value={choice}>{format(choice)}</ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        ) : setting.kind === 'bool' ? (
           <Switch checked={setting.value as boolean} disabled={busy}
             onChange={(e) => void save(e.target.checked)}
             slotProps={{ input: { 'aria-label': t(`${itemKey(setting.key)}.label`) } }} />

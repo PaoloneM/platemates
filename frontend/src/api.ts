@@ -25,9 +25,13 @@ export type Me =
       teams: { id: number; name: string; role: 'owner' | 'member' }[]
       // Staff only: the system team, whose recipes are the curated part of the community.
       system_team: number | null
+      // The application settings every interface follows, by key (`/manage/settings`).
+      settings: { 'ui.compact_actions'?: CompactActions }
     }
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
+// Recipe page actions as icons: never, on phones only, everywhere.
+export type CompactActions = 'off' | 'mobile' | 'always'
 
 export type LoginOptions = { identity_providers: IdentityProvider[] }
 export type IdentityProvider = 'google' | 'microsoft' | 'apple'
@@ -252,12 +256,14 @@ export type WeeklyMenu = {
 // An application setting, changed by administrators (`/manage/settings`).
 export type ConfigSetting = {
   key: string
-  kind: 'bool' | 'int'
+  kind: 'bool' | 'int' | 'choice'
   group: string
-  default: boolean | number
+  default: boolean | number | string
   minimum: number | null
   maximum: number | null
-  value: boolean | number
+  // A "choice" setting's values, translated under `settings.item.<key>.choices`.
+  choices: string[]
+  value: boolean | number | string
   is_default: boolean
   updated_at: string | null
   updated_by: string | null

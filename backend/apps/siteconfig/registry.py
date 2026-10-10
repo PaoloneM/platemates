@@ -20,17 +20,25 @@ CACHE_KEY = "siteconfig:values"
 @dataclass(frozen=True)
 class Setting:
     key: str
-    kind: str  # "bool" or "int"
+    kind: str  # "bool", "int" or "choice"
     default: Any
     group: str
     minimum: int | None = None
     maximum: int | None = None
+    # A "choice" setting's values, translated in the interface by key.
+    choices: tuple[str, ...] = ()
+    # Read by every user's interface (through `/api/me`); still changed by administrators only.
+    public: bool = False
 
     def clean(self, value: Any) -> Any:
         """The value if it fits this setting; raises ValueError otherwise."""
         if self.kind == "bool":
             if type(value) is not bool:
                 raise ValueError("Expected true or false.")
+            return value
+        if self.kind == "choice":
+            if value not in self.choices:
+                raise ValueError(f"One of: {', '.join(self.choices)}.")
             return value
         if type(value) is not int:
             raise ValueError("Expected a whole number.")
@@ -52,8 +60,23 @@ SETTINGS: dict[str, Setting] = {
         Setting("menu.thinking", "bool", False, "menu"),
         # Longest a generation may take, both attempts included; past it, it fails.
         Setting("menu.max_seconds", "int", 360, "menu", minimum=60, maximum=1800),
+        # Compact recipe pages: actions as icons beside the tabs instead of labelled buttons,
+        # never, on phones only, or everywhere.
+        Setting(
+            "ui.compact_actions",
+            "choice",
+            "off",
+            "ui",
+            choices=("off", "mobile", "always"),
+            public=True,
+        ),
     ]
 }
+
+
+def public_values() -> dict[str, Any]:
+    """The settings every user's interface reads, by key."""
+    return {key: get(key) for key, setting in SETTINGS.items() if setting.public}
 
 
 def context_tokens() -> int:

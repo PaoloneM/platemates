@@ -540,6 +540,9 @@ the deployment (addresses, secrets, who the administrators are).
   characters and 40 recipes at 8k, the size they were tuned at); `menu.thinking`, the model's
   own reasoning when planning a week (used only with a context of at least 32k, where it has
   room to answer; each generation records whether it used it).
+- Settings marked `public` (`ui.compact_actions`, recipe actions as icons beside the tabs:
+  never, on phones only, or always) shape every user's interface: `/api/me` returns their
+  values to everyone; changing them stays with administrators.
 
 ### Real-time messages (decided with Paolo 2026-10-08)
 

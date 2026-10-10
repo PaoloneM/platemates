@@ -59,6 +59,8 @@ def test_setting_the_default_value_stores_nothing(api, admin):
         ("llm.context_tokens", 10**7),
         ("llm.context_tokens", "64k"),
         ("llm.context_tokens", True),
+        ("ui.compact_actions", "sometimes"),
+        ("ui.compact_actions", True),
     ],
 )
 def test_values_are_validated(api, admin, key, value):
@@ -67,3 +69,12 @@ def test_values_are_validated(api, admin, key, value):
 
 def test_unknown_settings_are_not_found(api, admin):
     assert api.put("/api/config/nope/", {"value": 1}, format="json").status_code == 404
+
+
+def test_public_settings_reach_every_user(api, user):
+    assert api.get("/api/me/").json()["settings"] == {"ui.compact_actions": "off"}
+    ConfigVar.objects.create(key="ui.compact_actions", value="mobile")
+    assert api.get("/api/me/").json()["settings"]["ui.compact_actions"] == "mobile"
+    # Read by all, changed by administrators only.
+    answer = api.put("/api/config/ui.compact_actions/", {"value": "off"}, format="json")
+    assert answer.status_code == 403

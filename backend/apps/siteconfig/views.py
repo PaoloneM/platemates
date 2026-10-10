@@ -18,6 +18,7 @@ def _describe(setting, row: ConfigVar | None) -> dict:
         "default": setting.default,
         "minimum": setting.minimum,
         "maximum": setting.maximum,
+        "choices": list(setting.choices),
         "value": row.value if row else setting.default,
         "is_default": row is None,
         "updated_at": row.updated_at if row else None,

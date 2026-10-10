@@ -554,7 +554,8 @@
     "hint": "Impostazioni dell'applicazione, valide per tutti i team. Hanno effetto subito, senza riavvii; solo gli amministratori le vedono.",
     "group": {
       "llm": "Modello linguistico",
-      "menu": "Generazione del menu"
+      "menu": "Generazione del menu",
+      "ui": "Interfaccia"
     },
     "item": {
       "llm_context_tokens": {
@@ -568,6 +569,15 @@
       "menu_max_seconds": {
         "label": "Durata massima di una generazione (secondi)",
         "hint": "Oltre questo tempo, tentativi compresi, la generazione viene interrotta e segnata come non riuscita. Con il ragionamento attivo una settimana richiede 2-3 minuti."
+      },
+      "ui_compact_actions": {
+        "label": "Azioni compatte",
+        "hint": "Nella pagina di una ricetta, le azioni (modifica, rimuovi, aggiungi) diventano sole icone, allineate a destra all'altezza delle schede o del titolo. Vale per tutti gli utenti.",
+        "choices": {
+          "off": "Mai",
+          "mobile": "Solo su telefono",
+          "always": "Sempre"
+        }
       }
     },
     "on": "attivo",
