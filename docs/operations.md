@@ -143,8 +143,12 @@ A Hetzner Cloud VM (`platemates01`, CX23, Ubuntu 26.04) runs the stack from publ
   `EMBEDDINGS_PROVIDER=openai`); their API keys are in the vault (`vault_anthropic_api_key`,
   `vault_openai_api_key`) and written into the server's `.env`. Spending limits are set in each
   provider's console.
-- **DNS**: `platemates.cloud` needs an A record to the VM's address before the first deploy,
-  or Let's Encrypt cannot issue the certificate (Traefik serves its default one meanwhile).
+- **DNS and firewall**: `platemates.cloud` needs an A record to the VM's address, and the
+  Hetzner Cloud firewall attached to the VM must let in TCP 80 and 443 (besides 22), or Let's
+  Encrypt cannot reach the server and Traefik serves its default certificate. Traefik asks for
+  the certificate from the frontend's router (`docker-compose.prod.yml`): the base file's routers
+  set `tls=true` themselves, which makes Traefik ignore a resolver set on the entry point. After
+  fixing either, `docker compose restart traefik` on the server asks again at once.
 
 ## Moving to another machine
 
