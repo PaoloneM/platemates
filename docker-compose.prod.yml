@@ -105,8 +105,9 @@ services:
     build: !reset null
     restart: unless-stopped
     labels:
-      # Gestione is on the admin plane only.
-      - traefik.http.routers.frontend-tls.rule=PathPrefix(`/`) && !PathPrefix(`/manage`)
+      # Gestione is on the admin plane only; and paths the backend's router leaves out (Django
+      # admin, admin-only APIs) must not fall through to the SPA: they get Traefik's 404.
+      - traefik.http.routers.frontend-tls.rule=PathPrefix(`/`) && !PathPrefix(`/manage`) && !PathPrefix(`/api`) && !PathPrefix(`/admin`) && !PathPrefix(`/oidc`)
       # Traefik ranks routers by rule length: this one is now longer than /auth's and
       # /websocket's, so it must be told it comes last.
       - traefik.http.routers.frontend-tls.priority=1
