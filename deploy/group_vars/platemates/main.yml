@@ -47,7 +47,9 @@ platemates_env:
 # Backups (deploy/roles/backup): where they are, and the SSH keys that may copy them (the home
 # NAS, read-only through rrsync). Public keys, so not in the vault.
 backup_dir: /var/backups/platemates
-backup_pull_keys: []
+backup_pull_keys:
+  # The home FreeNAS (192.168.0.3), its `platemates` user's rsync task (2026-10-10).
+  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHYTI09LJLFvoTiEtGZLE4jwYzxvXeSf+bYw2BUQM5BK platemates@freenas.local
 
 base_timezone: Europe/Rome
 base_swap_mb: 2048
