@@ -2,6 +2,7 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import EditIcon from '@mui/icons-material/EditOutlined'
 import MergeIcon from '@mui/icons-material/MergeType'
+import PromoteIcon from '@mui/icons-material/PublicOutlined'
 import SearchIcon from '@mui/icons-material/Search'
 import {
   Alert,
@@ -27,6 +28,8 @@ import {
   TableRow,
   TableSortLabel,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -37,9 +40,11 @@ import { IngredientDialog } from '../../components/IngredientDialog'
 import { INGREDIENT_CATEGORIES, useDescribeMonths, useLabels } from '../../labels'
 
 const PAGE_SIZE = 50
-type Ordering = 'name' | '-usage' | 'category'
+type Ordering = 'name' | '-usage' | '-shared' | 'category'
+// System ingredients, or those teams added for themselves (to promote or merge).
+type Owner = 'system' | 'teams'
 
-/** Merge a duplicate into another ingredient: recipes move over, its name becomes an alias. */
+/** Merge a duplicate into a system ingredient: recipes move over, its name becomes an alias. */
 function MergeDialog({ source, onClose, onMerged }: {
   source: Ingredient
   onClose: () => void
@@ -54,7 +59,7 @@ function MergeDialog({ source, onClose, onMerged }: {
   useEffect(() => {
     if (!input.trim()) return
     const timer = setTimeout(() => {
-      api<Paginated<Ingredient>>(`/ingredients/?search=${encodeURIComponent(input.trim())}`)
+      api<Paginated<Ingredient>>(`/ingredients/?owner=system&search=${encodeURIComponent(input.trim())}`)
         .then((page) => setOptions(page.results.filter((i) => i.id !== source.id)))
         .catch(() => undefined)
     }, 200)
@@ -107,6 +112,7 @@ export function IngredientsPage() {
   const describeMonths = useDescribeMonths()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
+  const [owner, setOwner] = useState<Owner>('system')
   const [ordering, setOrdering] = useState<Ordering>('name')
   const [page, setPage] = useState(0)
   const [data, setData] = useState<Paginated<Ingredient> | null>(null)
@@ -117,11 +123,11 @@ export function IngredientsPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   const load = useCallback(() => {
-    const params = new URLSearchParams({ ordering, page: String(page + 1) })
+    const params = new URLSearchParams({ owner, ordering, page: String(page + 1) })
     if (search.trim()) params.set('search', search.trim())
     if (category) params.set('category', category)
     return api<Paginated<Ingredient>>(`/ingredients/?${params}`).then(setData)
-  }, [search, category, ordering, page])
+  }, [search, category, owner, ordering, page])
 
   useEffect(() => {
     const timer = setTimeout(() => void load().catch(() => setMessage(t('common.error'))), 250)
@@ -141,8 +147,30 @@ export function IngredientsPage() {
     }
   }
 
+  async function promote(ingredient: Ingredient) {
+    try {
+      await api(`/ingredients/${ingredient.id}/promote/`, { method: 'POST' })
+      setMessage(t('manage.ingredients.promoted', { name: ingredient.name }))
+      void load()
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        // The system catalog has it already: merging is the way.
+        setMessage(t('manage.ingredients.promoteClash', { name: ingredient.name }))
+        setMerging(ingredient)
+      } else setMessage(t('common.error'))
+    }
+  }
+
+  function showOwner(value: Owner) {
+    setOwner(value)
+    // Team additions met in shared recipes first: other teams already see them.
+    setOrdering(value === 'teams' ? '-shared' : 'name')
+    setPage(0)
+  }
+
+  const teams = owner === 'teams'
   const sortable = (key: Ordering, label: string) => (
-    <TableSortLabel active={ordering === key} direction={key === '-usage' ? 'desc' : 'asc'}
+    <TableSortLabel active={ordering === key} direction={key.startsWith('-') ? 'desc' : 'asc'}
       onClick={() => { setOrdering(key); setPage(0) }}>
       {label}
     </TableSortLabel>
@@ -163,6 +191,13 @@ export function IngredientsPage() {
           {t('manage.ingredients.new')}
         </Button>
       </Stack>
+      <ToggleButtonGroup exclusive size="small" value={owner} onChange={(_, v: Owner | null) => v && showOwner(v)}>
+        <ToggleButton value="system">{t('manage.ingredients.owner.system')}</ToggleButton>
+        <ToggleButton value="teams">{t('manage.ingredients.owner.teams')}</ToggleButton>
+      </ToggleButtonGroup>
+      {teams && (
+        <Typography variant="body2" color="text.secondary">{t('manage.ingredients.teamsHint')}</Typography>
+      )}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <TextField size="small" placeholder={t('manage.ingredients.search')} value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(0) }}
@@ -184,9 +219,13 @@ export function IngredientsPage() {
               <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                 {sortable('category', t('ingredient.category'))}
               </TableCell>
+              {teams && <TableCell>{t('manage.ingredients.team')}</TableCell>}
               <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{t('ingredient.unit')}</TableCell>
               <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{t('ingredient.season')}</TableCell>
               <TableCell align="right">{sortable('-usage', t('manage.ingredients.recipes'))}</TableCell>
+              {teams && (
+                <TableCell align="right">{sortable('-shared', t('manage.ingredients.sharedRecipes'))}</TableCell>
+              )}
               <TableCell align="right" />
             </TableRow>
           </TableHead>
@@ -200,11 +239,18 @@ export function IngredientsPage() {
                   )}
                 </TableCell>
                 <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{labels.category(i.category)}</TableCell>
+                {teams && <TableCell>{i.team_name}</TableCell>}
                 <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{labels.unit(i.default_unit)}</TableCell>
                 <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{describeMonths(i.season_months.months)}</TableCell>
                 <TableCell align="right">{i.usage_count}</TableCell>
+                {teams && <TableCell align="right">{i.shared_usage_count}</TableCell>}
                 {/* The row opens the editor; these buttons must not also trigger it. */}
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+                  {i.team != null && (
+                    <Tooltip title={t('manage.ingredients.promote')}>
+                      <IconButton size="small" onClick={() => void promote(i)}><PromoteIcon fontSize="small" /></IconButton>
+                    </Tooltip>
+                  )}
                   <Tooltip title={t('common.edit')}>
                     <IconButton size="small" onClick={() => setEditing(i)}><EditIcon fontSize="small" /></IconButton>
                   </Tooltip>
@@ -221,7 +267,7 @@ export function IngredientsPage() {
             ))}
             {data?.results.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={teams ? 8 : 6}>
                   <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
                     {t('manage.ingredients.none')}
                   </Typography>

@@ -57,8 +57,12 @@ export type Ingredient = {
   category: string
   default_unit: Unit
   season_months: Seasonality
-  // Recipes using it.
+  // Recipes using it, and how many of those are shared.
   usage_count: number
+  shared_usage_count: number
+  // The team that added it for itself; null for a system ingredient (every team's).
+  team: number | null
+  team_name: string | null
   provenance: Record<string, Source>
 }
 
@@ -397,6 +401,8 @@ export type MatchCandidate = {
   category: string
   default_unit: Unit
   season_months: number[]
+  // Set for an ingredient the team added for itself.
+  team: number | null
   similarity: number
 }
 

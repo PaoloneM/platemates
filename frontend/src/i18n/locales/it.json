@@ -246,7 +246,7 @@
   },
   "ingredient": {
     "newTitle": "Nuovo ingrediente",
-    "sharedHint": "Gli ingredienti sono comuni a tutti i team: usa un nome semplice, al singolare.",
+    "sharedHint": "Ingrediente di sistema: lo usano tutti i team. Usa un nome semplice, al singolare.",
     "name": "Nome",
     "nameHint": "Es. pomodoro, non «pomodori maturi» (i dettagli vanno nella nota); le conserve sono a parte: «pomodoro pelato»",
     "category": "Categoria",
@@ -260,7 +260,10 @@
     "editHint_other": "Usato da {{count}} ricette: le modifiche valgono per tutti i team, e la stagione delle ricette verrà ricalcolata.",
     "aliases": "Sinonimi",
     "aliasesHint": "Altri nomi con cui viene scritto (plurale, varianti): premi Invio dopo ognuno",
-    "exists": "Esiste già un ingrediente con questo nome o sinonimo."
+    "exists": "Esiste già un ingrediente con questo nome o sinonimo.",
+    "teamHint": "Lo aggiungi agli ingredienti del tuo team: lo vedete solo voi, finché lo staff non lo rende disponibile a tutti. Usa un nome semplice, al singolare.",
+    "teamMark": "del team",
+    "addedBy": "Aggiunto da «{{team}}»: solo quel team lo vede e lo usa."
   },
   "assistant": {
     "mode": {
@@ -374,7 +377,17 @@
       "deleted": "«{{name}}» eliminato",
       "deleteTitle": "Eliminare «{{name}}»?",
       "deleteHint": "L'ingrediente verrà tolto dal catalogo comune.",
-      "inUse": "Non si può eliminare: è usato da queste ricette. Puoi unirlo a un altro ingrediente."
+      "inUse": "Non si può eliminare: è usato da queste ricette. Puoi unirlo a un altro ingrediente.",
+      "owner": {
+        "system": "Di sistema",
+        "teams": "Aggiunte dei team"
+      },
+      "teamsHint": "Ingredienti che i team hanno aggiunto per sé. Rendili di sistema, così tutti li possono usare, o uniscili a uno esistente. Prima quelli usati in ricette condivise, che gli altri team vedono già.",
+      "team": "Team",
+      "sharedRecipes": "In ricette condivise",
+      "promote": "Rendi di sistema",
+      "promoted": "«{{name}}» ora è un ingrediente di sistema",
+      "promoteClash": "Esiste già un ingrediente di sistema «{{name}}»: unisci questo a quello."
     },
     "rules": {
       "hint": "Valgono per i menu di tutti i team, che le vedono in sola lettura. Le modifiche hanno effetto subito, senza rilasci. Le regole fornite con l'app si disattivano, non si eliminano.",

@@ -202,6 +202,10 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   hardcoded, so light and dark both work
 - UI strings go through i18next (`frontend/src/i18n/locales/{it,en}.json`), Italian default; add
   every new key to both files. Backend labels use `gettext_lazy`
+- Ingredients are system ones (`owner_team` null, staff-curated) or a team's own: what a team
+  may pick, match or use in a recipe or preference is `Ingredient.objects.usable_by(team)`, and
+  system recipes use system ingredients only. Never let a team see or pick another team's
+  ingredients
 - Seasonality is stored as months; season mode is only a view (see `docs/architecture.md`)
 - Preserved products ("pomodoro pelato", "passata di pomodoro") are distinct ingredients from
   the fresh one, available all year; never fold them into the fresh product

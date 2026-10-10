@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.catalog.models import Ingredient
 from apps.recipes.models import Course, Recipe
 
 from .calendar import NewDish
@@ -18,6 +19,16 @@ class PreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Preference
         fields = ["id", "team", "member", "kind", "ingredient", "cuisine", "note"]
+
+    def validate(self, attrs):
+        ingredient = attrs.get("ingredient")
+        team = attrs.get("team") or (self.instance.team if self.instance else None)
+        usable = Ingredient.objects.usable_by(team)
+        if ingredient is not None and team is not None and ingredient not in usable:
+            raise serializers.ValidationError(
+                {"ingredient": "Use a system ingredient or your team's own."}
+            )
+        return attrs
 
 
 class TeamSerializer(serializers.ModelSerializer):

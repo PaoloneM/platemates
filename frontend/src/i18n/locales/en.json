@@ -246,7 +246,7 @@
   },
   "ingredient": {
     "newTitle": "New ingredient",
-    "sharedHint": "Ingredients are common to all teams: use a simple, singular name.",
+    "sharedHint": "A system ingredient: every team uses it. Use a simple, singular name.",
     "name": "Name",
     "nameHint": "E.g. tomato, not “ripe tomatoes” (details go in the note); preserved forms are separate: “peeled tomato”",
     "category": "Category",
@@ -260,7 +260,10 @@
     "editHint_other": "Used by {{count}} recipes: changes apply to every team, and recipe seasons will be recomputed.",
     "aliases": "Aliases",
     "aliasesHint": "Other ways it is written (plural, variants): press Enter after each",
-    "exists": "An ingredient with this name or alias already exists."
+    "exists": "An ingredient with this name or alias already exists.",
+    "teamHint": "You add it to your team's ingredients: only your team sees it, until staff make it available to everyone. Use a simple, singular name.",
+    "teamMark": "team's",
+    "addedBy": "Added by “{{team}}”: only that team sees and uses it."
   },
   "assistant": {
     "mode": {
@@ -374,7 +377,17 @@
       "deleted": "“{{name}}” deleted",
       "deleteTitle": "Delete “{{name}}”?",
       "deleteHint": "The ingredient will be removed from the shared catalog.",
-      "inUse": "It cannot be deleted: these recipes use it. You can merge it into another ingredient."
+      "inUse": "It cannot be deleted: these recipes use it. You can merge it into another ingredient.",
+      "owner": {
+        "system": "System",
+        "teams": "Team additions"
+      },
+      "teamsHint": "Ingredients teams added for themselves. Make them system ingredients, so every team can use them, or merge them into an existing one. Those used in shared recipes, which other teams already see, come first.",
+      "team": "Team",
+      "sharedRecipes": "In shared recipes",
+      "promote": "Make it a system ingredient",
+      "promoted": "“{{name}}” is now a system ingredient",
+      "promoteClash": "A system ingredient “{{name}}” already exists: merge this one into it."
     },
     "rules": {
       "hint": "They apply to every team's menus, and teams see them read-only. Changes take effect at once, with no release. Rules shipped with the app are switched off, not deleted.",

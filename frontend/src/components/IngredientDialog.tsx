@@ -19,10 +19,12 @@ import { INGREDIENT_CATEGORIES, UNITS, useLabels } from '../labels'
 import { SeasonPicker } from './SeasonPicker'
 
 /**
- * Creates an ingredient in the shared catalog (from the recipe editor or the management
- * section), or edits one (management section, with its aliases).
+ * Creates an ingredient (from the recipe editor: the team's own, or a system one for a system
+ * recipe; from the management section: a system one), or edits one (management section, with
+ * its aliases).
  */
 export function IngredientDialog({
+  team = null,
   initialName = '',
   suggestion,
   ingredient,
@@ -31,6 +33,8 @@ export function IngredientDialog({
   onSaved,
   withAliases = false,
 }: {
+  // Creating: the team it is added for; null for a system ingredient (staff).
+  team?: number | null
   initialName?: string
   // From an assistant draft: category, unit and season it proposed, to confirm or change.
   suggestion?: DraftLine
@@ -64,6 +68,7 @@ export function IngredientDialog({
       default_unit: unit,
       season_months: { months },
     }
+    if (!ingredient) body.team = team
     if (withAliases) body.aliases = aliases
     try {
       const saved = await api<Ingredient>(ingredient ? `/ingredients/${ingredient.id}/` : '/ingredients/', {
@@ -87,8 +92,13 @@ export function IngredientDialog({
           <Typography variant="body2" color="text.secondary">
             {ingredient && ingredient.usage_count
               ? t('ingredient.editHint', { count: ingredient.usage_count })
-              : t('ingredient.sharedHint')}
+              : (ingredient ? ingredient.team : team) != null
+                ? t('ingredient.teamHint')
+                : t('ingredient.sharedHint')}
           </Typography>
+          {ingredient?.team_name && (
+            <Typography variant="body2">{t('ingredient.addedBy', { team: ingredient.team_name })}</Typography>
+          )}
           {suggestion && <Alert severity="info">{t('ingredient.suggested')}</Alert>}
           <TextField
             label={t('ingredient.name')}

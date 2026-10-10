@@ -162,9 +162,10 @@ def test_ingredient_search_matches_aliases(api, tomato):
     ]
 
 
-def test_catalogs_are_open_to_additions_but_only_staff_change_them(api, user, tomato):
+def test_catalogs_are_open_to_additions_but_only_staff_change_them(api, user, team, tomato):
     assert api.post("/api/cuisines/", {"name": "Italiana"}, format="json").status_code == 201
-    assert api.post("/api/ingredients/", {"name": "basilico"}, format="json").status_code == 201
+    added = {"team": team.pk, "name": "basilico"}
+    assert api.post("/api/ingredients/", added, format="json").status_code == 201
     assert (
         api.patch(f"/api/ingredients/{tomato.pk}/", {"name": "x"}, format="json").status_code == 403
     )

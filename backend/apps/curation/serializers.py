@@ -47,6 +47,7 @@ class SystemDraftDetailSerializer(SystemDraftSerializer):
     def get_matches(self, draft) -> list[dict]:
         if not draft.draft:
             return []
+        # A system recipe uses system ingredients only.
         return [match_ingredient(line["name"]) for line in draft.draft["ingredients"]]
 
 

@@ -1,7 +1,13 @@
 """Shared catalogs: normalized ingredients and kitchen tools.
 
-These are global, not per team: one "tomato" for everyone is what makes recipes comparable across
-teams and keeps the shopping list free of duplicates.
+Ingredients come in two kinds:
+- **system** ingredients (no owner team), curated by staff and shared by every team: one
+  "tomato" for everyone is what makes recipes comparable across teams and keeps the shopping
+  list free of duplicates;
+- **team** ingredients, added by a team for itself when the system catalog lacks one. Only
+  that team picks them; staff promote them to system ingredients or merge them into one.
+
+Kitchen tools are global.
 """
 
 from __future__ import annotations
@@ -64,21 +70,63 @@ PROTEIN_CATEGORIES: frozenset[str] = frozenset(
 )
 
 
+class IngredientQuerySet(models.QuerySet):
+    def system(self) -> IngredientQuerySet:
+        return self.filter(owner_team__isnull=True)
+
+    def usable_by(self, team) -> IngredientQuerySet:
+        """What a team's recipes and preferences may use: system ingredients and its own. The
+        system team's recipes use system ingredients only."""
+        if team is None or team.is_system:
+            return self.system()
+        return self.filter(models.Q(owner_team__isnull=True) | models.Q(owner_team=team))
+
+    def visible_to(self, user) -> IngredientQuerySet:
+        """System ingredients and those of the user's teams; staff see every team's additions."""
+        if user.is_staff:
+            return self
+        return self.filter(
+            models.Q(owner_team__isnull=True) | models.Q(owner_team__memberships__user=user)
+        ).distinct()
+
+
 class Ingredient(ProvenanceMixin, models.Model):
     # Normalized, singular, lowercase. Variants people type ("tomatoes", "pomodori") live in
-    # `aliases` and resolve here.
-    name = models.CharField(max_length=120, unique=True)
+    # `aliases` and resolve here. Unique among system ingredients, and within a team's own.
+    name = models.CharField(max_length=120)
     aliases = ArrayField(models.CharField(max_length=120), default=list, blank=True)
     category = models.CharField(
         max_length=20, choices=IngredientCategory.choices, default=IngredientCategory.OTHER
     )
     default_unit = models.CharField(max_length=2, choices=Unit.choices, default=Unit.GRAM)
     season_months = month_set_field("Months in which the ingredient is in season.")
+    # The team that added it for itself; none for system ingredients.
+    owner_team = models.ForeignKey(
+        "families.Team",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="ingredients",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = IngredientQuerySet.as_manager()
+
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name"],
+                condition=models.Q(owner_team__isnull=True),
+                name="unique_system_ingredient_name",
+            ),
+            models.UniqueConstraint(
+                fields=["owner_team", "name"],
+                condition=models.Q(owner_team__isnull=False),
+                name="unique_team_ingredient_name",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -87,6 +135,10 @@ class Ingredient(ProvenanceMixin, models.Model):
         self.name = normalize_name(self.name)
         self.aliases = sorted({normalize_name(a) for a in self.aliases} - {self.name})
         super().save(*args, **kwargs)
+
+    @property
+    def is_system(self) -> bool:
+        return self.owner_team_id is None
 
     @property
     def is_protein(self) -> bool:

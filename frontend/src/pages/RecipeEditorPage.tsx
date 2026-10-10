@@ -617,6 +617,7 @@ export function RecipeEditorPage() {
               sx={{ scrollMarginTop: 96, alignItems: 'center', pb: 2, borderBottom: 1, borderColor: 'divider' }}>
               <Grid size={{ xs: 12, md: 5 }}>
                 <IngredientPicker
+                  team={form.system && systemTeam ? systemTeam : team.id}
                   value={line.ingredient}
                   onChange={(ingredient) =>
                     setLine(line.key, {
@@ -810,6 +811,7 @@ export function RecipeEditorPage() {
 
       {creating && (
         <IngredientDialog
+          team={form.system ? null : team.id}
           initialName={creating.name}
           suggestion={creating.suggestion}
           onClose={() => setCreating(null)}

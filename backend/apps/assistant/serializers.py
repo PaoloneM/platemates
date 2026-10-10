@@ -66,7 +66,9 @@ class AssistantSessionSerializer(serializers.ModelSerializer):
     def get_matches(self, session) -> list[dict]:
         if not session.draft:
             return []
-        return [match_ingredient(line["name"]) for line in session.draft["ingredients"]]
+        return [
+            match_ingredient(line["name"], session.team) for line in session.draft["ingredients"]
+        ]
 
     def validate_mode(self, mode):
         if mode not in AVAILABLE_MODES:

@@ -83,7 +83,7 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
 
 | App | Models | Notes |
 |---|---|---|
-| `catalog` | `Ingredient`, `KitchenTool` | Global, shared by every team. Ingredient names are normalized on save (lowercase, single spaces); variants go in `aliases`. |
+| `catalog` | `Ingredient`, `KitchenTool` | Kitchen tools are global. Ingredients are system ones (no `owner_team`, every team's) or a team's own (`owner_team`). Names are normalized on save (lowercase, single spaces); variants go in `aliases`. |
 | `recipes` | `Cuisine`, `Recipe`, `RecipeIngredient`, `RecipeEmbedding` | Recipes live in one common pool; quantities refer to `Recipe.servings` and scale linearly. The method is `Recipe.steps`, one entry per step. |
 | `teams` | `Team`, `Membership`, `Member`, `Preference`, `RecipeBookEntry`, `TeamEmbedding` | Everything team-specific. `RecipeBookEntry` is the per-team view of a recipe: candidate / approved / rejected, plus the explicit rating. |
 | `menus` | `WeeklyMenu`, `MealSlot`, `SlotDish` | 7 days × {lunch, dinner}. Shopping list in `menus/shopping.py`, computed, never stored. |
@@ -184,17 +184,32 @@ adds them up, and comparing a variant with its original works on each ingredient
   creating team's book. Other teams add a shared recipe to their own book; the owner can
   delete a recipe only while no other team keeps it. Removing a private recipe from the
   owner's book deletes it.
-- **Shared catalogs** (ingredients, cuisines, kitchen tools): any user may read and add
-  entries, only staff may change or delete them (`CatalogPermission`), because an edit would
-  silently change other teams' recipes. Ingredient search matches names and aliases.
-  Ingredients and kitchen tools can be added from the recipe editor (no admin needed). The
+- **Shared catalogs** (cuisines, kitchen tools): any user may read and add entries, only staff
+  may change or delete them (`CatalogPermission`), because an edit would silently change other
+  teams' recipes. Kitchen tools can be added from the recipe editor (no admin needed). The
   kitchen tools the app ships with carry a stable `code` and are shown translated
   (`tool.<code>` in the frontend locales); tools added by users have no code and are shown by
   the name they were given. Tool names are unique regardless of case.
+- **System and team ingredients** (decided with Paolo 2026-10-10). System ingredients
+  (`owner_team` null) are the curated catalog every team shares, changed only by staff. When a
+  team needs one the catalog lacks, it adds it from the recipe editor for itself
+  (`owner_team`): only that team sees it, picks it and changes it (`IngredientPermission`),
+  and nobody else's catalog fills up with unreviewed duplicates. What a team can use is
+  `Ingredient.objects.usable_by(team)`: system ingredients plus its own; the system team's
+  recipes use system ingredients only. Names are unique among system ingredients and within a
+  team, and a team cannot add a name or alias a system ingredient has. Recipe lines and
+  preferences are checked against it; a line a recipe already has, or its original had, keeps
+  its ingredient, so a team's version of another team's shared recipe keeps that team's
+  ingredient, shown by name, without being able to pick it elsewhere. Staff see the team
+  additions in Management, those used by shared recipes first, and either make one a system
+  ingredient (`promote`, refused when the system has the name: merge instead) or merge it into
+  a system ingredient. Every ingredient that existed before became a system ingredient. No
+  per-team overrides of a system ingredient's properties for now.
 - **Seeded ingredient catalog** (`catalog/migrations/0005_seed_common_ingredients.py`): about 160
   common ingredients in Italian (the first deployment's language) with category, unit, Italian
   seasonality and plural aliases. Idempotent and non-destructive: an entry is skipped when an
-  ingredient already exists under its name or one of its aliases. Unlike shipped kitchen tools
+  ingredient already exists under its name or one of its aliases (which kept out "lenticchia",
+  "yogurt" and "paprika", restored by `0007_restore_base_ingredients`). Unlike shipped kitchen tools
   they have no code: ingredient names are data, matched by the assistant in the team's
   language. Database tests start from an empty catalog (`tests/conftest.py`); tests about the
   seed are marked `seeded`.
@@ -204,7 +219,8 @@ adds them up, and comparing a variant with its original works on each ingredient
   so, and `normalize_draft` forces an all-year season on names that denote a preserved product,
   because the model kept proposing the fresh product's season anyway.
 - **Management section** (frontend `/manage`, staff only, from the user menu; also holds the
-  system rules for menus): one page per shared catalog, starting with ingredients: search, category filter, sorting by usage, editing
+  system rules for menus): one page per shared catalog, starting with ingredients (system ones,
+  or team additions to promote): search, category filter, sorting by usage, editing
   (name, aliases, category, unit, season), deleting unused ones, and merging duplicates
   (`catalog/services.py`: recipe lines and preferences move to the target, same-unit quantities
   are added up when a recipe had both, the duplicate's name becomes an alias). Changing an
@@ -649,9 +665,11 @@ flowchart TD
 - Drafts are normalized (`normalize_draft`): units mapped (kg -> g, "q.b." -> to taste),
   unknown categories/courses fall back to safe values. Measured live 2026-10-06 with
   Qwen3.6-35B-A3B: first draft in 7-16 s, a correction in about 4 s.
-- Draft ingredients are matched to the catalog (`apps/catalog/matching.py`): exact name or
-  alias, otherwise PostgreSQL trigram similarity (`pg_trgm`), preselecting a candidate from
-  0.45 similarity ("pomodori" -> "pomodoro") and flagging it for the user to check.
+- Draft ingredients are matched to what the team can use (`apps/catalog/matching.py`; system
+  drafts: system ingredients only): exact name or alias, otherwise PostgreSQL trigram
+  similarity (`pg_trgm`) on the name and the aliases, preselecting a candidate from 0.45
+  similarity ("pomodori" -> "pomodoro") and flagging it for the user to check. System
+  ingredients win ties.
 - "Review and save" opens the editor with `?session=<id>`: matched ingredients are filled in,
   unknown ones must be created (category, unit and season prefilled from the draft) or replaced
   before saving. Saving links the recipe to the session and closes it.

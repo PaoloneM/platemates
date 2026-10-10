@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.catalog.models import Ingredient
 from apps.core.provenance import Source
 from apps.core.serializers import SeasonalityField, UserDecisionSerializerMixin
 from apps.curation.models import SystemDraft
@@ -221,7 +222,25 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             and attrs.get("visibility", Visibility.SHARED) != (Visibility.SHARED)
         ):
             raise serializers.ValidationError({"visibility": "System recipes are shared."})
+        if owner is not None and attrs.get("ingredients"):
+            self._check_ingredients(owner, attrs)
         return attrs
+
+    def _check_ingredients(self, owner, attrs) -> None:
+        """A recipe uses system ingredients and its team's own (a system recipe, system ones
+        only). Lines it already has, or its original had, keep theirs: another team's
+        ingredient in a shared recipe a team makes its own version of."""
+        ids = {line["ingredient"].pk for line in attrs["ingredients"]}
+        allowed = set(
+            Ingredient.objects.usable_by(owner).filter(pk__in=ids).values_list("pk", flat=True)
+        )
+        inherited = [r for r in (self.instance, attrs.get("derived_from")) if r is not None]
+        for recipe in inherited:
+            allowed.update(recipe.ingredients.values_list("ingredient_id", flat=True))
+        if ids - allowed:
+            raise serializers.ValidationError(
+                {"ingredients": "Use system ingredients or your team's own."}
+            )
 
     @transaction.atomic
     def create(self, validated_data):

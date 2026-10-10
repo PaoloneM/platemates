@@ -60,10 +60,10 @@ def test_menu_week_must_start_on_monday(api, team):
     assert response.status_code == 400
 
 
-def test_api_edits_are_recorded_as_user_decisions(api, db):
+def test_api_edits_are_recorded_as_user_decisions(api, team):
     response = api.post(
         "/api/ingredients/",
-        {"name": "Zucca", "season_months": {"seasons": ["autumn"]}},
+        {"team": team.pk, "name": "Zucca", "season_months": {"seasons": ["autumn"]}},
         format="json",
     )
     assert response.json()["provenance"] == {"season_months": "user"}
@@ -78,10 +78,10 @@ def test_slots_of_other_teams_are_invisible(api, db):
     assert api.get("/api/slots/").json()["count"] == 0
 
 
-def test_seasonality_in_season_mode(api, db):
+def test_seasonality_in_season_mode(api, team):
     created = api.post(
         "/api/ingredients/",
-        {"name": "asparagus", "season_months": {"seasons": ["spring"]}},
+        {"team": team.pk, "name": "asparagus", "season_months": {"seasons": ["spring"]}},
         format="json",
     ).json()
     assert created["season_months"] == {
@@ -91,19 +91,19 @@ def test_seasonality_in_season_mode(api, db):
     }
 
 
-def test_seasonality_in_month_mode_flags_partial_seasons(api, db):
+def test_seasonality_in_month_mode_flags_partial_seasons(api, team):
     created = api.post(
         "/api/ingredients/",
-        {"name": "cherry", "season_months": {"months": [5, 6, 7]}},
+        {"team": team.pk, "name": "cherry", "season_months": {"months": [5, 6, 7]}},
         format="json",
     ).json()
     assert created["season_months"] == {"months": [5, 6, 7], "seasons": [], "by_season": False}
 
 
-def test_all_months_is_stored_as_all_year(api, db):
+def test_all_months_is_stored_as_all_year(api, team):
     created = api.post(
         "/api/ingredients/",
-        {"name": "rice", "season_months": {"months": list(range(1, 13))}},
+        {"team": team.pk, "name": "rice", "season_months": {"months": list(range(1, 13))}},
         format="json",
     ).json()
     assert created["season_months"]["months"] == []

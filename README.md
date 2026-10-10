@@ -21,7 +21,7 @@ application.
 | **Teams**: sign-in with email/password or Google, Microsoft, Apple (Keycloak); invitation-only access; interface in Italian and English, remembered per user | Built |
 | **Team management**: profile (weekday time limit, kitchen tools), people at the table with ages, users and roles, invitation links to copy or share | Built |
 | **Team calendar and menu screen**: a typical week (which days, how many at breakfast, lunch and dinner), exceptions on specific dates (guests, someone away), each meal's people and dishes, picked by hand from the recipe book for now | Built |
-| **Shared catalogs**: ~160 common ingredients with Italian seasonality, kitchen tools; management section to edit, merge duplicates, add new ones | Built |
+| **Shared catalogs**: ~180 common system ingredients with Italian seasonality, kitchen tools; teams add their own ingredients; management section to edit, merge duplicates, promote team additions | Built |
 | **Operations**: one-command Docker Compose stack, HTTPS on the home network for phones, backups and restore, repeatable setup; application settings changed live by administrators (Keycloak role), with a Redis cache they can inspect and clear | Built |
 | **Menu planning rules**: rules in plain language at three levels (system, team, this week), each team rule switchable per week; the menu screen's button to plan the week | Built |
 | **Weekly menu generation**: in the background with the local LLM, following the rules; starts from a partly planned week, keeps the dishes already set, proposes new dishes beside the recipe book and changes to the people; everything is reviewed meal by meal before it counts | Built |
@@ -88,9 +88,10 @@ Details, decisions and what was learned on the way: [docs/architecture.md](docs/
 - **Seasonality, two levels**: derived from the ingredients (a dish of summer vegetables) and
   the dish's suitability to the weather (a hot soup is not for August even if its ingredients
   are available all year).
-- **Ingredient catalog**: normalized, shared, with category (for variety rules and shopping list
-  aisles), unit and seasonality. Preserved products ("pomodoro pelato") are distinct from the
-  fresh ones.
+- **Ingredient catalog**: normalized, with category (for variety rules and shopping list
+  aisles), unit and seasonality. System ingredients, curated by staff, are shared by every team;
+  a team adds what is missing for itself, and staff make it a system ingredient or merge it
+  into one. Preserved products ("pomodoro pelato") are distinct from the fresh ones.
 - **The user always has the final say**: everything the LLM proposes or the app derives is
   editable, and marked as such until confirmed.
 
