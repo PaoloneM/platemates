@@ -6,13 +6,45 @@
   ansible.builtin.apt:
     name: [acl, rsync, openssl]
 
+- name: Read the NAS account
+  ansible.builtin.getent:
+    database: passwd
+    key: nasbackup
+    fail_key: false
+
+# Created as a plain system account it got uid 999, the container's postgres: the same owner,
+# on the host, as the database's files. Recreated with its own uid (userdel -f: the uid is busy
+# with the database's processes).
+- name: Remove the NAS account if it shares the database's uid
+  ansible.builtin.command: userdel -f nasbackup
+  when:
+    - getent_passwd.nasbackup is defined and getent_passwd.nasbackup is not none
+    - getent_passwd.nasbackup[1] | int == backup_postgres_uid | int
+
+- name: Create the NAS account's group
+  ansible.builtin.group:
+    name: nasbackup
+    gid: "{{ backup_user_uid }}"
+    system: true
+
 - name: Create the account that copies the backups
   ansible.builtin.user:
     name: nasbackup
+    uid: "{{ backup_user_uid }}"
+    group: nasbackup
     system: true
     shell: /bin/sh
     create_home: true
+    home: /home/nasbackup
     password: "!"
+
+- name: Give it its home back
+  ansible.builtin.file:
+    path: /home/nasbackup
+    state: directory
+    owner: nasbackup
+    group: nasbackup
+    recurse: true
 
 - name: Let it run only a read-only rsync of the backups
   ansible.posix.authorized_key:
@@ -56,6 +88,24 @@
   loop: "{{ [backup_dir, backup_dir ~ '/pgbackrest', backup_dir ~ '/env'] | product([false, true]) | list }}"
   loop_control:
     label: "{{ item.0 }}{{ ' (default)' if item.1 else '' }}"
+
+# Self-healing, and idempotent: when something already there is out of the NAS account's reach
+# (e.g. after its uid changed, ACLs naming the old one), grant it again on everything.
+- name: Find backups the NAS account cannot read
+  ansible.builtin.command: >-
+    runuser -u nasbackup -- find {{ backup_dir }}
+    ( -type d ( ! -readable -o ! -executable ) -o ! -readable ) -print -quit
+  args:
+    chdir: /  # find returns to its starting folder, which the account may not enter
+  register: unreadable
+  changed_when: false
+  failed_when: false
+
+- name: Grant it read access to everything already there
+  ansible.builtin.shell: |
+    setfacl -R -m u:nasbackup:rX {{ backup_dir }}
+    find {{ backup_dir }} -type d -exec setfacl -d -m u:nasbackup:rX {} +
+  when: unreadable.stdout != "" or unreadable.rc != 0
 
 - name: Install the backup script
   ansible.builtin.template:
