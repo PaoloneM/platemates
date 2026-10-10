@@ -50,7 +50,8 @@ backup_dir: /var/backups/platemates
 backup_pull_keys:
   # The home FreeNAS (192.168.0.3), its `platemates` user's rsync task (2026-10-10). Copies into
   # ~/server, never the home itself: --delete would empty it, keys included.
-  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICIlSPGibIJgRMT5ETWcuxMTdFYUXNmf63wb9+LsXnZ6 platemates@freenas.local
+  # RSA: FreeNAS 11.3 cannot validate an ed25519 key when saving an rsync task.
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCyfe5mWTqT5zeBc6okwxRoDqoDOlT8+tHfCuDWLnanVZa6fD7Iz2aVgdKxprDwYmwAOKqdMEcOxKrKZfPcyEqELNCSy07HC+H/OtKPHAS3eJ9HgQZ+UZfew+WVg5vITQ84t6ZjBeecveuFdZ+e2AzcRno65duTz+DVmkWUd+Vy9xPeOA9MeS/jt3mTkZqbbJecjQXWuvuFrOjuiiYfI3XBG85HBbA0tVCp9pzTiJWavWNr6pAKCw8pPz1C8QNk1GwZPXHRflZM0n4s3qmJhDDEKiKrO5PceS0SW9scrNPKq+pnAcKZQmz6llMDezFtCR33ycKB0jPsq9EM5DUKoPa4bwVR4hD541DAZ6hgBa5soh5H0XOIxOq++VyGJuNdsvKYqk68Yech/xcdWjlTpqfm6rTczyW5eDu1YTO90rJ/0ck4XWxabIJn7K1EWzNEfBBwg3w2pVDTBH7laIOwpm1+E58ADsH+oXlgH86qQSwUmW+uKlE2msv3nAwbBJUjlF99MNQsm4B8l7BrAFdbTMcfUFHtKEqcXoHbKpxP08CWbiy5u9TPMfuCYPySCKgHQJxLvABJjwjt5PpcpxAOxf2lCThk9/B/bV0U2XHH4ExaKWIkVmSKC+CRgoF2Ej7Snf+/FbIYrEQF48T4Pk6Y5xDCT4KNbG0mkGKYxAGuFGo+fQ== platemates@freenas.local
 
 base_timezone: Europe/Rome
 base_swap_mb: 2048
