@@ -1,0 +1,14 @@
+# Docker Engine and the Compose plugin, from Docker's own repository (geerlingguy.docker,
+# installed from requirements.yml).
+
+- name: Install Docker
+  ansible.builtin.include_role:
+    name: geerlingguy.docker
+  vars:
+    docker_install_compose_plugin: true
+    docker_users: []
+    docker_daemon_options:
+      log-driver: json-file
+      log-opts:
+        max-size: "{{ docker_log_max_size }}"
+        max-file: "{{ docker_log_max_file }}"

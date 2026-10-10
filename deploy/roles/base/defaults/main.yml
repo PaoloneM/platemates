@@ -1,0 +1,11 @@
+base_timezone: Etc/UTC
+# Swap file size (0: none). With 4 GB, swap keeps a memory spike (an image pull, Keycloak's
+# start) from killing a container.
+base_swap_mb: 0
+base_packages:
+  - ca-certificates
+  - fail2ban
+  - git
+  - python3
+  - ufw
+  - unattended-upgrades

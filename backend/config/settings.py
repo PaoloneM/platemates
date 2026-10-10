@@ -43,6 +43,9 @@ CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS",
     "http://localhost:5173,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:8080",
 )
+# On a server reached only over HTTPS (platemates.cloud): cookies never travel in clear. Off by
+# default, since the Mac serves the app over plain HTTP on :5173 and :8080.
+SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", default=False)
 
 INSTALLED_APPS = [
     "django.contrib.admin",

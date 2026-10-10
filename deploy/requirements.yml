@@ -1,0 +1,4 @@
+# Installed by the container's entrypoint before every run.
+roles:
+  - name: geerlingguy.docker
+    version: 8.0.0

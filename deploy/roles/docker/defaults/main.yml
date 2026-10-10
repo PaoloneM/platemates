@@ -1,0 +1,3 @@
+# Container logs rotate: a busy container must not fill the 40 GB disk.
+docker_log_max_size: 10m
+docker_log_max_file: "3"

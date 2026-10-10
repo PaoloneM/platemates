@@ -1,0 +1,66 @@
+# The application: the repository's compose files and scripts, a .env, the published images.
+# Idempotent: re-running with nothing changed changes nothing; with a new version, it pulls and
+# recreates only what changed.
+
+- name: Check out the repository
+  ansible.builtin.git:
+    repo: "{{ platemates_repo }}"
+    dest: "{{ platemates_dir }}"
+    version: "{{ platemates_git_ref }}"
+
+- name: Keep secrets readable by root only
+  ansible.builtin.file:
+    path: "{{ platemates_dir }}/secrets"
+    state: directory
+    mode: "0700"
+
+# Creates .env from .env.example on the first run and generates its secrets (Django key,
+# Keycloak passwords); later runs only add keys new to .env.example. Never changes a value.
+- name: Create or complete .env
+  ansible.builtin.command: python3 scripts/init_env.py
+  args:
+    chdir: "{{ platemates_dir }}"
+  register: init_env
+  changed_when: "'nothing changed' not in init_env.stdout"
+
+# Only when .env was just created: the database volume is created with this password on the
+# first start, and changing it afterwards would lock the app out of its own data.
+- name: Give the database a random password on the first deploy
+  ansible.builtin.lineinfile:
+    path: "{{ platemates_dir }}/.env"
+    regexp: "^POSTGRES_PASSWORD="
+    line: "POSTGRES_PASSWORD={{ lookup('ansible.builtin.password', '/dev/null', length=32, chars=['ascii_letters', 'digits']) }}"
+    mode: "0600"
+  when: "'created .env' in init_env.stdout"
+
+- name: Set the server's own values in .env
+  ansible.builtin.lineinfile:
+    path: "{{ platemates_dir }}/.env"
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+    mode: "0600"
+  loop: "{{ platemates_env | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Pull the images and start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ platemates_dir }}"
+    # `latest` moves with every build of main: always look for a newer one.
+    pull: always
+    remove_orphans: true
+    state: present
+  register: compose
+
+- name: Wait for the backend behind Traefik
+  ansible.builtin.uri:
+    url: https://127.0.0.1/api/health/
+    headers:
+      Host: "{{ platemates_domain }}"
+    # Until the domain points here, Traefik has no Let's Encrypt certificate yet.
+    validate_certs: false
+  register: health
+  until: health.status == 200 and health.json.database.ok
+  retries: 30
+  delay: 5
+  changed_when: false

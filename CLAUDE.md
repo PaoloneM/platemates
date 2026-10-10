@@ -96,10 +96,15 @@ Full detail in `README.md`:
 - `backend/apps/realtime/`: the Socket.IO service (`realtime` in compose) at `/websocket/`
 - `services/embeddings/`: standalone OpenAI-compatible embedding server
 - `keycloak/`: Keycloak image (login theme, Apple provider)
-- `scripts/`: repository-level tooling (`init_env.py`, `backup.py`, `setup_lan_https.py`)
+- `scripts/`: repository-level tooling (`init_env.py`, `backup.py`, `setup_lan_https.py`,
+  `deploy.sh`)
+- `deploy/`: Ansible for the public server (inventory, roles `base`, `docker`, `platemates`);
+  `docker-compose.prod.yml` is the server's overlay; `.github/workflows/images.yml` tests and
+  publishes the images
 - `docs/architecture.md`: design decisions; update it when you change one
 - `docs/authentication.md`: login flow, invitations, provider setup
-- `docs/operations.md`: where data lives, backup/restore, moving to another machine
+- `docs/operations.md`: where data lives, backup/restore, moving to another machine, the public
+  server
 
 ### Environment
 
@@ -138,6 +143,7 @@ cd frontend && npm run build && npm run lint
 docker compose up -d --build                            # full stack on :8080
 cd backend && uv run python manage.py embed_recipes     # (re)compute missing or stale recipe embeddings
 python3 scripts/setup_lan_https.py                      # HTTPS on the home network (phones), see docs/operations.md
+scripts/deploy.sh                                       # deploy to the public server (Ansible in Docker)
 python3 scripts/backup.py create                        # back up both databases + .env to backups/
 python3 scripts/backup.py restore backups/<file>.tar    # replace all data (takes a safety backup first)
 ```
@@ -187,6 +193,10 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   Verify a new step by running it twice
 - Never run `docker compose down -v` (or remove `platemates_pgdata`) without a fresh backup: it deletes
   both databases, Keycloak accounts included. `backups/` holds personal data: never commit it
+- The public server is changed only through `scripts/deploy.sh` (Ansible, `deploy/`), never by
+  hand, and runs only images built by GitHub Actions. Its secrets are generated on the server and
+  never leave it; personal values go in the ansible-vault file, never in plain text (the
+  repository is public)
 - Keycloak is configured only through `setup_keycloak` (from `.env`), never by hand in its console
 - Routing lives in Traefik labels on each service in `docker-compose.yml`, one router per entry
   point (`web`, and `websecure` with `tls=true`); the `frontend` container only serves files

@@ -1,0 +1,8 @@
+# The PlateMates server, from a fresh Ubuntu to the running app. Idempotent: run it again to
+# deploy a new version (scripts/deploy.sh).
+- name: PlateMates server
+  hosts: platemates
+  roles:
+    - { role: base, tags: [base] }
+    - { role: docker, tags: [docker] }
+    - { role: platemates, tags: [app] }

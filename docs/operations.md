@@ -109,10 +109,38 @@ only the `.crt`.
 
 Traefik discovers containers through the Docker socket, mounted read-only. Read access to the
 Docker API still reveals every container's configuration, environment variables included. That
-is acceptable on a home machine; before exposing Traefik to the internet, put a socket proxy in
-between (e.g. `tecnativa/docker-socket-proxy`, allowing only container listing) and point
-Traefik's Docker provider at it. With a public domain, Traefik can also obtain Let's Encrypt
-certificates itself (an ACME resolver on the `websecure` entry point) instead of the mkcert one.
+is acceptable on a home machine; on a server exposed to the internet, `docker-compose.prod.yml`
+puts a socket proxy in between (`tecnativa/docker-socket-proxy`, listing containers only).
+
+## The public server (platemates.cloud)
+
+A Hetzner Cloud VM (`platemates01`, CX23, Ubuntu 26.04) runs the stack from published images:
+
+- **Images**: GitHub Actions (`.github/workflows/images.yml`) runs the backend tests and the
+  frontend checks on every push, then builds the backend, frontend, Keycloak and embeddings
+  images and publishes them to `ghcr.io/paolonem/platemates-*`, tagged `sha-<commit>`, `main`
+  and `latest`. The packages must be public (GitHub → Packages → each one → Package settings →
+  visibility) for the server to pull them without a token.
+- **Compose**: `docker-compose.prod.yml` on top of the base file (the server's `.env` sets
+  `COMPOSE_FILE`, so plain `docker compose` uses both): registry images at
+  `PLATEMATES_VERSION`, ports 80 and 443 only, HTTP redirected to HTTPS, a Let's Encrypt
+  certificate for `PLATEMATES_DOMAIN`, the socket proxy, restart after a reboot.
+- **Deploy**: `scripts/deploy.sh` runs Ansible (`deploy/`) in the `authkeys/docker-ansible`
+  container, with the Mac's ssh-agent and the host key pinned in `deploy/known_hosts`. Roles:
+  `base` (updates, automatic security updates, keys-only SSH, ufw allowing 22/80/443,
+  fail2ban, swap), `docker` (`geerlingguy.docker`, rotated logs), `platemates` (checkout of
+  the repository, `.env`, pull and `up`, wait for `/api/health/`). Idempotent: run it again to
+  deploy a new version; `--tags app` for the app only, `-e platemates_version=sha-<commit>` to
+  pin a build, `--check --diff` to see what would change.
+- **Secrets**: the server's `.env` is created once by `scripts/init_env.py` on the server
+  (Django key, Keycloak passwords) plus a random database password on the first deploy; they
+  never leave the server and are never overwritten. Ansible sets only the non-secret values
+  (domain, URLs, `DJANGO_DEBUG=false`, secure cookies). Personal values (the Let's Encrypt and
+  administrator emails) are in `deploy/group_vars/platemates/vault.yml`, encrypted with
+  ansible-vault; the password is in `~/.config/platemates/ansible-vault-password`, outside the
+  repository (keep a copy in a password manager). `scripts/deploy.sh vault edit` changes them.
+- **DNS**: `platemates.cloud` needs an A record to the VM's address before the first deploy,
+  or Let's Encrypt cannot issue the certificate (Traefik serves its default one meanwhile).
 
 ## Moving to another machine
 

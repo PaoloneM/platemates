@@ -1,0 +1,34 @@
+# The public server. Personal values (emails) are in vault.yml, encrypted with ansible-vault:
+# the repository is public.
+
+platemates_domain: platemates.cloud
+platemates_url: "https://{{ platemates_domain }}"
+platemates_dir: /opt/platemates
+platemates_repo: https://github.com/PaoloneM/platemates.git
+# Git ref checked out for the compose files and scripts.
+platemates_git_ref: main
+# Images built by GitHub Actions (.github/workflows/images.yml): `latest` follows main; pin a
+# build with `-e platemates_version=sha-<commit>`.
+platemates_image_prefix: ghcr.io/paolonem/platemates
+platemates_version: latest
+
+platemates_acme_email: "{{ vault_acme_email }}"
+platemates_app_admins: "{{ vault_app_admins }}"
+
+# Written into the server's .env on every run (the rest of it, secrets included, is created
+# once by scripts/init_env.py on the server and never overwritten).
+platemates_env:
+  COMPOSE_FILE: docker-compose.yml:docker-compose.prod.yml
+  PLATEMATES_DOMAIN: "{{ platemates_domain }}"
+  PLATEMATES_IMAGE_PREFIX: "{{ platemates_image_prefix }}"
+  PLATEMATES_VERSION: "{{ platemates_version }}"
+  ACME_EMAIL: "{{ platemates_acme_email }}"
+  DJANGO_DEBUG: "false"
+  DJANGO_SECURE_COOKIES: "true"
+  DJANGO_ALLOWED_HOSTS: "{{ platemates_domain }}"
+  DJANGO_CSRF_TRUSTED_ORIGINS: "{{ platemates_url }}"
+  APP_PUBLIC_URLS: "{{ platemates_url }}"
+  APP_ADMINS: "{{ platemates_app_admins }}"
+
+base_timezone: Europe/Rome
+base_swap_mb: 2048
