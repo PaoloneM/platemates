@@ -153,6 +153,10 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 
 - Every property the LLM suggests or the code derives goes through `ProvenanceMixin.propose`;
   never assign it directly. API writes are user decisions and are marked as such automatically
+- Staff and administrator powers exist only on the admin plane: every check goes through
+  `apps.core.planes.staff_powers` / `admin_powers`, never `user.is_staff`, `IsAdminUser` or the
+  profile's `is_admin` directly. Anything administrative is routed only by the admin Traefik
+  (`traefik-admin/dynamic.yml`, loopback only), never by the public one
 - Team-owned data is reached only through `TeamScopedMixin` querysets: a user never sees
   another team's data. Writes that change the team itself (profile, people, roles, invitations)
   go through `OwnerWritesMixin` / `require_owner`

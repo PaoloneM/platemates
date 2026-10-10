@@ -151,6 +151,28 @@ A Hetzner Cloud VM (`platemates01`, CX23, Ubuntu 26.04) runs the stack from publ
   set `tls=true` themselves, which makes Traefik ignore a resolver set on the entry point. After
   fixing either, `docker compose restart traefik` on the server asks again at once.
 
+## The admin plane
+
+Everything that is not the app is served only on the VM's loopback (decided with Paolo
+2026-10-11): Gestione, Django admin, Keycloak's admin console, and the monitoring.
+
+- **How to get there**: `ssh -N platemates-admin` (in `~/.ssh/config.d/platemates`, it forwards
+  local 9443 to the VM's 127.0.0.1:9443), then `https://admin.platemates.cloud:9443`. The name is a
+  public DNS record pointing to 127.0.0.1: without the tunnel it reaches nothing. Sign in as
+  usual (a separate session from the public site's: cookies are per host).
+- **How it works**: a second Traefik, `traefik-admin` (`docker-compose.prod.yml`), publishes only
+  `127.0.0.1:9443`; its routes are a file (`traefik-admin/dynamic.yml`), it has no Docker access.
+  Its certificate is Let's Encrypt's, through a DNS challenge on Hostinger's API
+  (`vault_hostinger_api_token`), since no HTTP challenge can reach a name resolving to 127.0.0.1.
+- **Planes in the backend** (`apps/core/planes.py`): each Traefik sets `X-PlateMates-Plane`
+  (`public` or `admin`), overwriting what the client sent; staff and admin powers exist only
+  with `admin`. On the public plane a staff account is an ordinary user, Gestione does not
+  appear, and Django admin and the admin-only APIs answer 404 (and are not routed either).
+  Without the header (`DEFAULT_PLANE`): `public` on the server, `admin` on a developer's machine.
+- **Denied on the public plane**: `/manage`, `/admin/`, `/api/config|cache|usage|transfer|system-drafts`,
+  Keycloak's `/auth/admin` and the `master` realm (its login page is Keycloak's own
+  administrators').
+
 ## Backups of the public server
 
 pgBackRest (decided with Paolo 2026-10-10), in the database image `platemates-db`

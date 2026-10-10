@@ -3,6 +3,10 @@
 
 platemates_domain: platemates.cloud
 platemates_url: "https://{{ platemates_domain }}"
+# The admin plane (apps/core/planes.py): only on the VM's 127.0.0.1:9443, reached through an SSH
+# tunnel; the name resolves publicly to 127.0.0.1, so it works only with the tunnel open.
+platemates_admin_domain: "admin.{{ platemates_domain }}"
+platemates_admin_url: "https://{{ platemates_admin_domain }}:9443"
 platemates_dir: /opt/platemates
 platemates_repo: https://github.com/PaoloneM/platemates.git
 # Git ref checked out for the compose files and scripts.
@@ -29,9 +33,14 @@ platemates_env:
   ACME_EMAIL: "{{ platemates_acme_email }}"
   DJANGO_DEBUG: "false"
   DJANGO_SECURE_COOKIES: "true"
-  DJANGO_ALLOWED_HOSTS: "{{ platemates_domain }}"
-  DJANGO_CSRF_TRUSTED_ORIGINS: "{{ platemates_url }}"
-  APP_PUBLIC_URLS: "{{ platemates_url }}"
+  DJANGO_ALLOWED_HOSTS: "{{ platemates_domain }},{{ platemates_admin_domain }}"
+  DJANGO_CSRF_TRUSTED_ORIGINS: "{{ platemates_url }},{{ platemates_admin_url }}"
+  APP_PUBLIC_URLS: "{{ platemates_url }},{{ platemates_admin_url }}"
+  # A request without the plane header (one that did not come through Traefik) gets no powers.
+  DEFAULT_PLANE: public
+  PLATEMATES_ADMIN_DOMAIN: "{{ platemates_admin_domain }}"
+  # The admin plane's certificate: a DNS challenge through Hostinger's API.
+  HOSTINGER_API_TOKEN: "{{ vault_hostinger_api_token }}"
   APP_ADMINS: "{{ platemates_app_admins }}"
   LLM_PROVIDER: "{{ platemates_llm_provider }}"
   EMBEDDINGS_PROVIDER: "{{ platemates_embeddings_provider }}"

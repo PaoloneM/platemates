@@ -11,7 +11,11 @@
 # - Traefik reads the Docker API through a socket proxy that only lists containers, never the
 #   socket itself (docs/operations.md);
 # - no other port is published: the database, Redis, Keycloak and the backend are reachable only
-#   inside Docker.
+#   inside Docker;
+# - two planes (apps/core/planes.py): the public Traefik serves the app only, and tells the
+#   backend so (X-PlateMates-Plane: public); a second Traefik, `traefik-admin`, listens only on
+#   the VM's 127.0.0.1:9443, reached through an SSH tunnel, and serves Gestione, Django admin and
+#   Keycloak's console (traefik-admin/dynamic.yml).
 #
 # Needs Docker Compose 2.24+ (`!reset`, `!override`).
 
@@ -54,6 +58,15 @@ services:
     build: !reset null
     ports: !reset []
     restart: unless-stopped
+    labels:
+      # Besides the admin console (denied in the base file), the master realm: its login page
+      # is Keycloak's own administrators', and has no business on the internet. Both are on the
+      # admin plane.
+      - traefik.http.routers.keycloak-master-tls.rule=PathPrefix(`/auth/realms/master`)
+      - traefik.http.routers.keycloak-master-tls.entrypoints=websecure
+      - traefik.http.routers.keycloak-master-tls.tls=true
+      - traefik.http.routers.keycloak-master-tls.middlewares=deny-all
+      - traefik.http.routers.keycloak-master-tls.service=keycloak
 
   keycloak-setup:
     <<: *backend-image
@@ -63,11 +76,19 @@ services:
     build: !reset null
     ports: !reset []
     restart: unless-stopped
+    labels:
+      # The public plane: the app's API and login only. Django admin and the admin-only APIs are
+      # not routed here (and the backend answers 404 for them on this plane anyway).
+      - traefik.http.middlewares.plane-public.headers.customrequestheaders.X-PlateMates-Plane=public
+      - "traefik.http.routers.backend-tls.rule=(PathPrefix(`/api`) && !PathPrefix(`/api/config`) && !PathPrefix(`/api/cache`) && !PathPrefix(`/api/usage`) && !PathPrefix(`/api/transfer`) && !PathPrefix(`/api/system-drafts`)) || PathPrefix(`/oidc`) || PathPrefix(`/static`)"
+      - traefik.http.routers.backend-tls.middlewares=plane-public
 
   realtime:
     <<: *backend-image
     ports: !reset []
     restart: unless-stopped
+    labels:
+      - traefik.http.routers.realtime-tls.middlewares=plane-public
 
   worker:
     <<: *backend-image
@@ -84,6 +105,11 @@ services:
     build: !reset null
     restart: unless-stopped
     labels:
+      # Gestione is on the admin plane only.
+      - traefik.http.routers.frontend-tls.rule=PathPrefix(`/`) && !PathPrefix(`/manage`)
+      # Traefik ranks routers by rule length: this one is now longer than /auth's and
+      # /websocket's, so it must be told it comes last.
+      - traefik.http.routers.frontend-tls.priority=1
       # The base file's routers set `tls=true` themselves, so Traefik ignores the entry point's
       # TLS defaults (resolver included): one router asks Let's Encrypt for the domain, and every
       # router serves the certificate from Traefik's store, the domain being the same.
@@ -137,7 +163,37 @@ services:
       - socket-proxy
     restart: unless-stopped
 
+  # The admin plane: only on the VM's loopback, reached through an SSH tunnel
+  # (`ssh platemates01` forwards 9443). Routes from a file, no Docker access; its certificate
+  # comes from Let's Encrypt through a DNS challenge on Hostinger's API, since the name resolves
+  # to 127.0.0.1 and no HTTP challenge can reach it.
+  traefik-admin:
+    image: traefik:v3.7
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.admin.address=:443
+      - --certificatesresolvers.hostinger.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
+      - --certificatesresolvers.hostinger.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.hostinger.acme.dnschallenge.provider=hostinger
+      - --ping=true
+      - --log.level=WARN
+    environment:
+      HOSTINGER_API_TOKEN: ${HOSTINGER_API_TOKEN:?set HOSTINGER_API_TOKEN in .env}
+      PLATEMATES_ADMIN_DOMAIN: ${PLATEMATES_ADMIN_DOMAIN:?set PLATEMATES_ADMIN_DOMAIN in .env}
+    ports:
+      - "127.0.0.1:9443:443"
+    volumes:
+      - ./traefik-admin/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - letsencrypt-admin:/letsencrypt
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
+  letsencrypt-admin:
   # The certificates and the ACME account: kept across restarts, so Let's Encrypt's rate limits
   # are never at risk.
   letsencrypt:

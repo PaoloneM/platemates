@@ -1,0 +1,56 @@
+# The admin plane's routes (docker-compose.prod.yml, traefik-admin). A static file rather than
+# Docker labels: this Traefik needs no view of the containers, and the public one never sees
+# these routes. Every route sets X-PlateMates-Plane: admin, which gives staff and administrators
+# their powers in the backend (apps/core/planes.py); the public Traefik sets "public".
+#
+# Served only on the VM's 127.0.0.1:9443, reached through an SSH tunnel at
+# https://{{ env "PLATEMATES_ADMIN_DOMAIN" }}:9443 (a public DNS name resolving to 127.0.0.1).
+
+http:
+  middlewares:
+    plane-admin:
+      headers:
+        customRequestHeaders:
+          X-PlateMates-Plane: admin
+
+  routers:
+    admin-backend:
+      rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`) && (PathPrefix(`/api`) || PathPrefix(`/oidc`) || PathPrefix(`/admin`) || PathPrefix(`/static`))
+      entryPoints: [admin]
+      service: backend
+      middlewares: [plane-admin]
+      tls: { certResolver: hostinger }
+    admin-realtime:
+      rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`) && PathPrefix(`/websocket`)
+      entryPoints: [admin]
+      service: realtime
+      middlewares: [plane-admin]
+      tls: { certResolver: hostinger }
+    # Keycloak whole, its admin console included (denied on the public plane).
+    admin-keycloak:
+      rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`) && PathPrefix(`/auth`)
+      entryPoints: [admin]
+      service: keycloak
+      tls: { certResolver: hostinger }
+    admin-frontend:
+      rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`)
+      entryPoints: [admin]
+      service: frontend
+      tls:
+        certResolver: hostinger
+        domains:
+          - main: '{{ env "PLATEMATES_ADMIN_DOMAIN" }}'
+
+  services:
+    backend:
+      loadBalancer:
+        servers: [{ url: "http://backend:8000" }]
+    realtime:
+      loadBalancer:
+        servers: [{ url: "http://realtime:8001" }]
+    keycloak:
+      loadBalancer:
+        servers: [{ url: "http://keycloak:8080" }]
+    frontend:
+      loadBalancer:
+        servers: [{ url: "http://frontend:80" }]

@@ -876,6 +876,18 @@ The public server has no local model: Claude answers (`LLM_PROVIDER=anthropic`, 
   re-embeds every recipe through `embed-recipes`; measured: "pasta al pomodoro" is 0.64 from
   "spaghetti al sugo" and 0.37 from "tiramisù".
 
+## Public and admin planes (decided with Paolo 2026-10-11)
+
+On the public server administration is not on the internet: a second Traefik bound to the VM's
+loopback serves Gestione, Django admin and Keycloak's console, reached through an SSH tunnel
+(`docs/operations.md`). Blocking paths alone would not do, because several management APIs
+are shared with the app (the ingredient picker, system rules read by the week, drafts published
+through the recipes API). So the backend knows the plane of every request (`X-PlateMates-Plane`,
+set by each Traefik, overwritten on every request; `DEFAULT_PLANE` without it) and grants staff
+and admin powers only on the admin plane (`apps/core/planes.py`). `/api/me` reports powers, not
+roles, so the interface follows by itself. Admin-only paths also answer 404 on the public plane,
+and the public Traefik does not route them: two independent layers.
+
 ## AI usage and costs (decided with Paolo 2026-10-10)
 
 The providers' consoles report costs by API key and model only, never by team. So the app
