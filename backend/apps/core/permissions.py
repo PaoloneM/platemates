@@ -1,5 +1,7 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
+from .planes import admin_powers, staff_powers
+
 
 class CatalogPermission(BasePermission):
     """Shared catalogs (kitchen tools): everyone may read and add entries; only staff may change
@@ -12,7 +14,7 @@ class CatalogPermission(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS or request.method == "POST":
             return request.user.is_authenticated
-        return request.user.is_staff
+        return staff_powers(request.user)
 
 
 class IngredientPermission(BasePermission):
@@ -23,7 +25,7 @@ class IngredientPermission(BasePermission):
         return request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS or request.user.is_staff:
+        if request.method in SAFE_METHODS or staff_powers(request.user):
             return True
         return (
             obj.owner_team_id is not None
@@ -32,13 +34,18 @@ class IngredientPermission(BasePermission):
 
 
 class IsAppAdmin(BasePermission):
-    """Application administrators: users holding Keycloak's `admin` realm role."""
+    """Application administrators: users holding Keycloak's `admin` realm role, on the admin
+    plane."""
 
     def has_permission(self, request, view):
-        user = request.user
-        return bool(
-            user.is_authenticated and getattr(getattr(user, "profile", None), "is_admin", False)
-        )
+        return admin_powers(request.user)
+
+
+class IsStaffHere(BasePermission):
+    """Staff, on the admin plane (DRF's IsAdminUser checks `is_staff` alone)."""
+
+    def has_permission(self, request, view):
+        return staff_powers(request.user)
 
 
 class StaffWritesPermission(BasePermission):
@@ -47,4 +54,4 @@ class StaffWritesPermission(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return request.user.is_authenticated
-        return request.user.is_staff
+        return staff_powers(request.user)

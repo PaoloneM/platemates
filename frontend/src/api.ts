@@ -25,6 +25,9 @@ export type Me =
       teams: { id: number; name: string; role: 'owner' | 'member' }[]
       // Staff only: the system team, whose recipes are the curated part of the community.
       system_team: number | null
+      // The plane the request came through (backend apps/core/planes.py): staff and admin
+      // powers, hence Gestione, exist only on the admin one.
+      plane: 'public' | 'admin'
       // The application settings every interface follows, by key (`/manage/settings`).
       settings: { 'ui.compact_actions'?: CompactActions }
     }

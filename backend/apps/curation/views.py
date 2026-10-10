@@ -6,10 +6,10 @@ from django.utils import translation
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from ai import AIError, get_chat_provider
+from apps.core.permissions import IsStaffHere
 
 from .drafting import dishes_for_theme
 from .jobs import announce, notify_worker
@@ -23,7 +23,7 @@ class SystemDraftViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, views
     """System recipe drafts, for staff: request them, follow them, discard or retry them.
     Publishing is saving the recipe from the editor with `system_draft` set."""
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsStaffHere]
     queryset = SystemDraft.objects.select_related("requested_by")
 
     def get_serializer_class(self):

@@ -6,6 +6,7 @@ import {
   Avatar,
   Badge,
   Box,
+  Chip,
   Container,
   Divider,
   IconButton,
@@ -137,6 +138,14 @@ function TeamSwitcher() {
   )
 }
 
+/** On the admin host (reached through the SSH tunnel), a reminder of where you are. */
+function AdminPlaneChip() {
+  const { t } = useTranslation()
+  const { me } = useAuth()
+  if (!me?.authenticated || me.plane !== 'admin' || !window.location.hostname.startsWith('admin.')) return null
+  return <Chip size="small" color="warning" label={t('shell.adminPlane')} />
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <>
@@ -148,6 +157,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <TeamSwitcher />
           </Box>
+          <AdminPlaneChip />
           <UserMenu />
         </Toolbar>
       </AppBar>

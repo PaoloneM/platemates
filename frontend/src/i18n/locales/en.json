@@ -67,7 +67,8 @@
       "light": "Light",
       "system": "Automatic (as the device)",
       "dark": "Dark"
-    }
+    },
+    "adminPlane": "Administration"
   },
   "nav": {
     "calendar": "Menu",

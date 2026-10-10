@@ -8,6 +8,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.core.permissions import StaffWritesPermission
+from apps.core.planes import staff_powers
 from apps.teams.permissions import OwnerWritesMixin, TeamScopedMixin
 
 from . import review
@@ -41,7 +42,7 @@ class SystemRuleViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         rules = SystemRule.objects.all()
-        return rules if self.request.user.is_staff else rules.filter(active=True)
+        return rules if staff_powers(self.request.user) else rules.filter(active=True)
 
     def perform_destroy(self, instance):
         if instance.code:

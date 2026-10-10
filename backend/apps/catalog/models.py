@@ -18,6 +18,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from apps.core.planes import staff_powers
 from apps.core.provenance import ProvenanceMixin
 from apps.core.seasons import month_set_field
 
@@ -85,7 +86,7 @@ class IngredientQuerySet(models.QuerySet):
 
     def visible_to(self, user) -> IngredientQuerySet:
         """System ingredients and those of the user's teams; staff see every team's additions."""
-        if user.is_staff:
+        if staff_powers(user):
             return self
         return self.filter(
             models.Q(owner_team__isnull=True) | models.Q(owner_team__memberships__user=user)

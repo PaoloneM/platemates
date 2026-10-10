@@ -2,6 +2,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.catalog.models import Ingredient
+from apps.core.planes import staff_powers
 from apps.core.provenance import Source
 from apps.core.serializers import SeasonalityField, UserDecisionSerializerMixin
 from apps.curation.models import SystemDraft
@@ -148,7 +149,7 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
     def get_can_edit(self, recipe) -> bool:
         user = self._user()
         return (
-            user.is_staff
+            staff_powers(user)
             or Membership.objects.filter(user=user, team_id=recipe.owner_team_id).exists()
         )
 
@@ -183,7 +184,7 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
 
     def validate_team(self, team):
         if team.is_system:
-            if not self._user().is_staff:
+            if not staff_powers(self._user()):
                 raise serializers.ValidationError("Only staff write system recipes.")
             return team
         if not Membership.objects.filter(user=self._user(), team=team).exists():

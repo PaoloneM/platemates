@@ -406,5 +406,7 @@ def test_staff_join_their_own_room(user, team, monkeypatch):
     UserProfile.objects.create(user=user)
     client = Client()
     client.force_login(user)
-    _, rooms = server.rooms_of(f"sessionid={client.cookies['sessionid'].value}")
-    assert rooms == [f"team-{team.pk}", "staff"]
+    cookie = f"sessionid={client.cookies['sessionid'].value}"
+    assert server.rooms_of(cookie, "admin")[1] == [f"team-{team.pk}", "staff"]
+    # On the public plane a staff account is an ordinary member (apps/core/planes.py).
+    assert server.rooms_of(cookie, "public")[1] == [f"team-{team.pk}"]

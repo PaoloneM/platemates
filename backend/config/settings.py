@@ -46,6 +46,11 @@ CSRF_TRUSTED_ORIGINS = env_list(
 # On a server reached only over HTTPS (platemates.cloud): cookies never travel in clear. Off by
 # default, since the Mac serves the app over plain HTTP on :5173 and :8080.
 SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", default=False)
+# The plane of a request without the X-PlateMates-Plane header (apps/core/planes.py): "admin" on
+# a developer's machine (no Traefik in front, everything allowed), "public" on the server.
+DEFAULT_PLANE = os.getenv("DEFAULT_PLANE", "admin")
+if DEFAULT_PLANE not in ("admin", "public"):
+    raise RuntimeError("DEFAULT_PLANE must be admin or public.")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -71,6 +76,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Which plane the request came through (apps/core/planes.py): first, so nothing below runs
+    # for an admin-only path asked on the public plane.
+    "apps.core.planes.PlaneMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",

@@ -67,7 +67,8 @@
       "light": "Chiaro",
       "system": "Automatico (come il dispositivo)",
       "dark": "Scuro"
-    }
+    },
+    "adminPlane": "Amministrazione"
   },
   "nav": {
     "calendar": "Menu",

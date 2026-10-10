@@ -2,10 +2,10 @@ from django.db.models import Count, Q
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
-from apps.core.permissions import CatalogPermission, IngredientPermission
+from apps.core.permissions import CatalogPermission, IngredientPermission, IsStaffHere
+from apps.core.planes import staff_powers
 from apps.recipes.models import Visibility
 from apps.teams.models import Team
 from apps.teams.permissions import user_teams
@@ -68,7 +68,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     def _team(self, team_id) -> Team:
         """One of the user's teams (staff: also the system team)."""
         teams = user_teams(self.request.user)
-        if self.request.user.is_staff:
+        if staff_powers(self.request.user):
             teams = teams | Team.objects.filter(is_system=True)
         team = teams.filter(pk=team_id).first()
         if team is None:
@@ -78,7 +78,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         owner = serializer.validated_data.get("owner_team")
         if owner is None:
-            if not self.request.user.is_staff:
+            if not staff_powers(self.request.user):
                 raise PermissionDenied("Only staff add system ingredients.")
         elif not user_teams(self.request.user).filter(pk=owner.pk).exists():
             raise serializers.ValidationError({"team": "Not one of your teams."})
@@ -104,7 +104,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
         ingredient.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
+    @action(detail=True, methods=["post"], permission_classes=[IsStaffHere])
     def promote(self, request, pk=None):
         """Make a team's ingredient a system one, for every team. Refused when a system
         ingredient already has its name (merge into it instead); aliases other system
@@ -130,7 +130,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
         ingredient.save()
         return Response(IngredientSerializer(self.get_queryset().get(pk=ingredient.pk)).data)
 
-    @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
+    @action(detail=True, methods=["post"], permission_classes=[IsStaffHere])
     def merge(self, request, pk=None):
         """Fold this ingredient into `into`: its recipes move over and its name becomes an alias.
         The target is a system ingredient, or one of the same team."""

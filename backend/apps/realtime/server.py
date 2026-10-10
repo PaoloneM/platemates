@@ -18,6 +18,7 @@ from django.conf import settings
 from django.contrib.auth import get_user
 from django.db import close_old_connections
 
+from apps.core.planes import ADMIN, plane_of
 from apps.teams.models import Membership
 
 from .events import STAFF_ROOM, team_room
@@ -36,8 +37,9 @@ def user_from_cookies(cookie_header: str):
     return user if user.is_authenticated else None
 
 
-def rooms_of(cookie_header: str) -> tuple[int, list[str]] | None:
-    """The user's id and the rooms they may join, or None if not signed in."""
+def rooms_of(cookie_header: str, plane: str | None = None) -> tuple[int, list[str]] | None:
+    """The user's id and the rooms they may join, or None if not signed in. The staff room
+    only on the admin plane (apps/core/planes.py)."""
     close_old_connections()
     try:
         user = user_from_cookies(cookie_header)
@@ -45,7 +47,8 @@ def rooms_of(cookie_header: str) -> tuple[int, list[str]] | None:
             return None
         teams = Membership.objects.filter(user=user).values_list("team_id", flat=True)
         rooms = [team_room(team) for team in teams]
-        return user.pk, [*rooms, STAFF_ROOM] if user.is_staff else rooms
+        staff = user.is_staff and (plane or settings.DEFAULT_PLANE) == ADMIN
+        return user.pk, [*rooms, STAFF_ROOM] if staff else rooms
     finally:
         close_old_connections()
 
@@ -59,7 +62,7 @@ sio = socketio.AsyncServer(
 
 @sio.event
 async def connect(sid, environ, auth=None):
-    found = await sync_to_async(rooms_of)(environ.get("HTTP_COOKIE", ""))
+    found = await sync_to_async(rooms_of)(environ.get("HTTP_COOKIE", ""), plane_of(environ))
     if found is None:
         raise socketio.exceptions.ConnectionRefusedError("not signed in")
     user_id, rooms = found

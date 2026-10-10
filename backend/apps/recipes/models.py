@@ -16,6 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from pgvector.django import VectorField
 
 from apps.catalog.models import Ingredient, KitchenTool, Unit
+from apps.core.planes import staff_powers
 from apps.core.provenance import ProvenanceMixin
 from apps.core.seasons import ALL_MONTHS, as_months, intersect_months, month_set_field
 
@@ -57,8 +58,8 @@ class RecipeQuerySet(models.QuerySet):
         ).distinct()
 
     def editable_by(self, user) -> RecipeQuerySet:
-        """Only the team that owns a recipe edits it; staff can edit everything."""
-        if user.is_staff:
+        """Only the team that owns a recipe edits it; staff (on the admin plane) edit everything."""
+        if staff_powers(user):
             return self
         return self.filter(owner_team__memberships__user=user).distinct()
 

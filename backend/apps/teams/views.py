@@ -7,6 +7,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.planes import staff_powers
 from apps.recipes.models import Recipe, Visibility
 
 from .calendar import calendar, set_day
@@ -42,7 +43,7 @@ class TeamViewSet(
 
     def perform_create(self, serializer):
         # Access is invitation-only: new teams are created by staff, everyone else joins one.
-        if not self.request.user.is_staff:
+        if not staff_powers(self.request.user):
             raise PermissionDenied("Only staff can create teams; ask for an invitation.")
         team = serializer.save()
         Membership.objects.create(user=self.request.user, team=team, role=Membership.Role.OWNER)
