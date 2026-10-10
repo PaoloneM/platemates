@@ -212,32 +212,61 @@ KEYCLOAK_IDENTITY_PROVIDERS = {
 }
 
 # -- AI components --------------------------------------------------------------------------------
-# Both the generative model and the embedding model are external services reached through an
-# OpenAI-compatible API. Swapping provider means changing these variables, never the code.
-# See `ai/` and docs/architecture.md.
+# The generative model and the embedding model are external services. Swapping provider means
+# changing these variables, never the code (see `ai/` and docs/architecture.md). Each cloud
+# provider has its own variables, so switching is one line: LLM_PROVIDER or EMBEDDINGS_PROVIDER.
 
-AI = {
-    "CHAT": {
-        # "unsloth_studio" adds Studio-specific behaviour (model-loaded checks, thinking toggle) on
-        # top of the plain "openai_compatible" protocol.
-        "PROVIDER": os.getenv("LLM_PROVIDER", "unsloth_studio"),
-        "BASE_URL": os.getenv("LLM_BASE_URL", "http://127.0.0.1:8888").rstrip("/"),
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "unsloth_studio")
+if LLM_PROVIDER == "anthropic":
+    _chat_model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+    _chat = {
+        "BASE_URL": os.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com"),
+        "API_KEY": os.getenv("ANTHROPIC_API_KEY") or None,
+        "MODEL": _chat_model,
+        "VISION_MODEL": os.getenv("ANTHROPIC_VISION_MODEL") or _chat_model,
+    }
+else:
+    # "unsloth_studio" adds Studio-specific behaviour (model-loaded checks, thinking toggle) on
+    # top of the plain "openai_compatible" protocol.
+    _chat_model = os.getenv("LLM_MODEL", "unsloth/Qwen3.6-35B-A3B-MTP-GGUF")
+    _chat = {
+        "BASE_URL": os.getenv("LLM_BASE_URL", "http://127.0.0.1:8888"),
         "API_KEY": os.getenv("LLM_API_KEY") or None,
-        "MODEL": os.getenv("LLM_MODEL", "unsloth/Qwen3.6-35B-A3B-MTP-GGUF"),
+        "MODEL": _chat_model,
         # Model that reads photos. Defaults to the chat model: no swap in Studio, and in a
         # comparison on recipe photos (2026-10-06) Qwen3.6 transcribed faithfully where
         # gemma-4-E2B misread and reordered words.
-        "VISION_MODEL": os.getenv("LLM_VISION_MODEL")
-        or os.getenv("LLM_MODEL", "unsloth/Qwen3.6-35B-A3B-MTP-GGUF"),
-        "TIMEOUT_SECONDS": float(os.getenv("LLM_TIMEOUT_SECONDS", "300")),
-    },
-    "EMBEDDINGS": {
-        "PROVIDER": os.getenv("EMBEDDINGS_PROVIDER", "openai_compatible"),
-        "BASE_URL": os.getenv("EMBEDDINGS_BASE_URL", "http://127.0.0.1:8100").rstrip("/"),
+        "VISION_MODEL": os.getenv("LLM_VISION_MODEL") or _chat_model,
+    }
+
+EMBEDDINGS_PROVIDER = os.getenv("EMBEDDINGS_PROVIDER", "openai_compatible")
+if EMBEDDINGS_PROVIDER == "openai":
+    _embeddings = {
+        "BASE_URL": os.getenv("OPENAI_BASE_URL", "https://api.openai.com"),
+        "API_KEY": os.getenv("OPENAI_API_KEY") or None,
+        "MODEL": os.getenv("OPENAI_EMBEDDINGS_MODEL", "text-embedding-3-small"),
+    }
+else:
+    # The bundled services/embeddings (sentence-transformers), or any OpenAI-compatible server.
+    _embeddings = {
+        "BASE_URL": os.getenv("EMBEDDINGS_BASE_URL", "http://127.0.0.1:8100"),
         "API_KEY": os.getenv("EMBEDDINGS_API_KEY") or None,
         "MODEL": os.getenv(
             "EMBEDDINGS_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
         ),
+    }
+
+AI = {
+    "CHAT": {
+        "PROVIDER": LLM_PROVIDER,
+        **_chat,
+        "BASE_URL": _chat["BASE_URL"].rstrip("/"),
+        "TIMEOUT_SECONDS": float(os.getenv("LLM_TIMEOUT_SECONDS", "300")),
+    },
+    "EMBEDDINGS": {
+        "PROVIDER": EMBEDDINGS_PROVIDER,
+        **_embeddings,
+        "BASE_URL": _embeddings["BASE_URL"].rstrip("/"),
         "TIMEOUT_SECONDS": float(os.getenv("EMBEDDINGS_TIMEOUT_SECONDS", "60")),
     },
 }

@@ -12,18 +12,31 @@ from typing import Any
 
 from django.conf import settings
 
+from .anthropic import AnthropicChat
 from .base import ChatProvider, EmbeddingProvider
 from .openai_compatible import OpenAICompatibleChat, OpenAICompatibleEmbeddings
 from .studio import StudioChat
 
 CHAT_PROVIDERS: dict[str, Callable[..., ChatProvider]] = {
+    "anthropic": AnthropicChat,
     "openai_compatible": OpenAICompatibleChat,
     "unsloth_studio": StudioChat,
 }
 
 EMBEDDING_PROVIDERS: dict[str, Callable[..., EmbeddingProvider]] = {
+    # OpenAI's own API speaks the same protocol: only the address, key and model differ.
+    "openai": OpenAICompatibleEmbeddings,
     "openai_compatible": OpenAICompatibleEmbeddings,
 }
+
+
+def _config_kwargs(config: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "base_url": config["BASE_URL"],
+        "model": config["MODEL"],
+        "api_key": config["API_KEY"],
+        "timeout_seconds": config["TIMEOUT_SECONDS"],
+    }
 
 
 def _build(registry: dict[str, Callable[..., Any]], config: dict[str, Any], kind: str) -> Any:
@@ -34,12 +47,7 @@ def _build(registry: dict[str, Callable[..., Any]], config: dict[str, Any], kind
         raise ValueError(
             f"Unknown {kind} provider '{name}'. Known: {', '.join(sorted(registry))}."
         ) from None
-    return factory(
-        base_url=config["BASE_URL"],
-        model=config["MODEL"],
-        api_key=config["API_KEY"],
-        timeout_seconds=config["TIMEOUT_SECONDS"],
-    )
+    return factory(**_config_kwargs(config))
 
 
 @lru_cache(maxsize=1)
@@ -56,36 +64,28 @@ def get_vision_provider() -> ChatProvider:
 
 @lru_cache(maxsize=1)
 def get_web_search_provider() -> ChatProvider | None:
-    """A chat provider whose model can search the web itself, or None if the provider can't.
-
-    Only Unsloth Studio has a built-in web search (its server-side tools, `enable_tools`).
-    """
+    """A chat provider whose model can search the web itself, or None if the provider can't:
+    Unsloth Studio (its server-side tools, `enable_tools`) and Claude (Anthropic's web search
+    tool), one search per message."""
     config = settings.AI["CHAT"]
-    if config["PROVIDER"] != "unsloth_studio":
-        return None
-    return StudioChat(
-        base_url=config["BASE_URL"],
-        model=config["MODEL"],
-        api_key=config["API_KEY"],
-        timeout_seconds=config["TIMEOUT_SECONDS"],
-        enable_tools=True,
-    )
+    if config["PROVIDER"] == "anthropic":
+        return AnthropicChat(**_config_kwargs(config), web_search=True)
+    if config["PROVIDER"] == "unsloth_studio":
+        return StudioChat(**_config_kwargs(config), enable_tools=True)
+    return None
 
 
 @lru_cache(maxsize=1)
 def get_reasoning_chat_provider() -> ChatProvider:
     """The chat provider with the model's own reasoning on, where the provider has a switch
-    for it (Unsloth Studio's `enable_thinking`); otherwise the plain chat provider."""
+    for it (Unsloth Studio's `enable_thinking`, Claude's adaptive thinking); otherwise the
+    plain chat provider."""
     config = settings.AI["CHAT"]
-    if config["PROVIDER"] != "unsloth_studio":
-        return get_chat_provider()
-    return StudioChat(
-        base_url=config["BASE_URL"],
-        model=config["MODEL"],
-        api_key=config["API_KEY"],
-        timeout_seconds=config["TIMEOUT_SECONDS"],
-        enable_thinking=True,
-    )
+    if config["PROVIDER"] == "anthropic":
+        return AnthropicChat(**_config_kwargs(config), thinking=True)
+    if config["PROVIDER"] == "unsloth_studio":
+        return StudioChat(**_config_kwargs(config), enable_thinking=True)
+    return get_chat_provider()
 
 
 @lru_cache(maxsize=1)

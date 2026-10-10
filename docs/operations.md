@@ -139,6 +139,10 @@ A Hetzner Cloud VM (`platemates01`, CX23, Ubuntu 26.04) runs the stack from publ
   administrator emails) are in `deploy/group_vars/platemates/vault.yml`, encrypted with
   ansible-vault; the password is in `~/.config/platemates/ansible-vault-password`, outside the
   repository (keep a copy in a password manager). `scripts/deploy.sh vault edit` changes them.
+- **Models**: Claude answers and OpenAI embeds (`LLM_PROVIDER=anthropic`,
+  `EMBEDDINGS_PROVIDER=openai`); their API keys are in the vault (`vault_anthropic_api_key`,
+  `vault_openai_api_key`) and written into the server's `.env`. Spending limits are set in each
+  provider's console.
 - **DNS**: `platemates.cloud` needs an A record to the VM's address before the first deploy,
   or Let's Encrypt cannot issue the certificate (Traefik serves its default one meanwhile).
 

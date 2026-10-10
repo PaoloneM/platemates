@@ -42,6 +42,8 @@
   loop: "{{ platemates_env | dict2items }}"
   loop_control:
     label: "{{ item.key }}"
+  # Some values are API keys: never print them, not even with --diff.
+  diff: false
 
 - name: Pull the images and start the stack
   community.docker.docker_compose_v2:

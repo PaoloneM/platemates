@@ -56,17 +56,24 @@ services:
 
   embed-recipes:
     <<: *backend-image
+    depends_on: !override
+      db:
+        condition: service_healthy
 
   frontend:
     image: ${PLATEMATES_IMAGE_PREFIX:-ghcr.io/paolonem/platemates}-frontend:${PLATEMATES_VERSION:-latest}
     build: !reset null
     restart: unless-stopped
 
+  # Embeddings come from OpenAI's API on the server (EMBEDDINGS_PROVIDER=openai): the local
+  # model would take a gigabyte of the 4 GB. Started only with `--profile local-embeddings`
+  # (then set EMBEDDINGS_PROVIDER=openai_compatible).
   embeddings:
     image: ${PLATEMATES_IMAGE_PREFIX:-ghcr.io/paolonem/platemates}-embeddings:${PLATEMATES_VERSION:-latest}
     build: !reset null
     ports: !reset []
     restart: unless-stopped
+    profiles: [local-embeddings]
 
   # The Docker API, read-only and reduced to what Traefik needs: listing containers and
   # following their events. Traefik never sees the socket itself.

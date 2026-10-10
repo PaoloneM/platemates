@@ -12,6 +12,10 @@ platemates_git_ref: main
 platemates_image_prefix: ghcr.io/paolonem/platemates
 platemates_version: latest
 
+# Claude answers, OpenAI embeds: no model runs on the server (docs/architecture.md).
+platemates_llm_provider: anthropic
+platemates_embeddings_provider: openai
+
 platemates_acme_email: "{{ vault_acme_email }}"
 platemates_app_admins: "{{ vault_app_admins }}"
 
@@ -29,6 +33,10 @@ platemates_env:
   DJANGO_CSRF_TRUSTED_ORIGINS: "{{ platemates_url }}"
   APP_PUBLIC_URLS: "{{ platemates_url }}"
   APP_ADMINS: "{{ platemates_app_admins }}"
+  LLM_PROVIDER: "{{ platemates_llm_provider }}"
+  EMBEDDINGS_PROVIDER: "{{ platemates_embeddings_provider }}"
+  ANTHROPIC_API_KEY: "{{ vault_anthropic_api_key }}"
+  OPENAI_API_KEY: "{{ vault_openai_api_key }}"
 
 base_timezone: Europe/Rome
 base_swap_mb: 2048

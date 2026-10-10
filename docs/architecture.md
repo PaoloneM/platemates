@@ -800,7 +800,9 @@ Application code depends only on the protocols in `ai/base.py` and on `get_chat_
 |---|---|---|
 | `openai_compatible` (chat) | `OpenAICompatibleChat` | Any OpenAI-compatible server: llama.cpp, vLLM, Ollama, cloud |
 | `unsloth_studio` (chat) | `StudioChat` | Same, plus Studio's `enable_thinking`/`enable_tools` flags and model-loaded checks |
+| `anthropic` (chat) | `AnthropicChat` | Claude through Anthropic's Messages API (`ANTHROPIC_*` variables) |
 | `openai_compatible` (embeddings) | `OpenAICompatibleEmbeddings` | `services/embeddings`, Studio's `/v1/embeddings`, cloud APIs |
+| `openai` (embeddings) | `OpenAICompatibleEmbeddings` | OpenAI's API (`OPENAI_*` variables), `text-embedding-3-small` |
 
 To add a provider: implement the protocol, register it in `ai/factory.py`. Nothing else changes.
 
@@ -827,6 +829,31 @@ Verified live on 2026-10-05 against this project's adapter:
   query). Keep it off for menu generation and on only for discovery.
 - "Switch model by request" is on in Paolo's Studio, so a non-resident model is loaded on demand.
 
+### Claude (decided with Paolo 2026-10-10)
+
+The public server has no local model: Claude answers (`LLM_PROVIDER=anthropic`, default
+`claude-sonnet-5-5`) and OpenAI embeds. On the Mac either Studio or Claude, by `LLM_PROVIDER`.
+`ai/anthropic.py` translates the OpenAI format the app speaks, so nothing outside `ai/` changed:
+
+- System messages become `system`; consecutive messages of one role are merged (the API refuses
+  them); `tool` results go back as `tool_result` blocks leading the next user turn; ids are
+  mapped to the characters Claude accepts, the same way on the call and its result.
+- `response_format` json_schema becomes structured outputs (`output_config.format`), with the
+  schema reduced to what they accept: no `minimum`/`maximum`/length bounds, every object closed.
+  The app validates values itself anyway (`normalize_draft`, the menu's validation).
+- No temperature is sent (Claude 4.7 and later refuse non-default ones). Thinking is off except
+  for the menu's reasoning mode (adaptive, its summary streamed as progress). How a model is told
+  not to think differs: Sonnet 5.5 refuses `disabled` and asks for `between_tools`; the adapter
+  learns it from the error, once per model.
+- Web search is Anthropic's server tool (`web_search_20250305`), one search per message as with
+  Studio; when the model leaves the URLs out of its text, the results' are appended, since the
+  callers read URLs from the text.
+- Verified live 2026-10-10: a plain answer in 2 s, a structured recipe extraction in 6.5 s, a
+  dish search returning four real recipe pages in 5.4 s, the assistant's `propose_recipe` over
+  two turns, a reasoning week plan streamed in 14 s.
+- Raise `llm.context_tokens` (Management > Settings) for Claude's larger context only as far as
+  needed: every prompt budget follows it, and so does the cost.
+
 ### Embeddings
 
 - Default: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (384 dimensions,
@@ -844,6 +871,10 @@ Verified live on 2026-10-05 against this project's adapter:
   `embed-recipes` compose service (`manage.py embed_recipes`, idempotent) catches up on every
   `up`. The embedding service is part of the default stack, with a readiness check that passes
   once the model is loaded.
+- On the public server: OpenAI's `text-embedding-3-small` (1536 dimensions), and the local
+  service does not run (`docker-compose.prod.yml` puts it in a profile). Switching model
+  re-embeds every recipe through `embed-recipes`; measured: "pasta al pomodoro" is 0.64 from
+  "spaghetti al sugo" and 0.37 from "tiramisù".
 
 ## Future: translated ingredient names (recorded 2026-10-07)
 
