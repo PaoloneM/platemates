@@ -64,6 +64,12 @@ services:
     image: ${PLATEMATES_IMAGE_PREFIX:-ghcr.io/paolonem/platemates}-frontend:${PLATEMATES_VERSION:-latest}
     build: !reset null
     restart: unless-stopped
+    labels:
+      # The base file's routers set `tls=true` themselves, so Traefik ignores the entry point's
+      # TLS defaults (resolver included): one router asks Let's Encrypt for the domain, and every
+      # router serves the certificate from Traefik's store, the domain being the same.
+      - traefik.http.routers.frontend-tls.tls.certresolver=letsencrypt
+      - traefik.http.routers.frontend-tls.tls.domains[0].main=${PLATEMATES_DOMAIN:?set PLATEMATES_DOMAIN in .env}
 
   # Embeddings come from OpenAI's API on the server (EMBEDDINGS_PROVIDER=openai): the local
   # model would take a gigabyte of the 4 GB. Started only with `--profile local-embeddings`
@@ -98,9 +104,6 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entrypoints.websecure.address=:443
-      # Every router on websecure gets the Let's Encrypt certificate for the domain.
-      - --entrypoints.websecure.http.tls.certresolver=letsencrypt
-      - --entrypoints.websecure.http.tls.domains[0].main=${PLATEMATES_DOMAIN:?set PLATEMATES_DOMAIN in .env}
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
