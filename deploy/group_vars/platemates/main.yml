@@ -37,6 +37,10 @@ platemates_env:
   EMBEDDINGS_PROVIDER: "{{ platemates_embeddings_provider }}"
   ANTHROPIC_API_KEY: "{{ vault_anthropic_api_key }}"
   OPENAI_API_KEY: "{{ vault_openai_api_key }}"
+  # Social login: a provider appears on the login page once its credentials are in the vault
+  # (keycloak-setup applies them on every deploy). docs/authentication.md has the steps.
+  GOOGLE_CLIENT_ID: "{{ vault_google_client_id | default('') }}"
+  GOOGLE_CLIENT_SECRET: "{{ vault_google_client_secret | default('') }}"
 
 base_timezone: Europe/Rome
 base_swap_mb: 2048
