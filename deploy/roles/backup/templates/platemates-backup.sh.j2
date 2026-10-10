@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Managed by Ansible (deploy/roles/backup). A pgBackRest backup of the PlateMates database
+# cluster (the app's and Keycloak's databases), then an encrypted copy of the server's .env,
+# without which a restore on a new machine cannot start.
+#
+#   platemates-backup          # full on weekday {{ backup_full_weekday }}, else differential
+#   platemates-backup full     # a full backup now
+set -euo pipefail
+
+cd {{ platemates_dir }}
+type="${1:-}"
+if [[ -z "$type" ]]; then
+  type=diff
+  [[ "$(date +%u)" == "{{ backup_full_weekday }}" ]] && type=full
+fi
+
+pgbackrest() {
+  docker compose exec -T -u postgres db pgbackrest --stanza=platemates "$@" </dev/null
+}
+
+# Without a full backup yet, pgBackRest takes a full one anyway.
+pgbackrest --type="$type" backup
+pgbackrest check
+
+# The .env, encrypted with the repository's passphrase (decrypt: docs/operations.md).
+PASS="$(grep '^PGBACKREST_CIPHER_PASS=' .env | cut -d= -f2-)"
+export PASS
+umask 027
+openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:PASS \
+  -in .env -out {{ backup_dir }}/env/platemates.env.enc.new
+mv {{ backup_dir }}/env/platemates.env.enc.new {{ backup_dir }}/env/platemates.env.enc
+echo "backup ($type) done"

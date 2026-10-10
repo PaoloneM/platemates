@@ -1,0 +1,9 @@
+backup_dir: /var/backups/platemates
+platemates_dir: /opt/platemates
+# The database container's postgres user owns the repository (uid of the official image).
+backup_postgres_uid: 999
+# ISO weekday of the full backup (7: Sunday); the other nights take a differential one.
+backup_full_weekday: 7
+backup_time: "03:30"
+# SSH public keys that may copy the backups (read-only, through rrsync).
+backup_pull_keys: []

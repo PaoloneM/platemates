@@ -22,7 +22,26 @@ x-backend-image: &backend-image
 services:
   # Long-running services come back after a reboot; one-shots (db-init, keycloak-setup,
   # embed-recipes) run once per `up`.
+  #
+  # The database archives its WAL continuously into pgBackRest's encrypted repository, a host
+  # folder the home NAS copies with rsync (deploy/roles/backup, docs/operations.md): backups
+  # every night, restore to any moment of the last two weeks. archive_timeout closes a WAL
+  # segment at least every 5 minutes, so even a quiet database is never further behind.
   db:
+    image: ${PLATEMATES_IMAGE_PREFIX:-ghcr.io/paolonem/platemates}-db:${PLATEMATES_VERSION:-latest}
+    command:
+      - postgres
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=pgbackrest --stanza=platemates archive-push %p
+      - -c
+      - archive_timeout=300
+    environment:
+      PGBACKREST_REPO1_CIPHER_PASS: ${PGBACKREST_CIPHER_PASS:?set PGBACKREST_CIPHER_PASS in .env}
+      PGBACKREST_PG1_USER: ${POSTGRES_USER:-platemates}
+    volumes:
+      - /var/backups/platemates/pgbackrest:/var/lib/pgbackrest
     ports: !reset []
     restart: unless-stopped
 

@@ -1,0 +1,83 @@
+# Backups, before the app starts: the repository folder the database archives into, the
+# nightly timer, and a read-only account the home NAS copies them with. The stanza and the
+# first backup need the database running: stanza.yml, after the app.
+
+- name: Install what the backups use
+  ansible.builtin.apt:
+    name: [acl, rsync, openssl]
+
+- name: Create the account that copies the backups
+  ansible.builtin.user:
+    name: nasbackup
+    system: true
+    shell: /bin/sh
+    create_home: true
+    password: "!"
+
+- name: Let it run only a read-only rsync of the backups
+  ansible.posix.authorized_key:
+    user: nasbackup
+    exclusive: true
+    key: "{{ backup_pull_keys | map('regex_replace', '^', 'restrict,command=\"/usr/bin/rrsync -ro ' ~ backup_dir ~ '\" ') | join('\n') }}"
+  when: backup_pull_keys | length > 0
+
+- name: Create the backup folders
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+    mode: "0750"
+  loop:
+    - { path: "{{ backup_dir }}", owner: root }
+    - { path: "{{ backup_dir }}/pgbackrest", owner: "{{ backup_postgres_uid }}" }
+    - { path: "{{ backup_dir }}/env", owner: root }
+  loop_control:
+    label: "{{ item.path }}"
+
+# The repository is written by the database container's postgres user; the NAS account reads
+# it: what is there now, and what is written later (default ACLs, set on folders only).
+- name: Let the NAS account read the backups
+  ansible.posix.acl:
+    path: "{{ backup_dir }}"
+    entity: nasbackup
+    etype: user
+    permissions: rX
+    recursive: true
+    state: present
+
+- name: Let it read what is written later
+  ansible.posix.acl:
+    path: "{{ item }}"
+    entity: nasbackup
+    etype: user
+    permissions: rX
+    default: true
+    state: present
+  loop:
+    - "{{ backup_dir }}"
+    - "{{ backup_dir }}/pgbackrest"
+    - "{{ backup_dir }}/env"
+
+- name: Install the backup script
+  ansible.builtin.template:
+    src: platemates-backup.sh.j2
+    dest: /usr/local/sbin/platemates-backup
+    mode: "0750"
+
+- name: Install the nightly backup service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop: [platemates-backup.service, platemates-backup.timer]
+  notify: Reload systemd
+
+- name: Load the units now
+  ansible.builtin.meta: flush_handlers
+
+- name: Run the backups every night
+  ansible.builtin.systemd_service:
+    name: platemates-backup.timer
+    enabled: true
+    state: started

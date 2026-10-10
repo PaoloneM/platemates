@@ -1,0 +1,26 @@
+# After the app is up: the pgBackRest stanza (idempotent), a check that WAL archiving works, and
+# a first full backup when there is none yet.
+
+- name: Create the pgBackRest stanza
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u postgres db pgbackrest --stanza=platemates stanza-create
+    chdir: "{{ platemates_dir }}"
+  register: stanza
+  changed_when: "'already exists' not in stanza.stdout + stanza.stderr"
+
+- name: Check that the database archives into the repository
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u postgres db pgbackrest --stanza=platemates check
+    chdir: "{{ platemates_dir }}"
+  changed_when: false
+
+- name: Read the repository's backups
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u postgres db pgbackrest --stanza=platemates info --output=json
+    chdir: "{{ platemates_dir }}"
+  register: info
+  changed_when: false
+
+- name: Take the first full backup
+  ansible.builtin.command: /usr/local/sbin/platemates-backup full
+  when: (info.stdout | from_json)[0].backup | length == 0

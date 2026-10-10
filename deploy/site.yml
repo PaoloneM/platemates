@@ -5,4 +5,14 @@
   roles:
     - { role: base, tags: [base] }
     - { role: docker, tags: [docker] }
+    # Before the app: the database archives into the backup folder from its first start.
+    - { role: backup, tags: [backup, app] }
     - { role: platemates, tags: [app] }
+  post_tasks:
+    - name: Set up pgBackRest once the database runs
+      ansible.builtin.include_role:
+        name: backup
+        tasks_from: stanza
+        apply:
+          tags: [backup, app]
+      tags: [backup, app]

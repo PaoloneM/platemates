@@ -143,12 +143,53 @@ A Hetzner Cloud VM (`platemates01`, CX23, Ubuntu 26.04) runs the stack from publ
   `EMBEDDINGS_PROVIDER=openai`); their API keys are in the vault (`vault_anthropic_api_key`,
   `vault_openai_api_key`) and written into the server's `.env`. Spending limits are set in each
   provider's console.
+- **Backups**: see "Backups of the public server" below.
 - **DNS and firewall**: `platemates.cloud` needs an A record to the VM's address, and the
   Hetzner Cloud firewall attached to the VM must let in TCP 80 and 443 (besides 22), or Let's
   Encrypt cannot reach the server and Traefik serves its default certificate. Traefik asks for
   the certificate from the frontend's router (`docker-compose.prod.yml`): the base file's routers
   set `tls=true` themselves, which makes Traefik ignore a resolver set on the entry point. After
   fixing either, `docker compose restart traefik` on the server asks again at once.
+
+## Backups of the public server
+
+pgBackRest (decided with Paolo 2026-10-10), in the database image `platemates-db`
+(`db/Dockerfile`), backs up the whole PostgreSQL cluster: the app's database and Keycloak's.
+
+- **What runs**: PostgreSQL archives its WAL continuously into the repository
+  (`archive_timeout=300`: never more than 5 minutes behind). The `platemates-backup` systemd
+  timer (`deploy/roles/backup`) takes a differential backup every night at 03:30 and a full one
+  on Sundays, runs `pgbackrest check`, and writes an encrypted copy of the server's `.env`.
+  Retention: two full backups, so any moment of about the last two weeks can be restored.
+- **Where**: `/var/backups/platemates/pgbackrest` (the repository, AES-256 encrypted, zstd) and
+  `/var/backups/platemates/env/platemates.env.enc`. The passphrase is `vault_pgbackrest_cipher_pass`
+  in the vault: **without it the backups cannot be read**. Keep a copy in a password manager,
+  with the vault password.
+- **Copy at home**: the home NAS pulls `/var/backups/platemates` with rsync over SSH, as the
+  `nasbackup` user, whose key (`backup_pull_keys` in `deploy/group_vars/platemates/main.yml`)
+  can only run a read-only rsync of that folder (`rrsync -ro`). The home connection starts the
+  transfer, so home needs no fixed address. Files in the repository never change once written,
+  so each run moves only what is new; run it every few hours, with `--delete` to follow the
+  retention, and keep ZFS snapshots of the target dataset so a deletion on the server cannot
+  erase the copies.
+- **State**: `systemctl list-timers platemates-backup.timer`, `journalctl -u platemates-backup`,
+  `docker compose exec -u postgres db pgbackrest --stanza=platemates info`.
+
+Restore, on the server (or a new one deployed with `scripts/deploy.sh`, the repository copied
+back from the NAS into `/var/backups/platemates`):
+
+```bash
+cd /opt/platemates
+docker compose stop                     # everything: nothing may use the database
+# Latest state (end of the archived WAL); or a moment: --type=time "--target=2026-10-10 12:00:00+02"
+docker compose run --rm --no-deps -u postgres db \
+  pgbackrest --stanza=platemates --delta restore
+docker compose up -d
+```
+
+`--delta` rewrites only what differs in the existing data volume. On a new machine, first
+decrypt the `.env` (its database password must match the restored roles):
+`openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:<passphrase> -in platemates.env.enc -out .env`.
 
 ## Moving to another machine
 

@@ -41,6 +41,13 @@ platemates_env:
   # (keycloak-setup applies them on every deploy). docs/authentication.md has the steps.
   GOOGLE_CLIENT_ID: "{{ vault_google_client_id | default('') }}"
   GOOGLE_CLIENT_SECRET: "{{ vault_google_client_secret | default('') }}"
+  # The backups' encryption passphrase (pgBackRest repository, the .env copy).
+  PGBACKREST_CIPHER_PASS: "{{ vault_pgbackrest_cipher_pass }}"
+
+# Backups (deploy/roles/backup): where they are, and the SSH keys that may copy them (the home
+# NAS, read-only through rrsync). Public keys, so not in the vault.
+backup_dir: /var/backups/platemates
+backup_pull_keys: []
 
 base_timezone: Europe/Rome
 base_swap_mb: 2048

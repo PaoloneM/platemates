@@ -192,6 +192,9 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   Today: `init_env.py`, migrations and seed data (ingredients, kitchen tools, system rules:
   never overwriting what users changed), `db-init`, `setup_keycloak`, `create_team`.
   Verify a new step by running it twice
+- On the public server, the database archives its WAL into pgBackRest's repository
+  (`/var/backups/platemates`): never turn archiving off, never touch the repository by hand, and
+  keep the pgBackRest passphrase (vault) safe: without it no backup can be read
 - Never run `docker compose down -v` (or remove `platemates_pgdata`) without a fresh backup: it deletes
   both databases, Keycloak accounts included. `backups/` holds personal data: never commit it
 - The public server is changed only through `scripts/deploy.sh` (Ansible, `deploy/`), never by

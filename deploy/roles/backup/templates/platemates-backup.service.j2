@@ -1,0 +1,9 @@
+# Managed by Ansible (deploy/roles/backup).
+[Unit]
+Description=PlateMates backup (pgBackRest, encrypted .env)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/platemates-backup
