@@ -28,6 +28,8 @@ SAFE_TOOLS = ["web_search"]
 
 
 class StudioChat(OpenAICompatibleChat):
+    PROVIDER = "unsloth_studio"
+
     def __init__(
         self,
         *,

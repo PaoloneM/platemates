@@ -89,7 +89,7 @@ Full detail in `README.md`:
 
 - `backend/`: Django project (`config/`), domain apps in `apps/` (`accounts`, `catalog`,
   `recipes`, `teams`, `menus`, `assistant`, `siteconfig`, `curation`, `transfer` (export and
-  import between installations); `core` holds abstract mixins and the
+  import between installations), `usage` (AI consumption by team); `core` holds abstract mixins and the
   cache manager), AI
   adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
@@ -159,6 +159,9 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - Application logic talks to AI only through `ai.get_chat_provider()` /
   `ai.get_embedding_provider()`; provider-specific code lives in `ai/` only
 - Embeddings are always stored with the model name that produced them
+- AI calls are billed to a team and feature: a new place that starts AI work wraps it in
+  `apps.usage.context.attribute(...)`, and work handed to threads goes through `carry()`;
+  providers report usage through `ai.usage.report`
 - Unsloth Studio's server-side tools are enabled only through `StudioChat`, which restricts them
   to `web_search` and caps tool calls: never send `enable_tools` with Studio's other tools
   (`python`, `terminal`, `edit_file` run on the host)

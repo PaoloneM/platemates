@@ -36,6 +36,7 @@ def _config_kwargs(config: dict[str, Any]) -> dict[str, Any]:
         "model": config["MODEL"],
         "api_key": config["API_KEY"],
         "timeout_seconds": config["TIMEOUT_SECONDS"],
+        "provider": config["PROVIDER"],
     }
 
 

@@ -358,7 +358,8 @@
       "settings": "Settings",
       "cache": "Cache",
       "drafts": "System drafts",
-      "transfer": "Export / import"
+      "transfer": "Export / import",
+      "usage": "Usage"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -799,6 +800,45 @@
       "team_rules": "Team rules",
       "book_entries": "Recipe book entries",
       "menus": "Weekly menus"
+    }
+  },
+  "usage": {
+    "hint": "What the models (Claude, OpenAI) consumed, by team, feature and model. Costs are estimates from the price list below: the provider's invoice is what counts.",
+    "month": "Month",
+    "total": "Estimated total",
+    "callsCount_one": "{{formatted}} call",
+    "callsCount_other": "{{formatted}} calls",
+    "none": "No usage this month.",
+    "byTeam": "By team",
+    "byFeature": "By feature",
+    "byModel": "By model",
+    "team": "Team",
+    "noTeam": "No team",
+    "featureLabel": "Feature",
+    "model": "Model",
+    "calls": "Calls",
+    "input": "Input tokens",
+    "output": "Output tokens",
+    "searches": "Web searches",
+    "cost": "Estimated cost",
+    "unpriced_one": "{{count}} call to a model without a price (local): not counted.",
+    "unpriced_other": "{{count}} calls to models without a price (local): not counted.",
+    "noPrice": "no price",
+    "prices": "Price list",
+    "pricesHint": "Prices in US dollars, per million tokens and per thousand web searches, as the providers publish them. Correcting one recalculates past months too.",
+    "price": {
+      "input_per_mtok": "Input / M tokens",
+      "output_per_mtok": "Output / M tokens",
+      "cache_read_per_mtok": "Cache read / M",
+      "cache_write_per_mtok": "Cache write / M",
+      "per_thousand_searches": "Searches / 1000"
+    },
+    "feature": {
+      "assistant": "Assistant",
+      "menu": "Menus",
+      "system_drafts": "System drafts",
+      "embeddings": "Embeddings",
+      "other": "Other"
     }
   }
 }

@@ -15,6 +15,8 @@ import logging
 from pgvector.django import CosineDistance
 
 from ai import AIError, EmbeddingProvider, get_embedding_provider
+from apps.usage.context import attribute
+from apps.usage.models import Feature
 
 from .models import Recipe, RecipeEmbedding
 
@@ -55,7 +57,9 @@ def refresh_embedding(recipe: Recipe, provider: EmbeddingProvider | None = None)
         current = RecipeEmbedding.objects.filter(recipe=recipe, model=provider.model).first()
         if current and current.content_hash == content_hash:
             return True
-        [vector] = provider.embed([document])
+        # Billed to the recipe's team, whatever started it (a save, an import, embed_recipes).
+        with attribute(team=recipe.owner_team_id, feature=Feature.EMBEDDINGS):
+            [vector] = provider.embed([document])
     except AIError as exc:
         log.info("recipe %s not embedded now: %s", recipe.pk, exc)
         return False

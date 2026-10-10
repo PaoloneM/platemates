@@ -23,6 +23,9 @@ from django.db import InterfaceError, OperationalError, connection
 
 from apps.curation import jobs as drafts
 from apps.menus import generation as menus
+from apps.teams.models import Team
+from apps.usage.context import attribute
+from apps.usage.models import Feature
 
 log = logging.getLogger(__name__)
 
@@ -97,11 +100,13 @@ class Command(BaseCommand):
         started = time.monotonic()
         if (generation := menus.claim_next()) is not None:
             self.stdout.write(f"Generating {generation.menu} ({generation.pk})...")
-            menus.run_generation(generation, should_stop=stopping)
+            with attribute(team=generation.menu.team_id, feature=Feature.MENU):
+                menus.run_generation(generation, should_stop=stopping)
             done = f"Generation {generation.pk}: {generation.status}"
         elif (draft := drafts.claim_next()) is not None:
             self.stdout.write(f"Drafting system recipe {draft.dish!r} ({draft.pk})...")
-            drafts.run_draft(draft, should_stop=stopping)
+            with attribute(team=Team.system(), feature=Feature.SYSTEM_DRAFTS):
+                drafts.run_draft(draft, should_stop=stopping)
             done = f"Draft {draft.pk}: {draft.status}"
         else:
             return False

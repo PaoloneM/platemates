@@ -12,6 +12,7 @@ from typing import Any
 
 import httpx
 
+from . import usage
 from .base import (
     AIError,
     AIUnavailableError,
@@ -25,6 +26,10 @@ from .base import (
 class _HTTPProvider:
     """Shared plumbing: base URL, bearer auth, timeouts and error mapping."""
 
+    # The name usage is reported under, unless the configuration gives the provider's own
+    # ("openai" for OpenAI's paid API, "openai_compatible" for the free local service).
+    PROVIDER = "openai_compatible"
+
     def __init__(
         self,
         *,
@@ -33,7 +38,9 @@ class _HTTPProvider:
         api_key: str | None = None,
         timeout_seconds: float = 60.0,
         client: httpx.Client | None = None,
+        provider: str | None = None,
     ) -> None:
+        self.provider = provider or self.PROVIDER
         self.model = model
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
@@ -117,6 +124,7 @@ class OpenAICompatibleChat(_HTTPProvider):
             payload["response_format"] = response_format
 
         data = self._request("POST", "/v1/chat/completions", json=payload).json()
+        usage.report(usage.from_openai(self.provider, self.model, "chat", data.get("usage")))
         choices = data.get("choices") or []
         if not choices:
             raise AIError("The provider returned no completion choices.")
@@ -190,6 +198,9 @@ class OpenAICompatibleChat(_HTTPProvider):
             raise AIUnavailableError(
                 f"{self._base_url} stopped answering for {self._timeout:.0f}s on {path}."
             ) from exc
+        # Streams carry no usage unless asked, which not every compatible server accepts: the
+        # call is counted, its tokens are not.
+        usage.report(usage.from_openai(self.provider, self.model, "stream", None))
         return ChatResult(content="".join(content).strip(), finish_reason=finish_reason)
 
 
@@ -206,6 +217,7 @@ class OpenAICompatibleEmbeddings(_HTTPProvider):
         data = self._request(
             "POST", "/v1/embeddings", json={"model": self.model, "input": texts}
         ).json()
+        usage.report(usage.from_openai(self.provider, self.model, "embeddings", data.get("usage")))
         items = sorted(data.get("data") or [], key=lambda item: item.get("index", 0))
         if len(items) != len(texts):
             raise AIError(f"Asked for {len(texts)} embeddings, got {len(items)}.")

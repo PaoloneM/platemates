@@ -358,7 +358,8 @@
       "settings": "Impostazioni",
       "cache": "Cache",
       "drafts": "Bozze di sistema",
-      "transfer": "Esporta / importa"
+      "transfer": "Esporta / importa",
+      "usage": "Consumi"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -799,6 +800,45 @@
       "team_rules": "Regole del team",
       "book_entries": "Voci del ricettario",
       "menus": "Menu settimanali"
+    }
+  },
+  "usage": {
+    "hint": "Quanto hanno consumato i modelli (Claude, OpenAI), per team, funzione e modello. I costi sono stime dal listino qui sotto: fa fede la fattura del fornitore.",
+    "month": "Mese",
+    "total": "Totale stimato",
+    "callsCount_one": "{{formatted}} chiamata",
+    "callsCount_other": "{{formatted}} chiamate",
+    "none": "Nessun consumo in questo mese.",
+    "byTeam": "Per team",
+    "byFeature": "Per funzione",
+    "byModel": "Per modello",
+    "team": "Team",
+    "noTeam": "Nessun team",
+    "featureLabel": "Funzione",
+    "model": "Modello",
+    "calls": "Chiamate",
+    "input": "Token in ingresso",
+    "output": "Token in uscita",
+    "searches": "Ricerche web",
+    "cost": "Costo stimato",
+    "unpriced_one": "{{count}} chiamata a un modello senza prezzo (locale): non conteggiata.",
+    "unpriced_other": "{{count}} chiamate a modelli senza prezzo (locali): non conteggiate.",
+    "noPrice": "senza prezzo",
+    "prices": "Listino",
+    "pricesHint": "Prezzi in dollari, per milione di token e per mille ricerche web, come li pubblicano i fornitori. Correggerli ricalcola anche i mesi passati.",
+    "price": {
+      "input_per_mtok": "Input / M token",
+      "output_per_mtok": "Output / M token",
+      "cache_read_per_mtok": "Lettura cache / M",
+      "cache_write_per_mtok": "Scrittura cache / M",
+      "per_thousand_searches": "Ricerche / 1000"
+    },
+    "feature": {
+      "assistant": "Assistente",
+      "menu": "Menu",
+      "system_drafts": "Bozze di sistema",
+      "embeddings": "Embeddings",
+      "other": "Altro"
     }
   }
 }

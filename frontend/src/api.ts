@@ -545,3 +545,35 @@ export type ImportReport = {
   teams: { file: string; into: string; new: boolean }[]
   document: { scope: string; exported_at: string }
 }
+
+// AI usage and estimated costs (Management > Usage, administrators). Costs in USD.
+export type UsageCounts = {
+  calls: number
+  input_tokens: number
+  output_tokens: number
+  cache_read_tokens: number
+  cache_write_tokens: number
+  web_searches: number
+  cost: number
+  // Calls to models without a price (local ones): their cost is unknown, not zero.
+  unpriced_calls: number
+}
+export type UsageReport = {
+  month: string
+  months: string[]
+  totals: UsageCounts | null
+  teams: (UsageCounts & { team_id: number | null; team: string | null; features: Record<string, number> })[]
+  features: (UsageCounts & { feature: string })[]
+  models: (UsageCounts & { provider: string; model: string; priced: boolean })[]
+}
+export type ModelPrice = {
+  id: number
+  model: string
+  input_per_mtok: string
+  output_per_mtok: string
+  cache_read_per_mtok: string
+  cache_write_per_mtok: string
+  per_thousand_searches: string
+  updated_at: string
+  updated_by: string | null
+}

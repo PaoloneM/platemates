@@ -9,6 +9,8 @@ from rest_framework.response import Response
 from ai import AIError
 from apps.recipes.models import Recipe
 from apps.teams.models import Membership
+from apps.usage.context import attribute
+from apps.usage.models import Feature
 
 from .agent import run_turn
 from .models import AssistantSession, Attachment
@@ -46,12 +48,13 @@ class AssistantSessionViewSet(
                 session=session, content_type=image.content_type, data=image.read()
             )
         try:
-            run_turn(
-                session,
-                message.validated_data.get("text", ""),
-                language=translation.get_language(),
-                photo=photo,
-            )
+            with attribute(team=session.team, feature=Feature.ASSISTANT):
+                run_turn(
+                    session,
+                    message.validated_data.get("text", ""),
+                    language=translation.get_language(),
+                    photo=photo,
+                )
         except AIError as exc:
             log.warning("assistant turn failed: %s", exc)
             return Response(

@@ -15,6 +15,7 @@ import { CachePage } from './pages/manage/CachePage'
 import { DraftsPage } from './pages/manage/DraftsPage'
 import { SettingsPage } from './pages/manage/SettingsPage'
 import { TransferPage } from './pages/manage/TransferPage'
+import { UsagePage } from './pages/manage/UsagePage'
 import { SystemRulesPage } from './pages/manage/SystemRulesPage'
 import { ManageIndex, ManageLayout } from './pages/manage/ManageLayout'
 import { LoginPage } from './pages/LoginPage'
@@ -56,6 +57,7 @@ function Protected() {
             <Route path="/manage/drafts" element={<ManageLayout><DraftsPage /></ManageLayout>} />
             <Route path="/manage/settings" element={<ManageLayout><SettingsPage /></ManageLayout>} />
             <Route path="/manage/transfer" element={<ManageLayout><TransferPage /></ManageLayout>} />
+            <Route path="/manage/usage" element={<ManageLayout><UsagePage /></ManageLayout>} />
             <Route path="/manage/cache" element={<ManageLayout><CachePage /></ManageLayout>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

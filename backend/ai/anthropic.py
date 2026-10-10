@@ -30,6 +30,7 @@ from typing import Any
 
 import httpx
 
+from . import usage
 from .base import AIError, AIUnavailableError, ChatMessage, ChatResult
 from .openai_compatible import _detail, _HTTPProvider
 
@@ -54,6 +55,8 @@ _THINKING_OFF: dict[str, dict[str, str]] = {}
 
 
 class AnthropicChat(_HTTPProvider):
+    PROVIDER = "anthropic"
+
     def __init__(
         self,
         *,
@@ -138,6 +141,7 @@ class AnthropicChat(_HTTPProvider):
         data = self._with_thinking_off(
             payload, lambda: self._request("POST", "/v1/messages", json=payload).json()
         )
+        usage.report(usage.from_anthropic(self.model, "chat", data.get("usage")))
         return from_anthropic_response(data)
 
     def _with_thinking_off(self, payload: dict[str, Any], send: Callable[[], Any]) -> Any:
@@ -178,6 +182,9 @@ class AnthropicChat(_HTTPProvider):
         path = "/v1/messages"
         content: list[str] = []
         stop_reason = None
+        # The counts come in pieces: input at message_start, output (cumulative) at
+        # message_delta; the latest value of each wins.
+        counts: dict[str, Any] = {}
         try:
             with self._client.stream(
                 "POST", path, json=payload, headers=self._headers()
@@ -196,8 +203,11 @@ class AnthropicChat(_HTTPProvider):
                     kind = event.get("type")
                     if kind == "error":
                         raise AIError(f"Anthropic stream error: {event.get('error')}")
+                    if kind == "message_start":
+                        counts.update((event.get("message") or {}).get("usage") or {})
                     if kind == "message_delta":
                         stop_reason = (event.get("delta") or {}).get("stop_reason") or stop_reason
+                        counts.update({k: v for k, v in (event.get("usage") or {}).items() if v})
                     if kind != "content_block_delta":
                         continue
                     delta = event.get("delta") or {}
@@ -212,6 +222,7 @@ class AnthropicChat(_HTTPProvider):
             raise AIUnavailableError(
                 f"{self._base_url} stopped answering for {self._timeout:.0f}s on {path}."
             ) from exc
+        usage.report(usage.from_anthropic(self.model, "stream", counts))
         return ChatResult(
             content="".join(content).strip(),
             finish_reason=_STOP_REASONS.get(stop_reason, stop_reason),

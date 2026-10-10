@@ -876,6 +876,25 @@ The public server has no local model: Claude answers (`LLM_PROVIDER=anthropic`, 
   re-embeds every recipe through `embed-recipes`; measured: "pasta al pomodoro" is 0.64 from
   "spaghetti al sugo" and 0.37 from "tiramisù".
 
+## AI usage and costs (decided with Paolo 2026-10-10)
+
+The providers' consoles report costs by API key and model only, never by team. So the app
+measures: every successful call reports what the provider says it used (`ai/usage.py`: tokens,
+cache tokens, web searches), and `apps/usage` stores it as an `AIUsage` row, attributed to the
+team and feature the work was for.
+
+- **Attribution** is a context variable set where the work starts:
+  `with attribute(team=..., feature=...)` around an assistant turn (the view), a menu
+  generation and a system draft (the worker); recipe embeddings are billed to the recipe's team
+  wherever they are computed. Threads do not inherit it: the assistant's parallel searches run
+  through `carry()`. Calls outside any (health checks) are "other", without a team.
+- **Costs** are not stored: they are computed when shown, from `ModelPrice` (per million tokens
+  and per thousand searches, USD), kept by administrators in Management > Usage, so a corrected
+  price corrects the history. Seeded from Anthropic's published prices (checked 2026-10-10) and
+  OpenAI's embedding price; local models have none and are shown as such.
+- `ai/` stays application-agnostic: it only calls a recorder the app registers at start-up, and
+  a failing recorder never fails the call.
+
 ## Export and import (decided with Paolo 2026-10-10)
 
 Data moves between installations (the Mac to the public server, a team to another server) as a

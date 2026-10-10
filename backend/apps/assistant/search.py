@@ -23,6 +23,7 @@ from ai import AIError, ChatProvider, get_chat_provider
 from apps.recipes.embeddings import similar_recipes
 from apps.recipes.models import Recipe
 from apps.teams.models import RecipeBookEntry
+from apps.usage.context import carry
 
 from .web import (
     URL_RE,
@@ -243,7 +244,9 @@ def web_results(
         log.warning("could not turn %r into dishes: %s", query, exc)
         dishes = [query]
     with ThreadPoolExecutor(max_workers=PARALLEL_SEARCHES) as pool:
-        per_dish = list(pool.map(lambda d: search_dish(d, search_chat, verify), dishes))
+        # carry(): the searches are billed to the same team as the request.
+        search = carry(lambda d: search_dish(d, search_chat, verify))
+        per_dish = list(pool.map(search, dishes))
     results, seen = [], set()
     for dish, found in zip(dishes, per_dish, strict=True):
         for result in found:

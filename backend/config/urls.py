@@ -26,6 +26,7 @@ from apps.teams.views import (
     TeamViewSet,
 )
 from apps.transfer.views import choices_view, export_view, import_view
+from apps.usage.views import ModelPriceViewSet, usage_view
 
 router = DefaultRouter()
 router.register("ingredients", IngredientViewSet, basename="ingredient")
@@ -44,6 +45,7 @@ router.register("system-drafts", SystemDraftViewSet)
 router.register("system-rules", SystemRuleViewSet, basename="system-rule")
 router.register("slots", MealSlotViewSet)
 router.register("invitations", InvitationViewSet)
+router.register("usage/prices", ModelPriceViewSet)
 router.register("assistant/sessions", AssistantSessionViewSet, basename="assistant-session")
 
 urlpatterns = [
@@ -56,6 +58,7 @@ urlpatterns = [
     path("api/cache/", cache_stats),
     path("api/cache/clear/", cache_clear),
     path("api/config/<str:key>/", config_detail),
+    path("api/usage/", usage_view),
     path("api/transfer/export/", export_view),
     path("api/transfer/import/", import_view),
     path("api/transfer/choices/", choices_view),
