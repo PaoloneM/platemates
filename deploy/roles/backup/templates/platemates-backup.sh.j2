@@ -8,6 +8,7 @@
 set -euo pipefail
 
 cd {{ platemates_dir }}
+started=$(date +%s)
 type="${1:-}"
 if [[ -z "$type" ]]; then
   type=diff
@@ -29,4 +30,18 @@ umask 027
 openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:PASS \
   -in .env -out {{ backup_dir }}/env/platemates.env.enc.new
 mv {{ backup_dir }}/env/platemates.env.enc.new {{ backup_dir }}/env/platemates.env.enc
+
+# For the monitoring (Database and backups dashboard): written only when everything above
+# succeeded, so a stale timestamp means a failed or missing backup.
+metrics=/var/lib/node_exporter/textfile/platemates_backup.prom
+umask 022
+cat > "$metrics.new" <<METRICS
+# HELP platemates_backup_last_success_timestamp_seconds When the last backup succeeded.
+# TYPE platemates_backup_last_success_timestamp_seconds gauge
+platemates_backup_last_success_timestamp_seconds $(date +%s)
+# HELP platemates_backup_last_duration_seconds How long the last successful backup took.
+# TYPE platemates_backup_last_duration_seconds gauge
+platemates_backup_last_duration_seconds $(( $(date +%s) - started ))
+METRICS
+mv "$metrics.new" "$metrics"
 echo "backup ($type) done"

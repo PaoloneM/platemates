@@ -328,17 +328,22 @@ class FakeKeycloak:
             return httpx.Response(204)
         if parts[1] == "clients":
             if "protocol-mappers" in parts:
+                mappers = self.mappers.setdefault(parts[2], {})
                 if method == "GET":
-                    return httpx.Response(200, json=list(self.mappers.values()))
+                    return httpx.Response(200, json=list(mappers.values()))
                 if method == "POST":
-                    self.mappers[body["name"]] = {**body, "id": "m1"}
+                    mappers[body["name"]] = {**body, "id": f"m-{parts[2]}"}
                     return httpx.Response(201)
                 return httpx.Response(204)
             if method == "GET":
-                return httpx.Response(200, json=list(self.clients.values()))
+                wanted = request.url.params.get("clientId")
+                found = [c for c in self.clients.values() if c["clientId"] == wanted]
+                return httpx.Response(200, json=found)
             if method == "POST":
-                self.clients["c"] = {"id": "c"}
+                self.clients[body["clientId"]] = {"id": f"id-{body['clientId']}", **body}
                 return httpx.Response(201)
+            if method == "DELETE":
+                self.clients = {k: c for k, c in self.clients.items() if c["id"] != parts[2]}
             return httpx.Response(204)
         if parts[1] == "roles":
             if method == "POST":
@@ -410,9 +415,28 @@ def test_setup_keycloak_names_the_default_role_after_the_realm(db):
 
 def test_setup_keycloak_puts_roles_in_the_id_token(db):
     fake = FakeKeycloak()
-    assert "added the realm roles to the ID token" in run_setup(fake, BASE_ENV)
-    assert fake.mappers["realm roles"]["config"]["id.token.claim"] == "true"
-    assert "added the realm roles to the ID token" not in run_setup(fake, BASE_ENV)
+    added = "added the realm roles to platemates-backend's tokens"
+    assert added in run_setup(fake, BASE_ENV)
+    mappers = fake.mappers["id-platemates-backend"]
+    assert mappers["realm roles"]["config"]["id.token.claim"] == "true"
+    assert added not in run_setup(fake, BASE_ENV)
+
+
+def test_setup_keycloak_manages_grafana_only_with_a_secret(db):
+    fake = FakeKeycloak()
+    grafana = {
+        **BASE_ENV,
+        "GRAFANA_OIDC_CLIENT_SECRET": "gs",
+        "GRAFANA_URLS": "https://admin.example.com:9443/grafana/",
+    }
+    assert "created client platemates-grafana" in run_setup(fake, grafana)
+    client = fake.clients["platemates-grafana"]
+    assert client["redirectUris"] == ["https://admin.example.com:9443/grafana/login/generic_oauth"]
+    assert "realm roles" in fake.mappers["id-platemates-grafana"]
+    assert "updated client platemates-grafana" in run_setup(fake, grafana)
+    # Its secret removed from .env: the client goes away.
+    assert "removed client platemates-grafana (no secret in .env)" in run_setup(fake, BASE_ENV)
+    assert set(fake.clients) == {"platemates-backend"}
 
 
 def test_setup_keycloak_gives_the_admin_role_to_exactly_app_admins(db):

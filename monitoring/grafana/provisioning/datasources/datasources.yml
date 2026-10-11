@@ -1,0 +1,21 @@
+# Grafana's data: the metrics, and the application database read-only (AI usage and costs).
+apiVersion: 1
+datasources:
+  - name: VictoriaMetrics
+    type: prometheus
+    uid: victoriametrics
+    access: proxy
+    url: http://victoriametrics:8428
+    isDefault: true
+  - name: PlateMates
+    type: grafana-postgresql-datasource
+    uid: platemates-db
+    access: proxy
+    url: db:5432
+    user: grafana_reader
+    jsonData:
+      database: $POSTGRES_DB
+      sslmode: disable
+      postgresVersion: 1700
+    secureJsonData:
+      password: $GRAFANA_DB_PASSWORD

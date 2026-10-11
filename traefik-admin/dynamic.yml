@@ -32,6 +32,12 @@ http:
       entryPoints: [admin]
       service: keycloak
       tls: { certResolver: hostinger }
+    # Monitoring, embedded in the app's Monitoring page (same origin, so no framing issue).
+    admin-grafana:
+      rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`) && PathPrefix(`/grafana`)
+      entryPoints: [admin]
+      service: grafana
+      tls: { certResolver: hostinger }
     admin-frontend:
       rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`)
       entryPoints: [admin]
@@ -54,3 +60,6 @@ http:
     frontend:
       loadBalancer:
         servers: [{ url: "http://frontend:80" }]
+    grafana:
+      loadBalancer:
+        servers: [{ url: "http://grafana:3000" }]

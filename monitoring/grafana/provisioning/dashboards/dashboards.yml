@@ -1,0 +1,10 @@
+# The dashboards in the repository (monitoring/grafana/dashboards, made by make_dashboards.py).
+# Changes made in Grafana's editor are not kept: change the generator instead.
+apiVersion: 1
+providers:
+  - name: platemates
+    folder: PlateMates
+    type: file
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards

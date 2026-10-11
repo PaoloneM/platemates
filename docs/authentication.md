@@ -134,7 +134,9 @@ e.g. http://localhost:8080/auth/realms/platemates/broker/google/endpoint
 client ID → type "Web application". Add the redirect URI above under "Authorized redirect URIs".
 Configure the OAuth consent screen (scopes `openid`, `email`, `profile`). Set
 `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. While the app is in "Testing" mode on the consent
-screen, only the test users listed there can sign in.
+screen, only the test users listed there can sign in. Every address the app is reached at needs
+its own redirect URI registered: on the public server both `https://platemates.cloud/…` and the
+admin plane's `https://admin.platemates.cloud:9443/…` (docs/operations.md).
 
 **Microsoft**: Microsoft Entra admin center → App registrations → New registration. Supported
 account types: "Accounts in any organizational directory and personal Microsoft accounts".

@@ -9,6 +9,7 @@ FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} AS builder
 # one certificate for everything. A build-time option, hence here and not in docker-compose.
 ENV KC_DB=postgres \
     KC_HEALTH_ENABLED=true \
+    KC_METRICS_ENABLED=true \
     KC_HTTP_RELATIVE_PATH=/auth
 
 # Apple is not a built-in Keycloak provider. Community extension, pinned and checksum-verified

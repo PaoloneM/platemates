@@ -65,6 +65,12 @@ class KeycloakConfig:
     identity_providers: dict[str, dict[str, Any]] = field(default_factory=dict)
     # Emails of the users who hold ADMIN_ROLE; everyone else loses it.
     admins: list[str] = field(default_factory=list)
+    # Grafana (the admin plane's monitoring), a second client: only with a secret.
+    grafana_secret: str = ""
+    grafana_urls: list[str] = field(default_factory=list)
+
+
+GRAFANA_CLIENT_ID = "platemates-grafana"
 
 
 def config_from_env(
@@ -128,6 +134,8 @@ def config_from_env(
         smtp=smtp,
         identity_providers=providers,
         admins=[e.strip().lower() for e in get("APP_ADMINS").split(",") if e.strip()],
+        grafana_secret=get("GRAFANA_OIDC_CLIENT_SECRET"),
+        grafana_urls=[u.strip().rstrip("/") for u in get("GRAFANA_URLS").split(",") if u.strip()],
     )
 
 
@@ -188,6 +196,30 @@ def client_representation(config: KeycloakConfig) -> dict[str, Any]:
         "attributes": {
             "pkce.code.challenge.method": "S256",
             "post.logout.redirect.uris": "##".join(f"{url}/" for url in config.app_urls),
+        },
+    }
+
+
+def grafana_client_representation(config: KeycloakConfig) -> dict[str, Any]:
+    """Grafana signs in through Keycloak too; it reads the `roles` claim to let administrators
+    in (and nobody else)."""
+    return {
+        "clientId": GRAFANA_CLIENT_ID,
+        "name": "PlateMates monitoring (Grafana)",
+        "protocol": "openid-connect",
+        "enabled": True,
+        "publicClient": False,
+        "clientAuthenticatorType": "client-secret",
+        "secret": config.grafana_secret,
+        "standardFlowEnabled": True,
+        "directAccessGrantsEnabled": False,
+        "implicitFlowEnabled": False,
+        "serviceAccountsEnabled": False,
+        "redirectUris": [f"{url}/login/generic_oauth" for url in config.grafana_urls],
+        "webOrigins": [],
+        "attributes": {
+            "pkce.code.challenge.method": "S256",
+            "post.logout.redirect.uris": "##".join(f"{url}/" for url in config.grafana_urls),
         },
     }
 
@@ -283,28 +315,11 @@ class KeycloakAdmin:
         log.append(f"configured realm {realm}")
         log += self._name_default_role(realm)
 
-        client = client_representation(config)
-        existing = self._call(
-            "GET", f"/realms/{realm}/clients", params={"clientId": config.client_id}
-        ).json()
-        if existing:
-            self._call("PUT", f"/realms/{realm}/clients/{existing[0]['id']}", json=client)
-            log.append(f"updated client {config.client_id}")
+        log += self._upsert_client(realm, client_representation(config))
+        if config.grafana_secret:
+            log += self._upsert_client(realm, grafana_client_representation(config))
         else:
-            self._call("POST", f"/realms/{realm}/clients", json=client)
-            log.append(f"created client {config.client_id}")
-
-        client_uuid = self._call(
-            "GET", f"/realms/{realm}/clients", params={"clientId": config.client_id}
-        ).json()[0]["id"]
-        mappers = f"/realms/{realm}/clients/{client_uuid}/protocol-mappers/models"
-        current = {m["name"]: m for m in self._call("GET", mappers).json()}
-        if ROLES_MAPPER["name"] in current:
-            mapper = {**ROLES_MAPPER, "id": current[ROLES_MAPPER["name"]]["id"]}
-            self._call("PUT", f"{mappers}/{mapper['id']}", json=mapper)
-        else:
-            self._call("POST", mappers, json=ROLES_MAPPER)
-            log.append("added the realm roles to the ID token")
+            log += self._remove_client(realm, GRAFANA_CLIENT_ID)
 
         log += self._sync_admins(realm, config.admins)
 
@@ -323,6 +338,38 @@ class KeycloakAdmin:
                 self._call("POST", path, json=provider)
                 log.append(f"created identity provider {alias}")
         return log
+
+    def _upsert_client(self, realm: str, client: dict[str, Any]) -> list[str]:
+        """Create or update a client, with the realm roles in its tokens."""
+        log: list[str] = []
+        client_id = client["clientId"]
+        clients = f"/realms/{realm}/clients"
+        existing = self._call("GET", clients, params={"clientId": client_id}).json()
+        if existing:
+            self._call("PUT", f"{clients}/{existing[0]['id']}", json=client)
+            log.append(f"updated client {client_id}")
+        else:
+            self._call("POST", clients, json=client)
+            log.append(f"created client {client_id}")
+
+        client_uuid = self._call("GET", clients, params={"clientId": client_id}).json()[0]["id"]
+        mappers = f"{clients}/{client_uuid}/protocol-mappers/models"
+        current = {m["name"]: m for m in self._call("GET", mappers).json()}
+        if ROLES_MAPPER["name"] in current:
+            mapper = {**ROLES_MAPPER, "id": current[ROLES_MAPPER["name"]]["id"]}
+            self._call("PUT", f"{mappers}/{mapper['id']}", json=mapper)
+        else:
+            self._call("POST", mappers, json=ROLES_MAPPER)
+            log.append(f"added the realm roles to {client_id}'s tokens")
+        return log
+
+    def _remove_client(self, realm: str, client_id: str) -> list[str]:
+        clients = f"/realms/{realm}/clients"
+        existing = self._call("GET", clients, params={"clientId": client_id}).json()
+        if not existing:
+            return []
+        self._call("DELETE", f"{clients}/{existing[0]['id']}")
+        return [f"removed client {client_id} (no secret in .env)"]
 
     def _name_default_role(self, realm: str) -> list[str]:
         """Keycloak names the role every user gets `default-roles-<realm>` when it creates the

@@ -1,0 +1,26 @@
+# What VictoriaMetrics collects on the public server (docker-compose.prod.yml), every 30 s, all
+# inside Docker's network: nothing here is reachable from outside.
+global:
+  scrape_interval: 30s
+
+scrape_configs:
+  # The VM: CPU, memory, disk, load; and the backups (textfile written by platemates-backup).
+  - job_name: node
+    static_configs: [{ targets: ["node-exporter:9100"] }]
+  # Each container's CPU and memory.
+  - job_name: cadvisor
+    static_configs: [{ targets: ["cadvisor:8080"] }]
+  # PostgreSQL: connections, sizes, WAL archiving into pgBackRest.
+  - job_name: postgres
+    static_configs: [{ targets: ["postgres-exporter:9187"] }]
+  # Both Traefiks: requests, errors and latency per service (the backend's included).
+  - job_name: traefik
+    static_configs:
+      - { targets: ["traefik:8082"], labels: { plane: public } }
+      - { targets: ["traefik-admin:8082"], labels: { plane: admin } }
+  # Keycloak (Quarkus): HTTP requests, JVM.
+  - job_name: keycloak
+    metrics_path: /auth/metrics
+    static_configs: [{ targets: ["keycloak:9000"] }]
+  - job_name: victoriametrics
+    static_configs: [{ targets: ["localhost:8428"] }]

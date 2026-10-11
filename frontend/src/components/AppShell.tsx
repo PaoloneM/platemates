@@ -1,6 +1,7 @@
 import GroupsIcon from '@mui/icons-material/GroupsOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
+import MonitoringIcon from '@mui/icons-material/MonitorHeartOutlined'
 import {
   AppBar,
   Avatar,
@@ -20,7 +21,7 @@ import {
 } from '@mui/material'
 import { useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link as RouterLink } from 'react-router'
+import { Link as RouterLink, useLocation } from 'react-router'
 import { csrfToken } from '../api'
 import { useAuth } from '../auth/context'
 import { saveLanguage } from '../auth/language'
@@ -29,6 +30,7 @@ import { supportedLanguages } from '../i18n'
 import { Flag } from './Flag'
 import { ThemeModeSwitch } from './ThemeMode'
 import { Logo } from './Logo'
+import { hasMonitoring } from '../monitoring'
 import { BOTTOM_BAR_HEIGHT, BottomBar, NavigationRail } from './Navigation'
 import yoda from '../assets/yoda.png'
 
@@ -94,6 +96,14 @@ function UserMenu() {
             <ListItemText>{t('manage.title')}</ListItemText>
           </MenuItem>
         )}
+        {hasMonitoring(me.user.is_admin) && (
+          <MenuItem component={RouterLink} to="/monitoring" onClick={() => setAnchor(null)}>
+            <ListItemIcon>
+              <MonitoringIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t('monitoring.title')}</ListItemText>
+          </MenuItem>
+        )}
         {(me.user.is_staff || me.user.is_admin) && <Divider />}
         <MenuItem onClick={() => logoutForm.current?.submit()}>
           <ListItemIcon>
@@ -146,21 +156,36 @@ function AdminPlaneChip() {
   return <Chip size="small" color="warning" label={t('shell.adminPlane')} />
 }
 
+// Pages that take the whole window below the app bar (no navigation, no margins).
+const FULL_BLEED = ['/monitoring']
+
 export function AppShell({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation()
+  const appBar = (
+    <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <Toolbar sx={{ gap: 1.5 }}>
+        <Box component={RouterLink} to="/" sx={{ display: 'flex' }} aria-label="home">
+          <Logo size={32} />
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <TeamSwitcher />
+        </Box>
+        <AdminPlaneChip />
+        <UserMenu />
+      </Toolbar>
+    </AppBar>
+  )
+  if (FULL_BLEED.includes(pathname)) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+        {appBar}
+        <Box sx={{ flex: 1, minHeight: 0 }}>{children}</Box>
+      </Box>
+    )
+  }
   return (
     <>
-      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Toolbar sx={{ gap: 1.5 }}>
-          <Box component={RouterLink} to="/" sx={{ display: 'flex' }} aria-label="home">
-            <Logo size={32} />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <TeamSwitcher />
-          </Box>
-          <AdminPlaneChip />
-          <UserMenu />
-        </Toolbar>
-      </AppBar>
+      {appBar}
       <Box sx={{ display: 'flex' }}>
         <NavigationRail />
         <Container maxWidth="lg" sx={{

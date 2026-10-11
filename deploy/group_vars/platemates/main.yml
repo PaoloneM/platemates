@@ -39,6 +39,9 @@ platemates_env:
   # A request without the plane header (one that did not come through Traefik) gets no powers.
   DEFAULT_PLANE: public
   PLATEMATES_ADMIN_DOMAIN: "{{ platemates_admin_domain }}"
+  PLATEMATES_ADMIN_URL: "{{ platemates_admin_url }}"
+  # Grafana, on the admin plane (its Keycloak client's redirect target).
+  GRAFANA_URLS: "{{ platemates_admin_url }}/grafana"
   # The admin plane's certificate: a DNS challenge through Hostinger's API.
   HOSTINGER_API_TOKEN: "{{ vault_hostinger_api_token }}"
   APP_ADMINS: "{{ platemates_app_admins }}"

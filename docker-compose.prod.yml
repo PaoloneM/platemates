@@ -155,6 +155,10 @@ services:
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --ping=true
       - --log.level=WARN
+      # Metrics for VictoriaMetrics, on an entry point that is not published.
+      - --entrypoints.metrics.address=:8082
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entrypoint=metrics
     ports: !override
       - "80:80"
       - "443:443"
@@ -178,6 +182,9 @@ services:
       - --certificatesresolvers.hostinger.acme.dnschallenge.provider=hostinger
       - --ping=true
       - --log.level=WARN
+      - --entrypoints.metrics.address=:8082
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entrypoint=metrics
     environment:
       HOSTINGER_API_TOKEN: ${HOSTINGER_API_TOKEN:?set HOSTINGER_API_TOKEN in .env}
       # Hostinger's nameservers take minutes to publish a record (60 s, the default, failed
@@ -197,7 +204,138 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # -- Monitoring (admin plane only): docs/operations.md -------------------------------------
+
+  # Metrics store, 30 days; scrapes the exporters below (monitoring/scrape.yml).
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.153.0
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=30d
+      - -promscrape.config=/etc/vm/scrape.yml
+    volumes:
+      - victoriametrics:/storage
+      - ./monitoring/scrape.yml:/etc/vm/scrape.yml:ro
+    restart: unless-stopped
+
+  # The VM itself, read from the host's filesystem; plus the backups' textfile metrics.
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    command:
+      - --path.rootfs=/host
+      - --collector.textfile.directory=/textfile
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+      - /var/lib/node_exporter/textfile:/textfile:ro
+    restart: unless-stopped
+
+  # Each container's CPU and memory. Container names come through the read-only socket proxy,
+  # never the Docker socket itself.
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.6
+    command:
+      - --docker=tcp://socket-proxy:2375
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --store_container_labels=false
+      - --disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl,advtcp,process
+    volumes:
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    depends_on:
+      - socket-proxy
+    restart: unless-stopped
+
+  # PostgreSQL's statistics, as the read-only `monitoring` role (pg_monitor, no table data).
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    environment:
+      DATA_SOURCE_URI: db:5432/${POSTGRES_DB:-platemates}?sslmode=disable
+      DATA_SOURCE_USER: monitoring
+      DATA_SOURCE_PASS: ${MONITORING_DB_PASSWORD:?set MONITORING_DB_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # One-shot, on every `up`: the read-only roles above and Grafana's (monitoring/db-roles.sql),
+  # once the backend has created the tables. Idempotent; passwords follow .env.
+  db-roles:
+    image: pgvector/pgvector:pg17
+    restart: "no"
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-platemates}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-platemates}
+      PGDATABASE: ${POSTGRES_DB:-platemates}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?set GRAFANA_DB_PASSWORD in .env}
+      MONITORING_DB_PASSWORD: ${MONITORING_DB_PASSWORD:?set MONITORING_DB_PASSWORD in .env}
+    command:
+      - sh
+      - -c
+      - >-
+        until psql -tAc "SELECT to_regclass('public.usage_aiusage')" | grep -q usage_aiusage;
+        do sleep 3; done;
+        psql -v ON_ERROR_STOP=1 -v dbname="$$PGDATABASE"
+        -v grafana_password="$$GRAFANA_DB_PASSWORD" -v monitoring_password="$$MONITORING_DB_PASSWORD"
+        -f /sql/db-roles.sql
+    volumes:
+      - ./monitoring/db-roles.sql:/sql/db-roles.sql:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Dashboards (monitoring/grafana), at /grafana on the admin plane, embedded in the app's
+  # Monitoring page. Signs in through Keycloak (client platemates-grafana, setup_keycloak):
+  # administrators only; silently, with the Keycloak session of the app, so it works inside an
+  # iframe (Google itself cannot be framed).
+  grafana:
+    image: grafana/grafana-oss:12.4.3
+    environment:
+      GF_SERVER_ROOT_URL: ${PLATEMATES_ADMIN_URL:?set PLATEMATES_ADMIN_URL in .env}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_AUTH_OAUTH_AUTO_LOGIN: "true"
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+      GF_AUTH_GENERIC_OAUTH_NAME: Keycloak
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: platemates-grafana
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:?set GRAFANA_OIDC_CLIENT_SECRET in .env}
+      GF_AUTH_GENERIC_OAUTH_SCOPES: openid email profile
+      GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+      # The browser goes to Keycloak on the admin host; Grafana talks to it inside Docker.
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: ${PLATEMATES_ADMIN_URL}/auth/realms/${KEYCLOAK_REALM:-platemates}/protocol/openid-connect/auth
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: http://keycloak:8080/auth/realms/${KEYCLOAK_REALM:-platemates}/protocol/openid-connect/token
+      GF_AUTH_GENERIC_OAUTH_API_URL: http://keycloak:8080/auth/realms/${KEYCLOAK_REALM:-platemates}/protocol/openid-connect/userinfo
+      GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: email
+      GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: email
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+      # Keycloak's `admin` realm role (the app's administrators) is Grafana's Admin; anyone else
+      # is refused.
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(roles[*], 'admin') && 'Admin' || ''"
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT: "true"
+      GF_AUTH_SIGNOUT_REDIRECT_URL: ${PLATEMATES_ADMIN_URL}/
+      # For the PostgreSQL datasource (monitoring/grafana/provisioning).
+      POSTGRES_DB: ${POSTGRES_DB:-platemates}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD}
+    volumes:
+      - grafana:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - victoriametrics
+    restart: unless-stopped
+
 volumes:
+  victoriametrics:
+  grafana:
   letsencrypt-admin:
   # The certificates and the ACME account: kept across restarts, so Let's Encrypt's rate limits
   # are never at risk.

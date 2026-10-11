@@ -841,5 +841,8 @@
       "embeddings": "Embeddings",
       "other": "Other"
     }
+  },
+  "monitoring": {
+    "title": "Monitoring"
   }
 }

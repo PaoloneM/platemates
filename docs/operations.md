@@ -169,6 +169,21 @@ Everything that is not the app is served only on the VM's loopback (decided with
   with `admin`. On the public plane a staff account is an ordinary user, Gestione does not
   appear, and Django admin and the admin-only APIs answer 404 (and are not routed either).
   Without the header (`DEFAULT_PLANE`): `public` on the server, `admin` on a developer's machine.
+- **Monitoring** (on the admin plane only): VictoriaMetrics (30 days) collects the VM
+  (node-exporter, with the backups' outcome from `platemates-backup`), the containers (cAdvisor,
+  through the read-only socket proxy), PostgreSQL and WAL archiving (postgres-exporter, role
+  `monitoring`), both Traefiks (requests, errors and latency per service) and Keycloak
+  (`monitoring/scrape.yml`). Grafana, at `/grafana`, is embedded in the app's Monitoring page
+  (user menu, administrators, admin host only); it signs in through Keycloak (client
+  `platemates-grafana`, administrators only) and reads the AI usage from PostgreSQL as
+  `grafana_reader` (usage, prices and team names only; `monitoring/db-roles.sql`). Dashboards
+  are code: `python3 monitoring/grafana/make_dashboards.py`, never edited in Grafana.
+  No alerts yet (a channel is to be chosen); an external check of `/api/health/` is the only
+  thing that would notice the VM itself being down.
+- **Social login on the admin host**: Keycloak builds each provider's redirect URI from the
+  address it is reached at, so every address needs its own registered with the provider, e.g.
+  Google: `https://admin.platemates.cloud:9443/auth/realms/platemates/broker/google/endpoint`
+  besides `https://platemates.cloud/auth/realms/platemates/broker/google/endpoint`.
 - **Denied on the public plane**: `/manage`, `/admin/`, `/api/config|cache|usage|transfer|system-drafts`,
   Keycloak's `/auth/admin` and the `master` realm (its login page is Keycloak's own
   administrators').

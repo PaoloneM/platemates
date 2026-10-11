@@ -25,6 +25,11 @@ SECRETS = {
     "DJANGO_SECRET_KEY": lambda: secrets.token_urlsafe(50),
     "KEYCLOAK_ADMIN_PASSWORD": lambda: secrets.token_urlsafe(18),
     "OIDC_RP_CLIENT_SECRET": lambda: secrets.token_urlsafe(32),
+    # Monitoring (the server's admin plane): Grafana's Keycloak client, and the database roles
+    # Grafana and the PostgreSQL exporter read with.
+    "GRAFANA_OIDC_CLIENT_SECRET": lambda: secrets.token_urlsafe(32),
+    "GRAFANA_DB_PASSWORD": lambda: secrets.token_urlsafe(24),
+    "MONITORING_DB_PASSWORD": lambda: secrets.token_urlsafe(24),
 }
 
 # Required, but only a person can provide them.

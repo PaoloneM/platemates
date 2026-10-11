@@ -1,0 +1,176 @@
+{
+ "uid": "pm-ai",
+ "title": "AI usage and costs",
+ "tags": [
+  "platemates"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "refresh": "1m",
+ "time": {
+  "from": "now-30d",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "type": "barchart",
+   "title": "Estimated cost per day, by team (USD)",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "platemates-db"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "platemates-db"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "\nSELECT date_trunc('day', u.created_at) AS time, COALESCE(t.name, 'no team') AS metric,\n  SUM((u.input_tokens * p.input_per_mtok + u.output_tokens * p.output_per_mtok\n  + u.cache_read_tokens * p.cache_read_per_mtok + u.cache_write_tokens * p.cache_write_per_mtok) / 1000000\n  + u.web_searches * p.per_thousand_searches / 1000) AS value\nFROM usage_aiusage u\nJOIN usage_modelprice p ON p.model = u.model\nLEFT JOIN families_team t ON t.id = u.team_id\nWHERE $__timeFilter(u.created_at)\nGROUP BY 1, 2 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD",
+     "custom": {
+      "fillOpacity": 30,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "id": 1,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 10
+   }
+  },
+  {
+   "type": "barchart",
+   "title": "Estimated cost per day, by feature (USD)",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "platemates-db"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "platemates-db"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "\nSELECT date_trunc('day', u.created_at) AS time, u.feature AS metric, SUM((u.input_tokens * p.input_per_mtok + u.output_tokens * p.output_per_mtok\n  + u.cache_read_tokens * p.cache_read_per_mtok + u.cache_write_tokens * p.cache_write_per_mtok) / 1000000\n  + u.web_searches * p.per_thousand_searches / 1000) AS value\nFROM usage_aiusage u JOIN usage_modelprice p ON p.model = u.model\nWHERE $__timeFilter(u.created_at)\nGROUP BY 1, 2 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD",
+     "custom": {
+      "fillOpacity": 30,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "id": 2,
+   "gridPos": {
+    "x": 0,
+    "y": 10,
+    "w": 12,
+    "h": 8
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Calls per hour, by model",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "platemates-db"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "platemates-db"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "\nSELECT date_trunc('hour', created_at) AS time, model AS metric, COUNT(*) AS value\nFROM usage_aiusage WHERE $__timeFilter(created_at)\nGROUP BY 1, 2 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "fillOpacity": 30,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "id": 3,
+   "gridPos": {
+    "x": 12,
+    "y": 10,
+    "w": 12,
+    "h": 8
+   }
+  },
+  {
+   "type": "table",
+   "title": "By team and model",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "platemates-db"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "platemates-db"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "\nSELECT COALESCE(t.name, 'no team') AS team, u.model, COUNT(*) AS calls,\n  SUM(u.input_tokens) AS input_tokens, SUM(u.output_tokens) AS output_tokens,\n  SUM(u.web_searches) AS web_searches, ROUND(SUM((u.input_tokens * p.input_per_mtok + u.output_tokens * p.output_per_mtok\n  + u.cache_read_tokens * p.cache_read_per_mtok + u.cache_write_tokens * p.cache_write_per_mtok) / 1000000\n  + u.web_searches * p.per_thousand_searches / 1000)::numeric, 4) AS cost_usd\nFROM usage_aiusage u\nLEFT JOIN usage_modelprice p ON p.model = u.model\nLEFT JOIN families_team t ON t.id = u.team_id\nWHERE $__timeFilter(u.created_at)\nGROUP BY 1, 2 ORDER BY cost_usd DESC NULLS LAST"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "fillOpacity": 30,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "id": 4,
+   "gridPos": {
+    "x": 0,
+    "y": 18,
+    "w": 24,
+    "h": 10
+   }
+  }
+ ]
+}

@@ -107,6 +107,13 @@
     find {{ backup_dir }} -type d -exec setfacl -d -m u:nasbackup:rX {} +
   when: unreadable.stdout != "" or unreadable.rc != 0
 
+# Read by node-exporter (docker-compose.prod.yml): the backups' outcome as metrics.
+- name: Create the folder for the backups' metrics
+  ansible.builtin.file:
+    path: /var/lib/node_exporter/textfile
+    state: directory
+    mode: "0755"
+
 - name: Install the backup script
   ansible.builtin.template:
     src: platemates-backup.sh.j2
