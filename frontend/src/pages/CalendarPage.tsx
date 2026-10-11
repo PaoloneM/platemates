@@ -164,7 +164,6 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview }: {
     <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
       <Typography variant="h3" sx={{ color: today ? 'primary.main' : undefined }}>{weekday}</Typography>
       <Typography variant="body2" color={today ? 'primary.main' : 'text.secondary'}>{dayMonth}</Typography>
-      {today && <Chip size="small" color="primary" label={t('calendar.todayChip')} sx={{ alignSelf: 'center' }} />}
     </Stack>
   )
   return (
@@ -197,6 +196,8 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview }: {
             <Typography variant="body2" sx={{ fontStyle: 'italic', overflowWrap: 'anywhere' }}>{day.note}</Typography>
           </Stack>
         )}
+        {/* At the end, right-aligned: the day's actions keep their place on every day. */}
+        {today && <Chip size="small" color="primary" label={t('calendar.todayChip')} sx={{ ml: 'auto' }} />}
       </Stack>
       <Box sx={{
         display: 'grid', gap: 1.5,
