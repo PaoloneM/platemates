@@ -740,13 +740,31 @@ flowchart TD
   context, so "with potatoes" refines the previous request. Picking a web result sends its URL:
   the conversation becomes a link import (mode switches to `link`), and later messages correct
   the draft.
-- **Local**: keyword matches first (every meaningful word, roughly stemmed, must appear in the
-  title or an ingredient: matching any word turned "un dolce al cioccolato" into a leek soup via
-  its "paprika dolce"), then embedding similarity from 0.4. Shown as "in your recipe book" or
-  "from other teams" (shared recipes only; private ones never leave their team).
-- **Web**: the chat model first turns the request into 3 concrete dishes (about 1 s; vague
-  requests otherwise find only category and collection pages), then runs one web search per
-  dish through Unsloth Studio's built-in search, two at a time. A result is shown only if its
+- **Reading the request first** (2026-10-11): one chat model call (`understand`, about 1 s)
+  turns the conversation into what both searches need: what is wanted, without negations; its
+  keywords; 3 concrete dishes; the ingredient categories and ingredients it rules out ("senza
+  carne o pesce", "vegetariano"). Negations never reach the embedding: it reads "senza pesce"
+  as "pesce" (a sea bass came first). If the model fails, the request is taken as typed.
+- **Local** (reworked 2026-10-11, after unrelated recipes filled the results): the recipes the
+  user can see that the request does not rule out (a non-optional line in an excluded category
+  or ingredient), ranked by embedding similarity to the request and its dishes (the best of
+  them per recipe), plus a bonus for keyword matches. A recipe with every keyword in its title
+  or main ingredients (PostgreSQL full text, Italian stems; basic ingredients never count) is
+  always offered; others only if above a minimum and within a margin of the best similarity:
+  absolute similarities depend on the model and the request (one word scores lower than a
+  phrase), but a right match stands out (0.58-0.70 against 0.40-0.50 for the rest, with
+  text-embedding-3-small). Minimum, margin and bonus are settings (`search.*`), tuned with
+  `manage.py search_probe`, which shows how requests are read and ranked. Recipe vectors are
+  an "identity card" of the dish (title, course, cuisine, main ingredients, start of the
+  description), no method and no basic ingredients, which made every recipe look alike.
+  Shown as "in your recipe book" or "from other teams" (shared recipes only; private ones never
+  leave their team).
+- **Basic ingredients** (`Ingredient.basic`, staff, Manage > Ingredients): staples in almost
+  every recipe (salt, pepper, water, olive and seed oil from the start). Left out of search and
+  of recipe embeddings; changing the flag re-embeds the recipes using the ingredient.
+- **Web**: the dishes the request was read into (vague requests otherwise find only category
+  and collection pages) each get one web search through Unsloth Studio's built-in search
+  (Claude's on the public server), two at a time. A result is shown only if its
   page exists, is public, and declares exactly one schema.org Recipe with ingredients and method;
   its title is the page's own. Measured: 22-29 s, 4-6 results.
 - What was learned on the way (2026-10-06): asked for JSON, the model invented every URL without

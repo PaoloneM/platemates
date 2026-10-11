@@ -105,6 +105,9 @@ class Ingredient(ProvenanceMixin, models.Model):
     )
     default_unit = models.CharField(max_length=2, choices=Unit.choices, default=Unit.GRAM)
     season_months = month_set_field("Months in which the ingredient is in season.")
+    # A pantry staple (salt, water, oil): in almost every recipe, so it says nothing about a
+    # dish. Recipe search and recipe embeddings leave it out. Set by staff.
+    basic = models.BooleanField(default=False)
     # The team that added it for itself; none for system ingredients.
     owner_team = models.ForeignKey(
         "families.Team",

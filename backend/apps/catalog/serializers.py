@@ -29,6 +29,7 @@ class IngredientSerializer(UserDecisionSerializerMixin, serializers.ModelSeriali
             "category",
             "default_unit",
             "season_months",
+            "basic",
             "usage_count",
             "shared_usage_count",
             "team",

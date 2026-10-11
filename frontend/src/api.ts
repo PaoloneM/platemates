@@ -63,6 +63,8 @@ export type Ingredient = {
   category: string
   default_unit: Unit
   season_months: Seasonality
+  // A pantry staple (salt, water, oil): left out of recipe search. Set by staff.
+  basic: boolean
   // Recipes using it, and how many of those are shared.
   usage_count: number
   shared_usage_count: number

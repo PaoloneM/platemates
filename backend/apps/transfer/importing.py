@@ -268,6 +268,8 @@ class Importer:
         ingredient.category = data["category"]
         ingredient.default_unit = data["default_unit"]
         ingredient.season_months = data["season_months"]
+        # Files from before the flag existed have none.
+        ingredient.basic = data.get("basic", False)
         ingredient.provenance = data["provenance"]
 
     # -- system rules ----------------------------------------------------------------------------

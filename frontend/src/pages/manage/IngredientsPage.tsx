@@ -9,6 +9,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -233,7 +234,10 @@ export function IngredientsPage() {
             {data?.results.map((i) => (
               <TableRow key={i.id} hover onClick={() => setEditing(i)} sx={{ cursor: 'pointer' }}>
                 <TableCell>
-                  <Typography sx={{ fontWeight: 500 }}>{i.name}</Typography>
+                  <Typography sx={{ fontWeight: 500 }}>
+                    {i.name}
+                    {i.basic && <Chip size="small" variant="outlined" label={t('ingredient.basicChip')} sx={{ ml: 1 }} />}
+                  </Typography>
                   {i.aliases.length > 0 && (
                     <Typography variant="caption" color="text.secondary">{i.aliases.join(', ')}</Typography>
                   )}

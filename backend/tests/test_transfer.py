@@ -207,6 +207,7 @@ def test_catalog_entries_are_matched_by_name_not_duplicated(user, world):
 
 def test_system_data_moves_to_an_empty_installation(user, world):
     SystemRule.objects.create(text_it="Niente fritti", text_en="No fried food", position=9)
+    Ingredient.objects.filter(name="pomodoro").update(basic=True)
     document = json.loads(json.dumps(export_system()))
     forget_team(world["team"])
     Recipe.objects.filter(owner_team__is_system=True).delete()
@@ -219,6 +220,7 @@ def test_system_data_moves_to_an_empty_installation(user, world):
     minestrone = Recipe.objects.get(title="Minestrone")
     assert minestrone.owner_team.is_system
     assert minestrone.ingredients.get().ingredient.name == "pomodoro"
+    assert minestrone.ingredients.get().ingredient.basic
     assert SystemRule.objects.filter(text_it="Niente fritti").exists()
     assert report.created["recipes"] == 1
 

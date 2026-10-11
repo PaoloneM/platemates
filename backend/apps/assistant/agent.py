@@ -393,9 +393,10 @@ def _import_link(session, text, url, language_name, chat, read_page) -> TurnResu
 def _search(session, text, language_name, chat, search_chat, verify_page) -> TurnResult:
     query = search.search_query(session.messages, text)
     session.messages = [*session.messages, {"role": "user", "content": text.strip()}]
-    found = search.local_results(session.user, session.team, query)
+    request = search.understand(query, language_name, chat or get_chat_provider())
+    found = search.local_results(session.user, session.team, request)
     web, notice = search.web_results(
-        query, language_name, search_chat, chat, **({"verify": verify_page} if verify_page else {})
+        request.dishes, search_chat, **({"verify": verify_page} if verify_page else {})
     )
     found += web
     titles = "; ".join(r["title"] for r in found) or "nothing"

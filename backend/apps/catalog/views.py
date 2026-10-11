@@ -85,9 +85,10 @@ class IngredientViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def perform_update(self, serializer):
-        before = serializer.instance.season_months
+        before = (serializer.instance.season_months, serializer.instance.basic)
         ingredient = serializer.save()
-        if ingredient.season_months != before:
+        # The season feeds the recipes' own; being basic, what their embeddings say.
+        if (ingredient.season_months, ingredient.basic) != before:
             recompute_recipes(ingredient)
 
     def destroy(self, request, *args, **kwargs):

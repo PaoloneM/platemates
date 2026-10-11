@@ -60,6 +60,17 @@ SETTINGS: dict[str, Setting] = {
         Setting("menu.thinking", "bool", False, "menu"),
         # Longest a generation may take, both attempts included; past it, it fails.
         Setting("menu.max_seconds", "int", 360, "menu", minimum=60, maximum=1800),
+        # Recipe search among the app's own recipes (apps/assistant/search.py), in hundredths
+        # of cosine similarity: they depend on the embedding model, so they are tuned here
+        # (`manage.py search_probe` shows the scores). Defaults measured on OpenAI's
+        # text-embedding-3-small, 2026-10-11: right matches 0.55-0.70, the rest 0.40-0.50.
+        # Below the minimum a recipe is never offered as similar.
+        Setting("search.min_similarity", "int", 40, "search", minimum=0, maximum=100),
+        # Only recipes within this distance of the best match are offered.
+        Setting("search.margin", "int", 6, "search", minimum=0, maximum=100),
+        # Added to a recipe that has every keyword of the request in its title or main
+        # ingredients; such a recipe is always offered.
+        Setting("search.keyword_bonus", "int", 10, "search", minimum=0, maximum=100),
         # Compact recipe pages: actions as icons beside the tabs instead of labelled buttons,
         # never, on phones only, or everywhere.
         Setting(

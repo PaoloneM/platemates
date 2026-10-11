@@ -43,10 +43,11 @@ def fake_embeddings(monkeypatch):
     return provider
 
 
-def recipe(team, title, *ingredients, visibility=Visibility.SHARED):
+def recipe(team, title, *ingredients, visibility=Visibility.SHARED, category="other"):
     r = Recipe.objects.create(title=title, owner_team=team, visibility=visibility)
     for name in ingredients:
-        r.ingredients.create(ingredient=Ingredient.objects.get_or_create(name=name)[0])
+        ingredient = Ingredient.objects.get_or_create(name=name, defaults={"category": category})
+        r.ingredients.create(ingredient=ingredient[0])
     RecipeBookEntry.objects.create(team=team, recipe=r, status="approved")
     return r
 
@@ -76,7 +77,7 @@ def test_similar_recipes_respect_visibility(team, user, fake_embeddings):
     recipe(team, "Torta", "dolce")
     for r in Recipe.objects.all():
         embeddings.refresh_embedding(r)
-    found = [r for r, _ in embeddings.similar_recipes(user, "qualcosa con la zucca")]
+    found = [r for r, _ in embeddings.similar_recipes(user, ["qualcosa con la zucca"])]
     assert pumpkin in found
     assert secret not in found  # another team's private recipe
 
@@ -84,25 +85,118 @@ def test_similar_recipes_respect_visibility(team, user, fake_embeddings):
 # -- local search -----------------------------------------------------------------------------
 
 
-def test_keywords_are_rough_stems_without_filler():
-    assert search.keywords("qualcosa con le patate e i porri") == ["patat", "porr"]
+def embed_all():
+    for r in Recipe.objects.all():
+        embeddings.refresh_embedding(r)
 
 
-def test_all_keywords_must_match(team, user, fake_embeddings):
+def titles(user, team, request):
+    if isinstance(request, str):
+        request = search.plain_request(request)
+    return [r["title"] for r in search.local_results(user, team, request)]
+
+
+def test_keywords_are_the_meaningful_words():
+    assert search.keywords("qualcosa con le patate e i porri") == ["patate", "porri"]
+
+
+def test_all_keywords_must_match_by_italian_stems(team, user, fake_embeddings):
     recipe(team, "Vellutata di porri", "porro", "patata", "paprika dolce")
     recipe(team, "Purè", "patata")
-    titles = lambda q: [r["title"] for r in search.local_results(user, team, q)]  # noqa: E731
-    assert titles("patate e porri")[0] == "Vellutata di porri"
+    assert titles(user, team, "patate e porri") == ["Vellutata di porri"]
     # "dolce" matches the paprika, but "cioccolato" matches nothing: no keyword match.
-    assert "Vellutata di porri" not in titles("un dolce al cioccolato")
+    assert "Vellutata di porri" not in titles(user, team, "un dolce al cioccolato")
+
+
+def test_basic_ingredients_say_nothing_about_a_dish(team, user, fake_embeddings):
+    salt = Ingredient.objects.create(name="sale", basic=True)
+    soup = recipe(team, "Vellutata di zucca", "zucca")
+    soup.ingredients.create(ingredient=salt)
+    assert "sale" not in embeddings.recipe_document(soup)
+    assert "zucca" in embeddings.recipe_document(soup)
+    assert titles(user, team, "sale") == []
+
+
+def test_marking_an_ingredient_basic_reembeds_its_recipes(
+    api, user, team, fake_embeddings, django_capture_on_commit_callbacks
+):
+    user.is_staff = True
+    user.save()
+    soup = recipe(team, "Vellutata di zucca", "zucca", "panna")
+    embed_all()
+    calls = fake_embeddings.calls
+    cream = Ingredient.objects.get(name="panna")
+    with django_capture_on_commit_callbacks(execute=True):
+        response = api.patch(f"/api/ingredients/{cream.pk}/", {"basic": True}, format="json")
+    assert response.json()["basic"] is True
+    assert fake_embeddings.calls == calls + 1
+    assert "panna" not in embeddings.recipe_document(soup)
+
+
+def test_what_the_request_rules_out_is_never_offered(team, user, fake_embeddings):
+    recipe(team, "Pesce al forno con patate", "orata", category="fish")
+    recipe(team, "Patate al forno", "patata")
+    embed_all()
+    request = search.Request(
+        query="patate al forno", keywords=["patate"], dishes=[], exclude_categories=["fish"]
+    )
+    assert titles(user, team, request) == ["Patate al forno"]
+    request.exclude_categories, request.exclude_ingredients = [], ["orata"]
+    assert titles(user, team, request) == ["Patate al forno"]
+
+
+def test_only_recipes_close_to_the_best_are_offered(team, user, fake_embeddings):
+    recipe(team, "Torta di zucca", "zucca", "dolce")  # zucca and dolce
+    recipe(team, "Crema di zucca", "zucca")  # zucca only: far from the best
+    embed_all()
+    request = search.Request(query="dolce zucca", keywords=[], dishes=[])
+    assert titles(user, team, request) == ["Torta di zucca"]
+
+
+def test_a_keyword_match_is_offered_even_when_not_similar(team, user, fake_embeddings):
+    recipe(team, "Hummus di ceci", "cece")
+    recipe(team, "Torta di zucca", "zucca")
+    embed_all()
+    request = search.Request(query="zucca", keywords=["ceci"], dishes=[])
+    assert titles(user, team, request)[:2] == ["Torta di zucca", "Hummus di ceci"]
 
 
 def test_local_results_tell_book_from_shared(team, user, fake_embeddings):
     other = Team.objects.create(name="Other")
     mine = recipe(team, "Zucca al forno", "zucca")
     theirs = recipe(other, "Zucca in agrodolce", "zucca")
-    kinds = {r["recipe"]: r["kind"] for r in search.local_results(user, team, "zucca")}
+    request = search.plain_request("zucca")
+    kinds = {r["recipe"]: r["kind"] for r in search.local_results(user, team, request)}
     assert kinds == {mine.pk: "book", theirs.pk: "shared"}
+
+
+# -- reading the request ----------------------------------------------------------------------
+
+
+def test_the_model_reads_the_request_negations_into_exclusions():
+    answer = {
+        "query": "peperoni ripieni",
+        "keywords": ["peperoni", "ripieni"],
+        "dishes": ["Peperoni ripieni di riso", "Peperoni ripieni di cous cous"],
+        "exclude_categories": ["red_meat", "fish", "not-a-category"],
+        "exclude_ingredients": [" "],
+    }
+    chat = FakeChat(ChatResult(content=json.dumps(answer)))
+    request = search.understand("peperoni ripieni, ma senza carne o pesce", "Italian", chat)
+    assert request.query == "peperoni ripieni"
+    assert request.exclude_categories == ["red_meat", "fish"]
+    assert request.exclude_ingredients == []
+    assert request.dishes[0] == "Peperoni ripieni di riso"
+
+
+def test_without_the_model_the_request_is_taken_as_typed():
+    chat = FakeChat(AIUnavailableError("down"))
+    request = search.understand("peperoni ripieni", "Italian", chat)
+    assert (request.query, request.keywords, request.dishes) == (
+        "peperoni ripieni",
+        ["peperoni", "ripieni"],
+        ["peperoni ripieni"],
+    )
 
 
 # -- web search -------------------------------------------------------------------------------
@@ -139,7 +233,6 @@ def verify_known(pages):
 
 
 def test_web_results_come_from_verified_pages_per_dish(db):
-    chat = FakeChat(dishes("Orata al forno", "Branzino al cartoccio"))
     search_chat = FakeChat(
         listing("https://a.it/orata", "https://a.it/collection", "https://b.it/orata"),
         listing("https://c.it/branzino"),
@@ -150,7 +243,7 @@ def test_web_results_come_from_verified_pages_per_dish(db):
         "https://c.it/branzino": "Branzino",
     }
     results, notice = search.web_results(
-        "secondo di pesce", "Italian", search_chat, chat, verify=verify_known(pages)
+        ["Orata al forno", "Branzino al cartoccio"], search_chat, verify=verify_known(pages)
     )
     assert notice is None
     assert [(r["title"], r["dish"]) for r in results] == [
@@ -162,23 +255,20 @@ def test_web_results_come_from_verified_pages_per_dish(db):
 
 
 def test_a_failed_web_search_is_retried(db):
-    chat = FakeChat(dishes("Polpette al sugo"))
     search_chat = FakeChat(
         ChatResult(content="Sorry, the search tool had a technical error."),
         listing("https://a.it/polpette"),
     )
     results, _ = search.web_results(
-        "polpette",
-        "Italian",
+        ["Polpette al sugo"],
         search_chat,
-        chat,
         verify=verify_known({"https://a.it/polpette": "Polpette"}),
     )
     assert [r["title"] for r in results] == ["Polpette"]
 
 
 def test_without_a_web_search_provider(db):
-    assert search.web_results("x", "Italian", None) == ([], "web_search_unavailable")
+    assert search.web_results(["x"], None) == ([], "web_search_unavailable")
 
 
 def test_collection_pages_declare_several_recipes():

@@ -277,7 +277,10 @@
     "exists": "Esiste già un ingrediente con questo nome o sinonimo.",
     "teamHint": "Lo aggiungi agli ingredienti del tuo team: lo vedete solo voi, finché lo staff non lo rende disponibile a tutti. Usa un nome semplice, al singolare.",
     "teamMark": "del team",
-    "addedBy": "Aggiunto da «{{team}}»: solo quel team lo vede e lo usa."
+    "addedBy": "Aggiunto da «{{team}}»: solo quel team lo vede e lo usa.",
+    "basic": "Ingrediente di base",
+    "basicHint": "Sta in quasi ogni ricetta (sale, acqua, olio): la ricerca delle ricette lo ignora.",
+    "basicChip": "di base"
   },
   "assistant": {
     "mode": {
@@ -584,7 +587,8 @@
     "group": {
       "llm": "Modello linguistico",
       "menu": "Generazione del menu",
-      "ui": "Interfaccia"
+      "ui": "Interfaccia",
+      "search": "Ricerca delle ricette"
     },
     "item": {
       "llm_context_tokens": {
@@ -607,6 +611,18 @@
           "mobile": "Solo su telefono",
           "always": "Sempre"
         }
+      },
+      "search_min_similarity": {
+        "label": "Somiglianza minima (centesimi)",
+        "hint": "Sotto questa somiglianza (40 = 0,40) una ricetta non viene mai proposta come simile alla richiesta. Dipende dal modello di embedding: con text-embedding-3-small le ricette giuste stanno tra 55 e 70, le altre tra 40 e 50."
+      },
+      "search_margin": {
+        "label": "Margine dal migliore (centesimi)",
+        "hint": "Si propongono solo le ricette simili al massimo così lontane dalla migliore. Più è piccolo, meno risultati e più pertinenti."
+      },
+      "search_keyword_bonus": {
+        "label": "Bonus parole chiave (centesimi)",
+        "hint": "Si aggiunge a una ricetta che contiene tutte le parole chiave della richiesta nel titolo o negli ingredienti principali; queste ricette vengono sempre proposte."
       }
     },
     "on": "attivo",

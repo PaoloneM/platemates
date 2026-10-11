@@ -62,6 +62,7 @@ def ingredient_data(ingredient: Ingredient) -> dict[str, Any]:
         "category": ingredient.category,
         "default_unit": ingredient.default_unit,
         "season_months": ingredient.season_months,
+        "basic": ingredient.basic,
         "provenance": ingredient.provenance,
     }
 

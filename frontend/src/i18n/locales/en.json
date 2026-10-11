@@ -277,7 +277,10 @@
     "exists": "An ingredient with this name or alias already exists.",
     "teamHint": "You add it to your team's ingredients: only your team sees it, until staff make it available to everyone. Use a simple, singular name.",
     "teamMark": "team's",
-    "addedBy": "Added by “{{team}}”: only that team sees and uses it."
+    "addedBy": "Added by “{{team}}”: only that team sees and uses it.",
+    "basic": "Basic ingredient",
+    "basicHint": "In almost every recipe (salt, water, oil): recipe search ignores it.",
+    "basicChip": "basic"
   },
   "assistant": {
     "mode": {
@@ -584,7 +587,8 @@
     "group": {
       "llm": "Language model",
       "menu": "Menu generation",
-      "ui": "Interface"
+      "ui": "Interface",
+      "search": "Recipe search"
     },
     "item": {
       "llm_context_tokens": {
@@ -607,6 +611,18 @@
           "mobile": "Phones only",
           "always": "Always"
         }
+      },
+      "search_min_similarity": {
+        "label": "Minimum similarity (hundredths)",
+        "hint": "Below this similarity (40 = 0.40) a recipe is never offered as similar to the request. It depends on the embedding model: with text-embedding-3-small right recipes score 55-70, the others 40-50."
+      },
+      "search_margin": {
+        "label": "Margin from the best (hundredths)",
+        "hint": "Only similar recipes at most this far from the best one are offered. Smaller: fewer, more relevant results."
+      },
+      "search_keyword_bonus": {
+        "label": "Keyword bonus (hundredths)",
+        "hint": "Added to a recipe that has every keyword of the request in its title or main ingredients; such recipes are always offered."
       }
     },
     "on": "on",

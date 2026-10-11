@@ -1,14 +1,17 @@
 import {
   Alert,
   Autocomplete,
+  Box,
   Button,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   MenuItem,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material'
@@ -43,12 +46,14 @@ export function IngredientDialog({
   onClose: () => void
   onCreated?: (ingredient: Ingredient) => void
   onSaved?: (ingredient: Ingredient) => void
+  // Management (staff): aliases and the basic flag are edited too.
   withAliases?: boolean
 }) {
   const { t } = useTranslation()
   const labels = useLabels()
   const [name, setName] = useState(ingredient?.name ?? initialName)
   const [aliases, setAliases] = useState<string[]>(ingredient?.aliases ?? [])
+  const [basic, setBasic] = useState(ingredient?.basic ?? false)
   const [category, setCategory] = useState(ingredient?.category ?? suggestion?.category ?? 'other')
   const [unit, setUnit] = useState<Unit>(
     ingredient?.default_unit ?? (suggestion && suggestion.unit !== 'tt' ? suggestion.unit : 'g'),
@@ -69,7 +74,10 @@ export function IngredientDialog({
       season_months: { months },
     }
     if (!ingredient) body.team = team
-    if (withAliases) body.aliases = aliases
+    if (withAliases) {
+      body.aliases = aliases
+      body.basic = basic
+    }
     try {
       const saved = await api<Ingredient>(ingredient ? `/ingredients/${ingredient.id}/` : '/ingredients/', {
         method: ingredient ? 'PATCH' : 'POST',
@@ -124,6 +132,17 @@ export function IngredientDialog({
               renderInput={(params) => (
                 <TextField {...params} label={t('ingredient.aliases')} helperText={t('ingredient.aliasesHint')} />
               )}
+            />
+          )}
+          {withAliases && (
+            <FormControlLabel
+              control={<Switch checked={basic} onChange={(e) => setBasic(e.target.checked)} />}
+              label={
+                <Box>
+                  <Typography>{t('ingredient.basic')}</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('ingredient.basicHint')}</Typography>
+                </Box>
+              }
             />
           )}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

@@ -1,6 +1,9 @@
 """'Help me search': recipes matching a request, from the local pool and from the web.
 
-Local results come from embedding similarity over the recipes the user can see. Web results come
+The request is first read by the chat model (`understand`): what is wanted, its keywords, a few
+concrete dishes, and what it rules out. Local results are the recipes the user can see that it
+does not rule out, with every keyword (full text) or close in embedding similarity to the best
+match (see `rank`). Web results come
 from the chat model's own web search (Unsloth Studio), and are never shown as the model states
 them: asked for structured results it invented every URL (2026-10-06), and even real results are
 often collection or search pages. So only URLs present in its answer are kept, each page is
@@ -14,14 +17,19 @@ import json
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlsplit
 
-from django.db.models import Q
+from django.contrib.postgres.search import SearchQuery, SearchVector
+from django.db.models import OuterRef, Q, StringAgg, Subquery, TextField, Value
+from django.db.models.functions import Coalesce
 
-from ai import AIError, ChatProvider, get_chat_provider
+from ai import AIError, ChatProvider
+from apps.catalog.models import IngredientCategory
 from apps.recipes.embeddings import similar_recipes
-from apps.recipes.models import Recipe
+from apps.recipes.models import Recipe, RecipeIngredient
+from apps.siteconfig import registry
 from apps.teams.models import RecipeBookEntry
 from apps.usage.context import carry
 
@@ -41,17 +49,9 @@ MAX_LOCAL = 6
 MAX_WEB = 6
 
 # A vague request ("un secondo di pesce al forno") finds mostly category and collection pages,
-# which are not importable; a concrete dish ("orata al forno") finds recipe pages. So the model
-# first turns the request into a few concrete dishes (no tools: about 1 s), then each dish gets
+# which are not importable; a concrete dish ("orata al forno") finds recipe pages. So the
+# request is first turned into a few concrete dishes (`understand`), then each dish gets
 # exactly one web search: left free, the model chained searches (90-110 s, context nearly full).
-DISHES_PROMPT = """\
-Suggest {count} concrete, different dishes that satisfy the request, by their common names in \
-{language}. If the request already names a specific dish, put it first. Answer as JSON."""
-DISHES_SCHEMA = {
-    "type": "object",
-    "properties": {"dishes": {"type": "array", "items": {"type": "string"}}},
-    "required": ["dishes"],
-}
 DISH_SEARCH_PROMPT = (
     "Do one web search for: ricetta {dish}. Then list the pages from the results that contain "
     "one recipe each: title and exact URL, one per line."
@@ -69,7 +69,91 @@ def search_query(messages: list[dict[str, Any]], text: str) -> str:
     return " ".join([*earlier, text]).strip()[:500]
 
 
-# Words that say nothing about the dish; everything else of 4+ letters is a keyword.
+# -- understanding the request ----------------------------------------------------------------
+
+# Ingredient categories a request can rule out ("senza carne o pesce", "vegetariano").
+CATEGORIES = [c.value for c in IngredientCategory]
+
+UNDERSTAND_PROMPT = """\
+The user is looking for recipes; the text is their request, earlier messages first (later ones \
+refine it). Describe what they want, in {language}:
+- query: what they want, in a few words, without anything they want to avoid;
+- keywords: the words a recipe that fits must contain in its title or ingredients (dish names, \
+key ingredients), singular or as written; none for a vague request;
+- dishes: {count} concrete, different dishes that satisfy the request, by their common names; \
+if the request names a specific dish, put it first;
+- exclude_categories: ingredient categories the request rules out ("without meat": red_meat, \
+white_meat, cured_meat; "vegetarian": those and fish, seafood);
+- exclude_ingredients: single ingredients the request rules out.
+Answer as JSON."""
+UNDERSTAND_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "query": {"type": "string"},
+        "keywords": {"type": "array", "items": {"type": "string"}},
+        "dishes": {"type": "array", "items": {"type": "string"}},
+        "exclude_categories": {"type": "array", "items": {"type": "string", "enum": CATEGORIES}},
+        "exclude_ingredients": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["query", "keywords", "dishes", "exclude_categories", "exclude_ingredients"],
+}
+
+
+@dataclass
+class Request:
+    """What a search request asks for. Negations live only in the exclusions: an embedding
+    reads "senza pesce" as "pesce" (a sea bass came first, 2026-10-11)."""
+
+    query: str
+    keywords: list[str]
+    dishes: list[str]
+    exclude_categories: list[str] = field(default_factory=list)
+    exclude_ingredients: list[str] = field(default_factory=list)
+
+
+def plain_request(text: str) -> Request:
+    """The request as typed, when the model cannot read it: no exclusions."""
+    return Request(query=text, keywords=keywords(text), dishes=[text])
+
+
+def understand(text: str, language_name: str, chat: ChatProvider) -> Request:
+    """One model call (no tools, about 1 s) turns the request into what both searches need."""
+    try:
+        result = chat.chat(
+            [
+                {
+                    "role": "system",
+                    "content": UNDERSTAND_PROMPT.format(language=language_name, count=DISH_COUNT),
+                },
+                {"role": "user", "content": text},
+            ],
+            temperature=0.2,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {"name": "request", "schema": UNDERSTAND_SCHEMA},
+            },
+        )
+        data = json.loads(result.content or "{}")
+    except (AIError, json.JSONDecodeError) as exc:
+        log.warning("could not read the request %r: %s", text, exc)
+        return plain_request(text)
+
+    def strings(key: str) -> list[str]:
+        return [str(v).strip() for v in data.get(key) or [] if str(v).strip()]
+
+    return Request(
+        query=str(data.get("query") or "").strip() or text,
+        keywords=strings("keywords"),
+        dishes=strings("dishes")[:DISH_COUNT] or [text],
+        exclude_categories=[c for c in strings("exclude_categories") if c in CATEGORIES],
+        exclude_ingredients=strings("exclude_ingredients"),
+    )
+
+
+# -- local search -----------------------------------------------------------------------------
+
+# Words that say nothing about the dish, left out of the keywords of a request the model could
+# not read.
 STOPWORDS = {
     "qualcosa",
     "ricetta",
@@ -101,55 +185,122 @@ STOPWORDS = {
 }
 
 
-def keywords(query: str) -> list[str]:
-    """Rough stems of the query's meaningful words: "porri" -> "porr", "patate" -> "patat"."""
-    words = [w for w in re.findall(r"[^\W\d_]+", query.lower()) if len(w) >= 4]
-    return [w[: max(4, len(w) - 1)] for w in words if w not in STOPWORDS]
+def keywords(text: str) -> list[str]:
+    """The meaningful words of a request: 4+ letters, not filler."""
+    words = re.findall(r"[^\W\d_]+", text.lower())
+    return [w for w in words if len(w) >= 4 and w not in STOPWORDS]
 
 
-def keyword_matches(user, query: str) -> list[Recipe]:
-    stems = keywords(query)
-    if not stems:
-        return []
-    # Every keyword must appear in the title or in some ingredient: matching any single word
-    # turned "un dolce al cioccolato" into a leek soup (its "paprika dolce"). Vaguer requests
-    # are left to semantic similarity.
+def _main_ingredient_names():
+    """A recipe's main ingredients (not optional, not basic), as one string, for full-text."""
+    return Coalesce(
+        Subquery(
+            RecipeIngredient.objects.filter(
+                recipe=OuterRef("pk"), optional=False, ingredient__basic=False
+            )
+            .values("recipe")
+            .annotate(names=StringAgg("ingredient__name", Value(" ")))
+            .values("names"),
+            output_field=TextField(),
+        ),
+        Value(""),
+        output_field=TextField(),
+    )
+
+
+def candidates(user, request: Request):
+    """The recipes the user can see that the request does not rule out."""
     recipes = Recipe.objects.visible_to(user)
-    for stem in stems:
-        recipes = recipes.filter(
-            Q(title__icontains=stem) | Q(ingredients__ingredient__name__icontains=stem)
-        )
-    return list(recipes.distinct()[:MAX_LOCAL])
+    ruled_out = Q()
+    if request.exclude_categories:
+        ruled_out |= Q(ingredient__category__in=request.exclude_categories)
+    for name in request.exclude_ingredients:
+        ruled_out |= Q(ingredient__name__icontains=name)
+    if ruled_out:
+        lines = RecipeIngredient.objects.filter(ruled_out, optional=False)
+        recipes = recipes.exclude(pk__in=lines.values("recipe"))
+    return recipes
 
 
-def local_results(user, team, query: str) -> list[dict[str, Any]]:
-    """Keyword matches first, then semantically similar recipes."""
-    matches = [(recipe, 1.0) for recipe in keyword_matches(user, query)]
+def keyword_matches(recipes, words: list[str]) -> set[int]:
+    """Recipes whose title or main ingredients have every word, by Italian stems (PostgreSQL
+    full text): "formaggi" finds "formaggio", but not inside other words as a substring
+    search did ("sale" in "salsiccia"). Basic ingredients never count."""
+    if not words:
+        return set()
+    document = SearchVector("title", weight="A", config="italian") + SearchVector(
+        _main_ingredient_names(), weight="B", config="italian"
+    )
+    query = SearchQuery(" ".join(words), config="italian", search_type="plain")
+    return set(
+        recipes.annotate(document=document).filter(document=query).values_list("pk", flat=True)
+    )
+
+
+@dataclass
+class Scored:
+    recipe: Recipe
+    similarity: float
+    keyword: bool
+    score: float
+    kept: bool = False
+
+
+def rank(user, request: Request) -> list[Scored]:
+    """Every candidate worth a look, best first, `kept` for those offered.
+
+    A recipe with every keyword is always offered. Others are offered by similarity, only
+    when close to the best one: absolute similarities depend on the model and on the request
+    (one word scores lower than a phrase), but a right match stands out from the rest."""
+    recipes = candidates(user, request)
+    matched = keyword_matches(recipes, request.keywords)
+    similarity: dict[int, tuple[Recipe, float]] = {}
     try:
-        seen = {recipe.pk for recipe, _ in matches}
-        matches += [
-            (recipe, similarity)
-            for recipe, similarity in similar_recipes(user, query, limit=MAX_LOCAL)
-            if recipe.pk not in seen
-        ]
+        texts = list(dict.fromkeys([request.query, *request.dishes]))
+        allowed = set(recipes.values_list("pk", flat=True))
+        for recipe, value in similar_recipes(user, texts, limit=MAX_LOCAL * 3):
+            if recipe.pk in allowed:
+                similarity[recipe.pk] = (recipe, value)
     except AIError as exc:
         log.info("semantic search unavailable, keywords only: %s", exc)
-    matches = matches[:MAX_LOCAL]
+    missing = matched - similarity.keys()
+    for recipe in Recipe.objects.filter(pk__in=missing):
+        similarity[recipe.pk] = (recipe, 0.0)
+
+    bonus = registry.get("search.keyword_bonus") / 100
+    scored = sorted(
+        (
+            Scored(recipe, value, pk in matched, value + (bonus if pk in matched else 0))
+            for pk, (recipe, value) in similarity.items()
+        ),
+        key=lambda s: -s.score,
+    )
+    floor = registry.get("search.min_similarity") / 100
+    margin = registry.get("search.margin") / 100
+    best = max((s.similarity for s in scored if not s.keyword), default=0.0)
+    for s in scored:
+        s.kept = s.keyword or (s.similarity >= floor and s.similarity >= best - margin)
+    return scored
+
+
+def local_results(user, team, request: Request) -> list[dict[str, Any]]:
+    """The recipes offered: keyword matches and the closest similar ones, at most MAX_LOCAL."""
+    offered = [s for s in rank(user, request) if s.kept][:MAX_LOCAL]
     in_book = set(
-        RecipeBookEntry.objects.filter(team=team, recipe__in=[r for r, _ in matches]).values_list(
-            "recipe_id", flat=True
-        )
+        RecipeBookEntry.objects.filter(
+            team=team, recipe__in=[s.recipe for s in offered]
+        ).values_list("recipe_id", flat=True)
     )
     return [
         {
-            "kind": "book" if recipe.pk in in_book else "shared",
-            "recipe": recipe.pk,
-            "title": recipe.title,
-            "course": recipe.course,
-            "total_minutes": recipe.total_minutes,
-            "similarity": round(similarity, 2),
+            "kind": "book" if s.recipe.pk in in_book else "shared",
+            "recipe": s.recipe.pk,
+            "title": s.recipe.title,
+            "course": s.recipe.course,
+            "total_minutes": s.recipe.total_minutes,
+            "similarity": round(s.similarity, 2),
         }
-        for recipe, similarity in matches
+        for s in offered
     ]
 
 
@@ -177,25 +328,6 @@ def _verify(url: str) -> dict[str, Any] | None:
         "title": clean_title(str(recipe.get("name") or "")) or final_url,
         "servings": servings_of(recipe.get("recipeYield")),
     }
-
-
-def suggest_dishes(query: str, language_name: str, chat: ChatProvider) -> list[str]:
-    result = chat.chat(
-        [
-            {
-                "role": "system",
-                "content": DISHES_PROMPT.format(count=DISH_COUNT, language=language_name),
-            },
-            {"role": "user", "content": query},
-        ],
-        temperature=0.4,
-        response_format={
-            "type": "json_schema",
-            "json_schema": {"name": "dishes", "schema": DISHES_SCHEMA},
-        },
-    )
-    dishes = json.loads(result.content or "{}").get("dishes") or []
-    return [str(d).strip() for d in dishes if str(d).strip()][:DISH_COUNT] or [query]
 
 
 def _urls(answer: str) -> list[str]:
@@ -228,21 +360,11 @@ def search_dish(dish: str, search_chat: ChatProvider, verify=_verify) -> list[di
     return found
 
 
-def web_results(
-    query: str,
-    language_name: str,
-    search_chat: ChatProvider | None,
-    chat: ChatProvider | None = None,
-    verify=_verify,
-):
-    """Returns (results, error code or None)."""
+def web_results(dishes: list[str], search_chat: ChatProvider | None, verify=_verify):
+    """Verified recipe pages for the dishes a request was turned into. Returns (results, error
+    code or None)."""
     if search_chat is None:
         return [], "web_search_unavailable"
-    try:
-        dishes = suggest_dishes(query, language_name, chat or get_chat_provider())
-    except (AIError, json.JSONDecodeError) as exc:
-        log.warning("could not turn %r into dishes: %s", query, exc)
-        dishes = [query]
     with ThreadPoolExecutor(max_workers=PARALLEL_SEARCHES) as pool:
         # carry(): the searches are billed to the same team as the request.
         search = carry(lambda d: search_dish(d, search_chat, verify))
