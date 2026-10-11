@@ -3,6 +3,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import InvitationViewSet, login_options, me
+from apps.assistant.probe import probe_view
 from apps.assistant.views import AssistantSessionViewSet
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
 from apps.core.views import health
@@ -62,6 +63,7 @@ urlpatterns = [
     path("api/cache/clear/", cache_clear),
     path("api/config/<str:key>/", config_detail),
     path("api/usage/", usage_view),
+    path("api/search-probe/", probe_view),
     path("api/transfer/export/", export_view),
     path("api/transfer/import/", import_view),
     path("api/transfer/choices/", choices_view),

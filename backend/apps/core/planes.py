@@ -33,6 +33,7 @@ ADMIN_ONLY_PATHS = (
     "/api/config/",
     "/api/cache/",
     "/api/usage/",
+    "/api/search-probe/",
     "/api/transfer/",
     "/api/system-drafts/",
 )

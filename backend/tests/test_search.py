@@ -178,6 +178,42 @@ def test_local_results_tell_book_from_shared(team, user, fake_embeddings):
     assert kinds == {mine.pk: "book", theirs.pk: "shared"}
 
 
+# -- the search probe (Manage) -----------------------------------------------------------------
+
+
+@pytest.fixture
+def admin(user):
+    from apps.accounts.models import UserProfile
+
+    UserProfile.objects.create(user=user, is_admin=True)
+    return user
+
+
+def test_the_probe_shows_every_candidate_and_what_is_offered(api, admin, team, fake_embeddings):
+    recipe(team, "Torta di zucca", "zucca", "dolce")
+    recipe(team, "Crema di zucca", "zucca")
+    embed_all()
+    body = {"text": "dolce zucca", "plain": True}
+    response = api.post("/api/search-probe/", body, format="json")
+    assert response.status_code == 200, response.json()
+    data = response.json()
+    assert data["request"]["keywords"] == ["dolce", "zucca"]
+    assert data["tuning"] == {"min_similarity": 40, "margin": 6, "keyword_bonus": 10}
+    assert [(r["title"], r["kept"]) for r in data["results"]] == [
+        ("Torta di zucca", True),
+        ("Crema di zucca", False),
+    ]
+    # Other values, for this probe only: a wide margin lets the second one through.
+    wide = api.post("/api/search-probe/", {**body, "margin": 50}, format="json").json()
+    assert [r["kept"] for r in wide["results"]] == [True, True]
+    assert wide["tuning"]["margin"] == 50
+
+
+def test_only_administrators_probe(api, team):
+    response = api.post("/api/search-probe/", {"text": "zucca", "plain": True}, format="json")
+    assert response.status_code == 403
+
+
 # -- reading the request ----------------------------------------------------------------------
 
 

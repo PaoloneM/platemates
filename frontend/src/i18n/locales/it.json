@@ -376,7 +376,8 @@
       "cache": "Cache",
       "drafts": "Bozze di sistema",
       "transfer": "Esporta / importa",
-      "usage": "Consumi"
+      "usage": "Consumi",
+      "searchProbe": "Prova ricerca"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -925,5 +926,36 @@
     "app": {
       "listonic": "Listonic"
     }
+  },
+  "probe": {
+    "hint": "Come la ricerca delle ricette legge una richiesta e classifica le ricette che vedi tu. Soglia, margine e bonus valgono solo per questa prova: per cambiarli davvero vai alle",
+    "settingsLink": "Impostazioni.",
+    "request": "Richiesta",
+    "placeholder": "Es. peperoni ripieni senza carne",
+    "tuning": {
+      "min_similarity": "Somiglianza minima",
+      "margin": "Margine dal migliore",
+      "keyword_bonus": "Bonus parole chiave"
+    },
+    "tuningHint": "In centesimi, come nelle impostazioni (40 = 0,40). Vuoto: il valore attuale.",
+    "plain": "Senza modello",
+    "run": "Prova",
+    "readAs": "Come è stata letta",
+    "query": "Cosa si cerca",
+    "keywords": "Parole chiave",
+    "dishes": "Piatti suggeriti (anche per il web)",
+    "excluded": "Esclusi",
+    "threshold": "Soglia applicata",
+    "thresholdValue": "minimo {{floor}}; proposte le simili da {{bar}} in su (migliore meno margine)",
+    "recipe": "Ricetta",
+    "similarity": "Somiglianza",
+    "keyword": "Parole chiave",
+    "score": "Punteggio",
+    "outcome": "Esito",
+    "kept": "Proposta",
+    "keptKeyword": "Proposta (parole chiave)",
+    "dropped": "Scartata",
+    "none": "Nessuna ricetta candidata.",
+    "legend": "Punteggio = somiglianza + bonus se la ricetta ha tutte le parole chiave nel titolo o negli ingredienti principali. Le ricette escluse dalla richiesta non compaiono. All'utente arrivano al massimo le prime 6 proposte."
   }
 }

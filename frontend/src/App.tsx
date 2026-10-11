@@ -19,6 +19,7 @@ import { MonitoringPage } from './pages/MonitoringPage'
 import { ShoppingListPage } from './pages/ShoppingListPage'
 import { ShoppingPage } from './pages/ShoppingPage'
 import { UsagePage } from './pages/manage/UsagePage'
+import { SearchProbePage } from './pages/manage/SearchProbePage'
 import { SystemRulesPage } from './pages/manage/SystemRulesPage'
 import { ManageIndex, ManageLayout } from './pages/manage/ManageLayout'
 import { LoginPage } from './pages/LoginPage'
@@ -62,6 +63,7 @@ function Protected() {
             <Route path="/manage/transfer" element={<ManageLayout><TransferPage /></ManageLayout>} />
             <Route path="/manage/usage" element={<ManageLayout><UsagePage /></ManageLayout>} />
             <Route path="/manage/cache" element={<ManageLayout><CachePage /></ManageLayout>} />
+            <Route path="/manage/search-probe" element={<ManageLayout><SearchProbePage /></ManageLayout>} />
             <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/shopping" element={<ShoppingPage />} />
             <Route path="/shopping/:id" element={<ShoppingListPage />} />

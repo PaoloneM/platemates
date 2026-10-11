@@ -754,7 +754,9 @@ flowchart TD
   absolute similarities depend on the model and the request (one word scores lower than a
   phrase), but a right match stands out (0.58-0.70 against 0.40-0.50 for the rest, with
   text-embedding-3-small). Minimum, margin and bonus are settings (`search.*`), tuned with
-  `manage.py search_probe`, which shows how requests are read and ranked. Recipe vectors are
+  Manage > Search probe (administrators, admin plane: `/api/search-probe/`) or `manage.py
+  search_probe`, which show how a request is read and every recipe ranked, with other values to
+  try before saving them. Recipe vectors are
   an "identity card" of the dish (title, course, cuisine, main ingredients, start of the
   description), no method and no basic ingredients, which made every recipe look alike.
   Shown as "in your recipe book" or "from other teams" (shared recipes only; private ones never

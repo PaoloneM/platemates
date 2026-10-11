@@ -376,7 +376,8 @@
       "cache": "Cache",
       "drafts": "System drafts",
       "transfer": "Export / import",
-      "usage": "Usage"
+      "usage": "Usage",
+      "searchProbe": "Search probe"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -925,5 +926,36 @@
     "app": {
       "listonic": "Listonic"
     }
+  },
+  "probe": {
+    "hint": "How recipe search reads a request and ranks the recipes you can see. Threshold, margin and bonus apply to this probe only: to change them for real, go to",
+    "settingsLink": "Settings.",
+    "request": "Request",
+    "placeholder": "E.g. stuffed peppers without meat",
+    "tuning": {
+      "min_similarity": "Minimum similarity",
+      "margin": "Margin from the best",
+      "keyword_bonus": "Keyword bonus"
+    },
+    "tuningHint": "In hundredths, as in the settings (40 = 0.40). Empty: the current value.",
+    "plain": "Without the model",
+    "run": "Probe",
+    "readAs": "How it was read",
+    "query": "What is wanted",
+    "keywords": "Keywords",
+    "dishes": "Suggested dishes (for the web too)",
+    "excluded": "Ruled out",
+    "threshold": "Threshold applied",
+    "thresholdValue": "minimum {{floor}}; similar ones offered from {{bar}} up (best minus margin)",
+    "recipe": "Recipe",
+    "similarity": "Similarity",
+    "keyword": "Keywords",
+    "score": "Score",
+    "outcome": "Outcome",
+    "kept": "Offered",
+    "keptKeyword": "Offered (keywords)",
+    "dropped": "Dropped",
+    "none": "No candidate recipes.",
+    "legend": "Score = similarity + bonus when the recipe has every keyword in its title or main ingredients. Recipes the request rules out are not listed. Users get at most the first 6 offered."
   }
 }

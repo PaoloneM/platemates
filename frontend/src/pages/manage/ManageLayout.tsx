@@ -2,6 +2,7 @@ import CachedIcon from '@mui/icons-material/Cached'
 import DraftIcon from '@mui/icons-material/AutoStoriesOutlined'
 import EggIcon from '@mui/icons-material/EggOutlined'
 import RuleIcon from '@mui/icons-material/RuleOutlined'
+import ProbeIcon from '@mui/icons-material/ManageSearch'
 import TuneIcon from '@mui/icons-material/Tune'
 import TransferIcon from '@mui/icons-material/SwapVert'
 import UsageIcon from '@mui/icons-material/InsightsOutlined'
@@ -35,6 +36,7 @@ const SECTIONS = [
   { key: 'drafts', path: '/manage/drafts', icon: <DraftIcon />, who: 'staff' },
   { key: 'settings', path: '/manage/settings', icon: <TuneIcon />, who: 'admin' },
   { key: 'usage', path: '/manage/usage', icon: <UsageIcon />, who: 'admin' },
+  { key: 'searchProbe', path: '/manage/search-probe', icon: <ProbeIcon />, who: 'admin' },
   { key: 'cache', path: '/manage/cache', icon: <CachedIcon />, who: 'admin' },
   { key: 'transfer', path: '/manage/transfer', icon: <TransferIcon />, who: 'admin' },
 ] as const

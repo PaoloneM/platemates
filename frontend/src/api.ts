@@ -641,3 +641,25 @@ export async function listonicLink(items: string[], name: string): Promise<strin
   if (!response.ok) throw new ApiError(response.status, `Listonic link: ${response.status}`)
   return response.json()
 }
+
+// Manage > Search probe (backend apps/assistant/probe.py): how search reads a request and
+// ranks the recipes. Tuning values in hundredths, as the `search.*` settings.
+export type SearchTuning = { min_similarity: number; margin: number; keyword_bonus: number }
+export type SearchProbe = {
+  request: {
+    query: string
+    keywords: string[]
+    dishes: string[]
+    exclude_categories: string[]
+    exclude_ingredients: string[]
+  }
+  tuning: SearchTuning
+  results: {
+    recipe: number
+    title: string
+    similarity: number
+    keyword: boolean
+    score: number
+    kept: boolean
+  }[]
+}

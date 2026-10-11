@@ -246,7 +246,25 @@ class Scored:
     kept: bool = False
 
 
-def rank(user, request: Request) -> list[Scored]:
+@dataclass(frozen=True)
+class Tuning:
+    """How similar is similar enough (fractions of cosine similarity): the `search.*`
+    settings, or other values to try them out (Manage > Search probe)."""
+
+    min_similarity: float
+    margin: float
+    keyword_bonus: float
+
+    @classmethod
+    def current(cls) -> Tuning:
+        return cls(
+            registry.get("search.min_similarity") / 100,
+            registry.get("search.margin") / 100,
+            registry.get("search.keyword_bonus") / 100,
+        )
+
+
+def rank(user, request: Request, tuning: Tuning | None = None) -> list[Scored]:
     """Every candidate worth a look, best first, `kept` for those offered.
 
     A recipe with every keyword is always offered. Others are offered by similarity, only
@@ -267,7 +285,8 @@ def rank(user, request: Request) -> list[Scored]:
     for recipe in Recipe.objects.filter(pk__in=missing):
         similarity[recipe.pk] = (recipe, 0.0)
 
-    bonus = registry.get("search.keyword_bonus") / 100
+    tuning = tuning or Tuning.current()
+    bonus = tuning.keyword_bonus
     scored = sorted(
         (
             Scored(recipe, value, pk in matched, value + (bonus if pk in matched else 0))
@@ -275,8 +294,7 @@ def rank(user, request: Request) -> list[Scored]:
         ),
         key=lambda s: -s.score,
     )
-    floor = registry.get("search.min_similarity") / 100
-    margin = registry.get("search.margin") / 100
+    floor, margin = tuning.min_similarity, tuning.margin
     # The best similarity of all, keyword matches included: measuring from the best of the
     # rest let every unrelated recipe through whenever the right one had the keywords.
     best = max((s.similarity for s in scored), default=0.0)
