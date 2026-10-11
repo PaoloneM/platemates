@@ -2,6 +2,17 @@
 # Idempotent: re-running with nothing changed changes nothing; with a new version, it pulls and
 # recreates only what changed.
 
+# A file mounted into a container that is missing from the checkout makes Docker create an
+# empty directory in its place, which then blocks the checkout from bringing the file
+# (happened with monitoring/db-roles.sql, kept out by .gitignore). Only empty directories go.
+- name: Remove empty directories Docker made in place of mounted files
+  ansible.builtin.command: >-
+    find {{ platemates_dir }}/monitoring {{ platemates_dir }}/traefik-admin
+    -maxdepth 1 -type d -empty -name '*.*' -print -delete
+  register: stray
+  changed_when: stray.stdout != ""
+  failed_when: false
+
 - name: Check out the repository
   ansible.builtin.git:
     repo: "{{ platemates_repo }}"

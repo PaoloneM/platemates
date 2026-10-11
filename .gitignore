@@ -4,6 +4,8 @@
 *.db-wal
 *.json.gz
 *.sql
+# Not data: the monitoring's database roles (schema only).
+!monitoring/db-roles.sql
 *.dump
 notes/
 backups/
