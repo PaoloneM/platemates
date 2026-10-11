@@ -213,6 +213,8 @@ services:
       - -storageDataPath=/storage
       - -retentionPeriod=30d
       - -promscrape.config=/etc/vm/scrape.yml
+      # Re-read the scrape configuration when it changes, without a restart.
+      - -promscrape.configCheckInterval=1m
     volumes:
       - victoriametrics:/storage
       - ./monitoring/scrape.yml:/etc/vm/scrape.yml:ro
