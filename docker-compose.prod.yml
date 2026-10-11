@@ -308,6 +308,9 @@ services:
       # For the PostgreSQL datasource (monitoring/grafana/provisioning).
       POSTGRES_DB: ${POSTGRES_DB:-platemates}
       GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD}
+      # Alerts go to Telegram (monitoring/grafana/make_alerts.py).
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN in .env}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:?set TELEGRAM_CHAT_ID in .env}
     volumes:
       - grafana:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

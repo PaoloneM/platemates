@@ -1,0 +1,516 @@
+{
+ "apiVersion": 1,
+ "contactPoints": [
+  {
+   "orgId": 1,
+   "name": "telegram",
+   "receivers": [
+    {
+     "uid": "pm-telegram",
+     "type": "telegram",
+     "settings": {
+      "bottoken": "$TELEGRAM_BOT_TOKEN",
+      "chatid": "$TELEGRAM_CHAT_ID"
+     },
+     "disableResolveMessage": false
+    }
+   ]
+  }
+ ],
+ "policies": [
+  {
+   "orgId": 1,
+   "receiver": "telegram",
+   "group_by": [
+    "alertname"
+   ],
+   "group_wait": "30s",
+   "group_interval": "5m",
+   "repeat_interval": "12h"
+  }
+ ],
+ "groups": [
+  {
+   "orgId": 1,
+   "name": "platemates",
+   "folder": "PlateMates",
+   "interval": "1m",
+   "rules": [
+    {
+     "uid": "pm-backup-stale",
+     "title": "Backup older than 26 hours",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "victoriametrics",
+       "model": {
+        "refId": "A",
+        "expr": "time() - platemates_backup_last_success_timestamp_seconds",
+        "instant": true
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "gt",
+           "params": [
+            93600
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "Alerting",
+     "execErrState": "Error",
+     "for": "10m",
+     "annotations": {
+      "summary": "No successful backup for over 26 hours: check `journalctl -u platemates-backup`."
+     },
+     "labels": {
+      "severity": "critical"
+     },
+     "isPaused": false
+    },
+    {
+     "uid": "pm-wal-archive",
+     "title": "WAL archiving failing",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "victoriametrics",
+       "model": {
+        "refId": "A",
+        "expr": "increase(pg_stat_archiver_failed_count[15m])",
+        "instant": true
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "gt",
+           "params": [
+            0
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "OK",
+     "execErrState": "Error",
+     "for": "5m",
+     "annotations": {
+      "summary": "PostgreSQL cannot archive WAL into pgBackRest: restores to a moment are at risk."
+     },
+     "labels": {
+      "severity": "critical"
+     },
+     "isPaused": false
+    },
+    {
+     "uid": "pm-postgres-down",
+     "title": "PostgreSQL down",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "victoriametrics",
+       "model": {
+        "refId": "A",
+        "expr": "pg_up",
+        "instant": true
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "lt",
+           "params": [
+            1
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "Alerting",
+     "execErrState": "Error",
+     "for": "2m",
+     "annotations": {
+      "summary": "The database does not answer the exporter."
+     },
+     "labels": {
+      "severity": "critical"
+     },
+     "isPaused": false
+    },
+    {
+     "uid": "pm-disk",
+     "title": "Disk over 85%",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "victoriametrics",
+       "model": {
+        "refId": "A",
+        "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})",
+        "instant": true
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "gt",
+           "params": [
+            85
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "OK",
+     "execErrState": "Error",
+     "for": "10m",
+     "annotations": {
+      "summary": "The server's disk is filling up."
+     },
+     "labels": {
+      "severity": "warning"
+     },
+     "isPaused": false
+    },
+    {
+     "uid": "pm-memory",
+     "title": "Memory under 10%",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "victoriametrics",
+       "model": {
+        "refId": "A",
+        "expr": "100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes",
+        "instant": true
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "lt",
+           "params": [
+            10
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "OK",
+     "execErrState": "Error",
+     "for": "10m",
+     "annotations": {
+      "summary": "Less than 10% of memory available for 10 minutes."
+     },
+     "labels": {
+      "severity": "warning"
+     },
+     "isPaused": false
+    },
+    {
+     "uid": "pm-target-down",
+     "title": "A monitored service is down",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "victoriametrics",
+       "model": {
+        "refId": "A",
+        "expr": "up",
+        "instant": true
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "lt",
+           "params": [
+            1
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "OK",
+     "execErrState": "Error",
+     "for": "5m",
+     "annotations": {
+      "summary": "{{ $$labels.job }} ({{ $$labels.instance }}) has not answered for 5 minutes."
+     },
+     "labels": {
+      "severity": "critical"
+     },
+     "isPaused": false
+    },
+    {
+     "uid": "pm-public-5xx",
+     "title": "Errors on the public site",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "victoriametrics",
+       "model": {
+        "refId": "A",
+        "expr": "sum(rate(traefik_service_requests_total{plane=\"public\",code=~\"5..\"}[5m]))",
+        "instant": true
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "gt",
+           "params": [
+            0.05
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "OK",
+     "execErrState": "Error",
+     "for": "5m",
+     "annotations": {
+      "summary": "The public site has been answering with server errors (5xx) for 5 minutes."
+     },
+     "labels": {
+      "severity": "warning"
+     },
+     "isPaused": false
+    },
+    {
+     "uid": "pm-ai-cost",
+     "title": "AI spending over 5 USD today",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "platemates-db",
+       "model": {
+        "refId": "A",
+        "rawSql": "SELECT COALESCE(SUM((u.input_tokens * p.input_per_mtok + u.output_tokens * p.output_per_mtok\n  + u.cache_read_tokens * p.cache_read_per_mtok + u.cache_write_tokens * p.cache_write_per_mtok)\n  / 1000000 + u.web_searches * p.per_thousand_searches / 1000), 0) AS value\nFROM usage_aiusage u JOIN usage_modelprice p ON p.model = u.model\nWHERE u.created_at >= date_trunc('day', now())",
+        "format": "table",
+        "rawQuery": true,
+        "editorMode": "code"
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "gt",
+           "params": [
+            5
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "OK",
+     "execErrState": "Error",
+     "for": "0s",
+     "annotations": {
+      "summary": "Today's estimated AI cost passed the threshold: see Gestione > Consumi."
+     },
+     "labels": {
+      "severity": "warning"
+     },
+     "isPaused": false
+    }
+   ]
+  }
+ ]
+}

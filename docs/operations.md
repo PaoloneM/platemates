@@ -180,8 +180,13 @@ Everything that is not the app is served only on the VM's loopback (decided with
   `platemates-grafana`, administrators only) and reads the AI usage from PostgreSQL as
   `grafana_reader` (usage, prices and team names only; `monitoring/db-roles.sql`). Dashboards
   are code: `python3 monitoring/grafana/make_dashboards.py`, never edited in Grafana.
-  No alerts yet (a channel is to be chosen); an external check of `/api/health/` is the only
-  thing that would notice the VM itself being down.
+  **Alerts** go to Telegram (bot token and chat id in the vault), defined as code in
+  `monitoring/grafana/make_alerts.py`: backup older than 26 h, WAL archiving failing,
+  PostgreSQL down, disk over 85%, memory under 10%, a monitored service down, 5xx on the public
+  site, AI spending over a daily threshold. Each is sent when it fires and when it resolves,
+  repeated every 12 h while it lasts. They run on the VM itself: if the VM is down nothing is
+  sent, which only an external check of `https://platemates.cloud/api/health/` (UptimeRobot,
+  also able to write to Telegram) can catch.
 - **Social login on the admin host**: Keycloak builds each provider's redirect URI from the
   address it is reached at, so every address needs its own registered with the provider, e.g.
   Google: `https://admin.platemates.cloud:9443/auth/realms/platemates/broker/google/endpoint`

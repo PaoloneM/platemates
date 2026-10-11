@@ -42,6 +42,9 @@ platemates_env:
   PLATEMATES_ADMIN_URL: "{{ platemates_admin_url }}"
   # Grafana, on the admin plane (its Keycloak client's redirect target).
   GRAFANA_URLS: "{{ platemates_admin_url }}/grafana"
+  # Grafana's alerts (monitoring/grafana/make_alerts.py) go to this Telegram bot and chat.
+  TELEGRAM_BOT_TOKEN: "{{ vault_telegram_bot_token }}"
+  TELEGRAM_CHAT_ID: "{{ vault_telegram_chat_id }}"
   # The admin plane's certificate: a DNS challenge through Hostinger's API.
   HOSTINGER_API_TOKEN: "{{ vault_hostinger_api_token }}"
   APP_ADMINS: "{{ platemates_app_admins }}"
