@@ -29,6 +29,7 @@ import { saveLanguage } from '../auth/language'
 import { useTeam } from '../team'
 import { supportedLanguages } from '../i18n'
 import { Flag } from './Flag'
+import { MenuLayoutSwitch } from './MenuLayoutSwitch'
 import { ShoppingAppDialog } from './ShoppingAppDialog'
 import { ThemeModeSwitch } from './ThemeMode'
 import { Logo } from './Logo'
@@ -84,6 +85,7 @@ function UserMenu() {
           </MenuItem>
         ))}
         <ThemeModeSwitch />
+        <MenuLayoutSwitch />
         <Divider />
         <MenuItem component={RouterLink} to="/team" onClick={() => setAnchor(null)}>
           <ListItemIcon>

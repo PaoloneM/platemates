@@ -1,3 +1,5 @@
+import HorizontalIcon from '@mui/icons-material/ViewWeekOutlined'
+import VerticalIcon from '@mui/icons-material/ViewAgendaOutlined'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -13,6 +15,7 @@ import {
   Card,
   CardActionArea,
   CardActions,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -23,6 +26,8 @@ import {
   Snackbar,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -35,7 +40,7 @@ import { enGB, it } from 'date-fns/locale'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useSearchParams } from 'react-router'
-import { api, type CalendarDay, type CalendarDayChange, type GenerationEvent, type Meal, type MenuGeneration } from '../api'
+import { api, type CalendarDay, type CalendarDayChange, type GenerationEvent, type Meal, type MenuGeneration, type MenuLayout } from '../api'
 import {
   addDays,
   changeDay,
@@ -61,16 +66,20 @@ import { RecipeDialog } from '../components/RecipeDialog'
 import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useOnConnect, useRealtimeConnected, useRealtimeEvent } from '../realtime'
 import { DAY_ACTION, MEAL_ACTION, revealOnHover } from '../hover'
+import { useMenuLayout } from '../menuLayout'
 import { useTeam } from '../team'
 
 const MAX_PEOPLE = 50
 // Only while the real-time connection is down: the progress then comes from the API.
 const FALLBACK_POLL_MS = 15000
 
-function MealCard({ day, meal, owner, onClear, onReview }: {
+function MealCard({ day, meal, owner, today, narrow, onClear, onReview }: {
   day: CalendarDay
   meal: Meal
   owner: boolean
+  today: boolean
+  // In a day's column (horizontal layout): dishes wrap rather than being cut.
+  narrow: boolean
   onClear: () => void
   onReview: (action: 'accept' | 'reject') => void
 }) {
@@ -87,6 +96,8 @@ function MealCard({ day, meal, owner, onClear, onReview }: {
     <Card sx={{
       ...revealOnHover(MEAL_ACTION),
       position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', opacity: nobody ? 0.6 : 1,
+      // Today's meals stand out in the accent colour.
+      ...(today && { border: 2, borderColor: 'primary.main' }),
       ...(proposal && { outline: '1px dashed', outlineColor: 'primary.main', outlineOffset: -1 }),
     }}>
       <CardActionArea component={RouterLink} to={mealUrl(day.date, meal)}
@@ -103,7 +114,7 @@ function MealCard({ day, meal, owner, onClear, onReview }: {
           <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>{t('calendar.noDishes')}</Typography>
         ) : (
           <Stack spacing={0.25}>
-            {dishes.map((dish, index) => <DishLine key={index} dish={dish} />)}
+            {dishes.map((dish, index) => <DishLine key={index} dish={dish} wrap={narrow} />)}
           </Stack>
         )}
       </CardActionArea>
@@ -141,10 +152,12 @@ function MealCard({ day, meal, owner, onClear, onReview }: {
   )
 }
 
-function DayRow({ day, today, owner, onConfigure, onClear, onReview }: {
+function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview }: {
   day: CalendarDay
   today: boolean
   owner: boolean
+  // Vertical: the days one under the other, meals side by side; horizontal: the reverse.
+  layout: MenuLayout
   onConfigure: () => void
   onClear: (meals: Meal[]) => void
   onReview: (meal: Meal, action: 'accept' | 'reject') => void
@@ -154,9 +167,8 @@ function DayRow({ day, today, owner, onConfigure, onClear, onReview }: {
   const title = (
     <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
       <Typography variant="h3" sx={{ color: today ? 'primary.main' : undefined }}>{weekday}</Typography>
-      <Typography variant="body2" color={today ? 'primary.main' : 'text.secondary'}>
-        {today ? t('calendar.today', { date: dayMonth }) : dayMonth}
-      </Typography>
+      <Typography variant="body2" color={today ? 'primary.main' : 'text.secondary'}>{dayMonth}</Typography>
+      {today && <Chip size="small" color="primary" label={t('calendar.todayChip')} sx={{ alignSelf: 'center' }} />}
     </Stack>
   )
   return (
@@ -190,9 +202,13 @@ function DayRow({ day, today, owner, onConfigure, onClear, onReview }: {
           </Stack>
         )}
       </Stack>
-      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(280px, 1fr))' } }}>
+      <Box sx={{
+        display: 'grid', gap: 1.5,
+        gridTemplateColumns: layout === 'horizontal' ? '1fr' : { xs: '1fr', sm: 'repeat(auto-fill, minmax(280px, 1fr))' },
+      }}>
         {MEALS.map((meal) => (
-          <MealCard key={meal} day={day} meal={meal} owner={owner} onClear={() => onClear([meal])}
+          <MealCard key={meal} day={day} meal={meal} owner={owner} today={today} narrow={layout === 'horizontal'}
+            onClear={() => onClear([meal])}
             onReview={(action) => onReview(meal, action)} />
         ))}
       </Box>
@@ -292,29 +308,34 @@ function WeekBar({ monday, thisMonday, onChange }: {
   const title = format('long')
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const offset = monday.getTime() - thisMonday.getTime()
-  const todayButton = (visible: boolean) => (
+  // Narrow screens: "Today" on the side today lies on, inside the arrows. Wide ones: one slot
+  // before the arrows, so they stay close to the dates.
+  const todayButton = (visible: boolean, display: Record<string, string>) => (
     <Button size="small" variant="outlined" onClick={() => onChange(thisMonday)} tabIndex={visible ? 0 : -1}
-      aria-hidden={!visible} sx={{ visibility: visible ? 'visible' : 'hidden', minWidth: 0, flexShrink: 0 }}>
+      aria-hidden={!visible} sx={{ visibility: visible ? 'visible' : 'hidden', minWidth: 0, flexShrink: 0, display }}>
       {t('calendar.today_button')}
     </Button>
   )
+  const inside = { xs: 'inline-flex', md: 'none' }
   const inWeek = (date: Date) => date >= monday && date <= sunday
 
   return (
-    <Stack direction="row" sx={{ alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+    // Full width and centred on narrow screens; beside the title, compact, on wide ones.
+    <Stack direction="row" sx={{ alignItems: 'center', gap: { xs: 0.5, sm: 1, md: 0.5 }, flexShrink: 0 }}>
+      {todayButton(offset !== 0, { xs: 'none', md: 'inline-flex' })}
       <IconButton onClick={() => onChange(addDays(monday, -7))} aria-label={t('calendar.previous')}>
         <ChevronLeftIcon />
       </IconButton>
-      {todayButton(offset > 0)}
-      <Box sx={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+      {todayButton(offset > 0, inside)}
+      <Box sx={{ flex: { xs: 1, md: '0 0 auto' }, minWidth: 0, textAlign: 'center' }}>
         <Button onClick={(e) => setAnchor(e.currentTarget)} color="inherit" endIcon={<ArrowDropDownIcon />}
           aria-label={`${title}: ${t('calendar.pickDate')}`} aria-haspopup="dialog"
-          sx={{ typography: 'h2', px: 1.5, maxWidth: '100%' }}>
+          sx={{ typography: { xs: 'h2', md: 'h3' }, px: 1.5, maxWidth: '100%' }}>
           <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{title}</Box>
           <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, whiteSpace: 'nowrap' }}>{format('short')}</Box>
         </Button>
       </Box>
-      {todayButton(offset < 0)}
+      {todayButton(offset < 0, inside)}
       <IconButton onClick={() => onChange(addDays(monday, 7))} aria-label={t('calendar.next')}>
         <ChevronRightIcon />
       </IconButton>
@@ -339,6 +360,23 @@ function WeekBar({ monday, thisMonday, onChange }: {
   )
 }
 
+/** Days one under the other, or side by side: the user's own choice, saved for them. */
+function LayoutToggle() {
+  const { t } = useTranslation()
+  const { layout, choose } = useMenuLayout()
+  return (
+    <ToggleButtonGroup size="small" exclusive value={layout} aria-label={t('calendar.layout.label')}
+      onChange={(_, value: MenuLayout | null) => value && void choose(value)}>
+      <Tooltip title={t('calendar.layout.vertical')}>
+        <ToggleButton value="vertical" aria-label={t('calendar.layout.vertical')}><VerticalIcon fontSize="small" /></ToggleButton>
+      </Tooltip>
+      <Tooltip title={t('calendar.layout.horizontal')}>
+        <ToggleButton value="horizontal" aria-label={t('calendar.layout.horizontal')}><HorizontalIcon fontSize="small" /></ToggleButton>
+      </Tooltip>
+    </ToggleButtonGroup>
+  )
+}
+
 /** A day of the month calendar; the days of the week on screen are highlighted together. */
 function WeekDay(props: PickerDayProps & { inWeek?: (date: Date) => boolean }) {
   const { inWeek, day, ...rest } = props
@@ -357,6 +395,7 @@ function WeekDay(props: PickerDayProps & { inWeek?: (date: Date) => boolean }) {
 type Notice = { message: string; undo?: { date: string; change: CalendarDayChange } }
 
 export function CalendarPage() {
+  const { layout } = useMenuLayout()
   const { t } = useTranslation()
   const labels = useLabels()
   const { team } = useTeam()
@@ -482,10 +521,14 @@ export function CalendarPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        <Typography variant="h1" sx={{ flex: 1, minWidth: 0 }}>{t('calendar.title')}</Typography>
+      <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { md: 'center' }, gap: 1 }}>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
+          <Typography variant="h1" sx={{ color: 'primary.main', minWidth: 0 }}>{t('calendar.title')}</Typography>
+          <Box sx={{ flex: 1 }} />
+          <LayoutToggle />
+        </Stack>
+        <WeekBar monday={monday} thisMonday={thisMonday} onChange={goTo} />
       </Stack>
-      <WeekBar monday={monday} thisMonday={thisMonday} onChange={goTo} />
       <GenerationBanner generation={generation} progress={progress?.id === generation?.id ? progress : null}
         pending={pending} busy={reviewing}
         onAcceptAll={() => void review('accept')} onRejectAll={() => void review('reject')}
@@ -493,13 +536,15 @@ export function CalendarPage() {
       {!current ? (
         <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />
       ) : (
-        <Stack spacing={3}>
+        <Box sx={layout === 'horizontal'
+          ? { display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', alignItems: 'start' }
+          : { display: 'flex', flexDirection: 'column', gap: 3 }}>
           {current.map((day) => (
-            <DayRow key={day.date} day={day} today={day.date === todayIso} owner={owner}
+            <DayRow key={day.date} day={day} today={day.date === todayIso} owner={owner} layout={layout}
               onConfigure={() => setConfiguring(day)} onClear={(meals) => void clear(day, meals)}
               onReview={(meal, action) => void review(action, [{ date: day.date, meal }])} />
           ))}
-        </Stack>
+        </Box>
       )}
       <Typography variant="body2" color="text.secondary">
         {owner ? t('calendar.hintOwner') : t('calendar.hint')}

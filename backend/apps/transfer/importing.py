@@ -195,6 +195,8 @@ class Importer:
                 team.max_weekday_minutes = data["max_weekday_minutes"]
                 team.notes = data["notes"]
                 team.sign_shared_recipes = data["sign_shared_recipes"]
+                # Files from before the choice existed have none.
+                team.menu_layout = data.get("menu_layout", "")
                 team.save()
                 team.tools.set([t for t in map(self._tool, data["tools"]) if t])
                 if not new:

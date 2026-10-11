@@ -160,6 +160,7 @@ def team_data(team: Team) -> dict[str, Any]:
         "max_weekday_minutes": team.max_weekday_minutes,
         "notes": team.notes,
         "sign_shared_recipes": team.sign_shared_recipes,
+        "menu_layout": team.menu_layout,
         "tools": [tool_ref(t) for t in team.tools.all()],
         "members": [
             {"uid": str(m.uid), "name": m.name, "birth_year": m.birth_year}

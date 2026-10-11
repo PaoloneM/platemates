@@ -59,6 +59,14 @@ class Team(models.Model):
     )
     # Whether the recipes the team shares show its name in the community; anonymous otherwise.
     sign_shared_recipes = models.BooleanField(default=False)
+    # How the menu screen lays out the days for the team's users: "vertical" or "horizontal";
+    # blank follows the application's setting (`ui.menu_layout`). A user may choose otherwise.
+    menu_layout = models.CharField(
+        max_length=10,
+        blank=True,
+        default="",
+        choices=[("", "Default"), ("vertical", "Vertical"), ("horizontal", "Horizontal")],
+    )
     # The system team, "PlateMates": it owns the curated recipes every team sees in the
     # community, is edited by staff only and has no members. Created by a data migration.
     is_system = models.BooleanField(default=False, editable=False)

@@ -171,7 +171,7 @@ export function RecipeBookPage() {
   const filtering = !!search.trim() || !!course
   return (
     <Stack spacing={2.5}>
-      <Typography variant="h1">{t('book.title')}</Typography>
+      <Typography variant="h1" sx={{ color: 'primary.main' }}>{t('book.title')}</Typography>
 
       <TextField
         placeholder={t('book.search')}

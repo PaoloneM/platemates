@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
+import type { MenuLayout } from './api'
 import { useAuth } from './auth/context'
 
-type Team = { id: number; name: string; role: 'owner' | 'member' }
+type Team = { id: number; name: string; role: 'owner' | 'member'; menu_layout: MenuLayout | null }
 type TeamState = { team: Team; teams: Team[]; select: (id: number) => void }
 
 const TeamContext = createContext<TeamState | null>(null)

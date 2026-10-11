@@ -36,6 +36,13 @@ class UserProfile(models.Model):
     language = models.CharField(max_length=8, choices=settings.LANGUAGES, blank=True)
     # Light or dark interface, or "system" to follow the device's own setting.
     theme = models.CharField(max_length=6, choices=THEMES, default="system")
+    # How the menu screen lays out the days for this user; blank follows the team's choice.
+    menu_layout = models.CharField(
+        max_length=10,
+        blank=True,
+        default="",
+        choices=[("", "Team's"), ("vertical", "Vertical"), ("horizontal", "Horizontal")],
+    )
     # The shopping list app the user sends items to, chosen by the user (opt-in).
     shopping_app = models.CharField(max_length=16, choices=SHOPPING_APPS, blank=True, default="")
     # Holds Keycloak's realm role `admin` (assigned from APP_ADMINS by setup_keycloak), copied

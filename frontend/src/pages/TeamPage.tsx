@@ -67,6 +67,8 @@ function ProfileSection({ team, owner, onSaved }: {
   const [allTools, setAllTools] = useState<KitchenTool[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
   const [sign, setSign] = useState(team.sign_shared_recipes)
+  const [layout, setLayout] = useState(team.menu_layout)
+  const { refresh } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -89,9 +91,12 @@ function ProfileSection({ team, owner, onSaved }: {
             max_weekday_minutes: minutes ? Number(minutes) : null,
             tools: tools.map((tool) => tool.id),
             sign_shared_recipes: sign,
+            menu_layout: layout,
           }),
         }),
       )
+      // The menu screen follows the team's layout from /me.
+      void refresh()
     } catch {
       setError(t('common.error'))
     } finally {
@@ -136,6 +141,15 @@ function ProfileSection({ team, owner, onSaved }: {
           <Typography variant="body2" color="text.secondary">
             {sign ? t('team.profile.signedHint', { name }) : t('team.profile.anonymousHint')}
           </Typography>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField select label={t('team.profile.menuLayout')} value={layout} disabled={!owner}
+            onChange={(e) => setLayout(e.target.value as TeamProfile['menu_layout'])}
+            helperText={t('team.profile.menuLayoutHint')}>
+            <MenuItem value="">{t('team.profile.menuLayoutDefault')}</MenuItem>
+            <MenuItem value="vertical">{t('calendar.layout.vertical')}</MenuItem>
+            <MenuItem value="horizontal">{t('calendar.layout.horizontal')}</MenuItem>
+          </TextField>
         </Grid>
       </Grid>
     </Section>

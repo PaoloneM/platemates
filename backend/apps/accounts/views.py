@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from apps.core.planes import admin_powers, staff_powers
 from apps.core.planes import current as current_plane
-from apps.siteconfig.registry import public_values
+from apps.siteconfig.registry import MENU_LAYOUTS, public_values
 from apps.teams.models import Membership, Team
 from apps.teams.permissions import TeamScopedMixin
 
@@ -24,7 +24,7 @@ def me(request):
 
     Answers 200 for anonymous visitors too (`authenticated: false`), so the SPA can tell "not
     signed in" from "something is broken". PATCH updates the user's preferences (`language`,
-    `theme`, `shopping_app`).
+    `theme`, `shopping_app`, `menu_layout`).
     """
     user = request.user
     if not user.is_authenticated:
@@ -45,6 +45,11 @@ def me(request):
                 raise serializers.ValidationError({"theme": "system, light or dark."})
             profile.theme = request.data["theme"]
             changed.append("theme")
+        if "menu_layout" in request.data:
+            if request.data["menu_layout"] not in ("", *MENU_LAYOUTS):
+                raise serializers.ValidationError({"menu_layout": "vertical, horizontal or ''."})
+            profile.menu_layout = request.data["menu_layout"]
+            changed.append("menu_layout")
         if "shopping_app" in request.data:
             if request.data["shopping_app"] not in dict(SHOPPING_APPS):
                 raise serializers.ValidationError({"shopping_app": "Not a supported app."})
@@ -69,8 +74,18 @@ def me(request):
                 "language": profile.language or None,
                 "theme": profile.theme,
                 "shopping_app": profile.shopping_app or None,
+                # The user's own choice; null: the team's (in `teams`), or the application's.
+                "menu_layout": profile.menu_layout or None,
             },
-            "teams": [{"id": m.team_id, "name": m.team.name, "role": m.role} for m in memberships],
+            "teams": [
+                {
+                    "id": m.team_id,
+                    "name": m.team.name,
+                    "role": m.role,
+                    "menu_layout": m.team.menu_layout or None,
+                }
+                for m in memberships
+            ],
             "plane": current_plane(),
             # Application settings the interface follows (`siteconfig`, `public` ones).
             "settings": public_values(),

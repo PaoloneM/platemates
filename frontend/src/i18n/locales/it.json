@@ -124,7 +124,14 @@
     "mealCleared": "{{meal}} di {{day}} svuotato",
     "dayCleared": "{{day}} svuotato",
     "today_button": "Oggi",
-    "pickDate": "scegli una data"
+    "pickDate": "scegli una data",
+    "todayChip": "Oggi",
+    "layout": {
+      "label": "Disposizione del menu",
+      "vertical": "Giorni uno sotto l'altro",
+      "horizontal": "Giorni affiancati",
+      "team": "Come il team"
+    }
   },
   "course": {
     "first": "Primo",
@@ -448,7 +455,10 @@
       "saved": "Profilo salvato",
       "signRecipes": "Firma le ricette condivise con il nome del team",
       "signedHint": "Nella community le vostre ricette condivise compaiono come «di {{name}}».",
-      "anonymousHint": "Nella community le vostre ricette condivise compaiono senza nome, come «Community»."
+      "anonymousHint": "Nella community le vostre ricette condivise compaiono senza nome, come «Community».",
+      "menuLayout": "Disposizione del menu",
+      "menuLayoutHint": "Come vedono il menu i membri del team; ognuno può scegliere diversamente.",
+      "menuLayoutDefault": "Predefinita dell'app"
     },
     "people": {
       "title": "Persone a tavola",
@@ -624,6 +634,14 @@
       "search_keyword_bonus": {
         "label": "Bonus parole chiave (centesimi)",
         "hint": "Si aggiunge a una ricetta che contiene tutte le parole chiave della richiesta nel titolo o negli ingredienti principali; queste ricette vengono sempre proposte."
+      },
+      "ui_menu_layout": {
+        "label": "Disposizione del menu",
+        "hint": "Come la schermata Menu dispone i giorni, se il team e l'utente non hanno scelto: uno sotto l'altro (pasti affiancati) o affiancati (pasti uno sotto l'altro), andando a capo quando lo spazio finisce.",
+        "choices": {
+          "vertical": "Giorni uno sotto l'altro",
+          "horizontal": "Giorni affiancati"
+        }
       }
     },
     "on": "attivo",

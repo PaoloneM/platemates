@@ -23,18 +23,23 @@ export type Me =
         theme: ThemeChoice
         // The shopping list app the user chose to send items to; null: none (opt-in).
         shopping_app: ShoppingApp | null
+        // The user's own menu layout; null: the team's, or the application's.
+        menu_layout: MenuLayout | null
       }
-      teams: { id: number; name: string; role: 'owner' | 'member' }[]
+      // menu_layout: the team's choice; null: the application's (`ui.menu_layout`).
+      teams: { id: number; name: string; role: 'owner' | 'member'; menu_layout: MenuLayout | null }[]
       // Staff only: the system team, whose recipes are the curated part of the community.
       system_team: number | null
       // The plane the request came through (backend apps/core/planes.py): staff and admin
       // powers, hence Gestione, exist only on the admin one.
       plane: 'public' | 'admin'
       // The application settings every interface follows, by key (`/manage/settings`).
-      settings: { 'ui.compact_actions'?: CompactActions }
+      settings: { 'ui.compact_actions'?: CompactActions; 'ui.menu_layout'?: MenuLayout }
     }
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
+// The menu screen: days one under the other, or side by side (wrapping).
+export type MenuLayout = 'vertical' | 'horizontal'
 export type ShoppingApp = 'listonic'
 // Recipe page actions as icons: never, on phones only, everywhere.
 export type CompactActions = 'off' | 'mobile' | 'always'
@@ -348,6 +353,8 @@ export type TeamProfile = {
   notes: string
   // Whether its shared recipes show its name in the community.
   sign_shared_recipes: boolean
+  // Blank: the application's setting.
+  menu_layout: MenuLayout | ''
   members: Person[]
   my_role: Role | null
 }

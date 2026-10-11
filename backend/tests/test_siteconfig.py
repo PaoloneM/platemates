@@ -72,7 +72,10 @@ def test_unknown_settings_are_not_found(api, admin):
 
 
 def test_public_settings_reach_every_user(api, user):
-    assert api.get("/api/me/").json()["settings"] == {"ui.compact_actions": "off"}
+    assert api.get("/api/me/").json()["settings"] == {
+        "ui.compact_actions": "off",
+        "ui.menu_layout": "vertical",
+    }
     ConfigVar.objects.create(key="ui.compact_actions", value="mobile")
     assert api.get("/api/me/").json()["settings"]["ui.compact_actions"] == "mobile"
     # Read by all, changed by administrators only.

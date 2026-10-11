@@ -93,7 +93,7 @@ export function ShoppingPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h1">{t('shopping.title')}</Typography>
+      <Typography variant="h1" sx={{ color: 'primary.main' }}>{t('shopping.title')}</Typography>
 
       <Stack spacing={1.5}>
         <Typography variant="h2">{t('shopping.weeks')}</Typography>

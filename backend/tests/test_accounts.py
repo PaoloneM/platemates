@@ -97,7 +97,9 @@ def test_me_for_anonymous_visitors(db):
 def test_me_lists_the_users_teams(api, team):
     data = api.get("/api/me/").json()
     assert data["authenticated"] is True
-    assert data["teams"] == [{"id": team.pk, "name": team.name, "role": "owner"}]
+    assert data["teams"] == [
+        {"id": team.pk, "name": team.name, "role": "owner", "menu_layout": None}
+    ]
 
 
 @override_settings(KEYCLOAK_IDENTITY_PROVIDERS={"google": True, "microsoft": False, "apple": True})
@@ -241,6 +243,21 @@ def test_theme_is_saved_per_user(api):
     assert api.patch("/api/me/", {"theme": "dark"}, format="json").json()["user"]["theme"] == "dark"
     both = api.patch("/api/me/", {"theme": "light", "language": "en"}, format="json").json()
     assert (both["user"]["theme"], both["user"]["language"]) == ("light", "en")
+
+
+def test_the_menu_layout_is_the_users_then_the_teams(api, team):
+    me = api.get("/api/me/").json()
+    assert me["user"]["menu_layout"] is None
+    assert me["teams"][0]["menu_layout"] is None
+    assert me["settings"]["ui.menu_layout"] == "vertical"
+    team.menu_layout = "horizontal"
+    team.save()
+    assert api.get("/api/me/").json()["teams"][0]["menu_layout"] == "horizontal"
+    mine = api.patch("/api/me/", {"menu_layout": "vertical"}, format="json").json()
+    assert mine["user"]["menu_layout"] == "vertical"
+    back = api.patch("/api/me/", {"menu_layout": ""}, format="json").json()
+    assert back["user"]["menu_layout"] is None
+    assert api.patch("/api/me/", {"menu_layout": "diagonal"}, format="json").status_code == 400
 
 
 def test_the_shopping_app_is_opt_in_per_user(api):

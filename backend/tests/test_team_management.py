@@ -145,3 +145,15 @@ def test_invitation_shows_who_invited_and_who_joined(api, team):
         "alice",
         "Dora",
     )
+
+
+def test_the_owner_sets_the_teams_menu_layout(api, team, member):
+    response = api.patch(f"/api/teams/{team.pk}/", {"menu_layout": "horizontal"}, format="json")
+    assert response.status_code == 200 and response.json()["menu_layout"] == "horizontal"
+    _membership, member_client = member
+    refused = member_client.patch(f"/api/teams/{team.pk}/", {"menu_layout": ""}, format="json")
+    assert refused.status_code == 403
+    assert (
+        api.patch(f"/api/teams/{team.pk}/", {"menu_layout": "diagonal"}, format="json").status_code
+        == 400
+    )

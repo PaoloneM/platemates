@@ -15,6 +15,7 @@ from apps.core.cache import cache_manager
 from .models import ConfigVar
 
 CACHE_KEY = "siteconfig:values"
+MENU_LAYOUTS = ("vertical", "horizontal")
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,17 @@ SETTINGS: dict[str, Setting] = {
         # Added to a recipe that has every keyword of the request in its title or main
         # ingredients; such a recipe is always offered.
         Setting("search.keyword_bonus", "int", 10, "search", minimum=0, maximum=100),
+        # How the weekly menu screen lays out the days: one under the other (meals side by
+        # side), or side by side (meals one under the other), wrapping. Teams and users may
+        # choose otherwise (`Team.menu_layout`, `UserProfile.menu_layout`).
+        Setting(
+            "ui.menu_layout",
+            "choice",
+            "vertical",
+            "ui",
+            choices=MENU_LAYOUTS,
+            public=True,
+        ),
         # Compact recipe pages: actions as icons beside the tabs instead of labelled buttons,
         # never, on phones only, or everywhere.
         Setting(

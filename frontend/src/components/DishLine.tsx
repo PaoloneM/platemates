@@ -4,12 +4,13 @@ import { useTranslation } from 'react-i18next'
 import type { CalendarDish } from '../api'
 import { useLabels } from '../labels'
 
-/** A dish's title and course on one line; a sparkle marks a proposal, "new" a dish without a recipe. */
-export function DishLine({ dish }: { dish: CalendarDish }) {
+/** A dish's title and course, on one line unless `wrap` (narrow columns); a sparkle marks a
+ * proposal, "new" a dish without a recipe. */
+export function DishLine({ dish, wrap = false }: { dish: CalendarDish; wrap?: boolean }) {
   const { t } = useTranslation()
   const labels = useLabels()
   return (
-    <Typography variant="body2" noWrap sx={{ color: dish.proposed ? 'primary.main' : undefined }}>
+    <Typography variant="body2" noWrap={!wrap} sx={{ color: dish.proposed ? 'primary.main' : undefined }}>
       {dish.proposed && (
         <AutoAwesomeIcon aria-label={t('generation.proposed')} sx={{ fontSize: 14, mr: 0.5, verticalAlign: '-2px' }} />
       )}

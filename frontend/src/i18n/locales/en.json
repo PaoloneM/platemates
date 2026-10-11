@@ -124,7 +124,14 @@
     "mealCleared": "{{day}} {{meal}} cleared",
     "dayCleared": "{{day}} cleared",
     "today_button": "Today",
-    "pickDate": "pick a date"
+    "pickDate": "pick a date",
+    "todayChip": "Today",
+    "layout": {
+      "label": "Menu layout",
+      "vertical": "Days one under the other",
+      "horizontal": "Days side by side",
+      "team": "The team's"
+    }
   },
   "course": {
     "first": "First course",
@@ -448,7 +455,10 @@
       "saved": "Profile saved",
       "signRecipes": "Sign shared recipes with the team's name",
       "signedHint": "In the community your shared recipes show as \"by {{name}}\".",
-      "anonymousHint": "In the community your shared recipes show without a name, as \"Community\"."
+      "anonymousHint": "In the community your shared recipes show without a name, as \"Community\".",
+      "menuLayout": "Menu layout",
+      "menuLayoutHint": "How the team's members see the menu; each may choose otherwise.",
+      "menuLayoutDefault": "The app's default"
     },
     "people": {
       "title": "People at the table",
@@ -624,6 +634,14 @@
       "search_keyword_bonus": {
         "label": "Keyword bonus (hundredths)",
         "hint": "Added to a recipe that has every keyword of the request in its title or main ingredients; such recipes are always offered."
+      },
+      "ui_menu_layout": {
+        "label": "Menu layout",
+        "hint": "How the Menu screen lays out the days when neither the team nor the user chose: one under the other (meals side by side) or side by side (meals one under the other), wrapping when space runs out.",
+        "choices": {
+          "vertical": "Days one under the other",
+          "horizontal": "Days side by side"
+        }
       }
     },
     "on": "on",
