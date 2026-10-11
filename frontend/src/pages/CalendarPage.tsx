@@ -1,5 +1,3 @@
-import HorizontalIcon from '@mui/icons-material/ViewWeekOutlined'
-import VerticalIcon from '@mui/icons-material/ViewAgendaOutlined'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -26,8 +24,6 @@ import {
   Snackbar,
   Stack,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -360,23 +356,6 @@ function WeekBar({ monday, thisMonday, onChange }: {
   )
 }
 
-/** Days one under the other, or side by side: the user's own choice, saved for them. */
-function LayoutToggle() {
-  const { t } = useTranslation()
-  const { layout, choose } = useMenuLayout()
-  return (
-    <ToggleButtonGroup size="small" exclusive value={layout} aria-label={t('calendar.layout.label')}
-      onChange={(_, value: MenuLayout | null) => value && void choose(value)}>
-      <Tooltip title={t('calendar.layout.vertical')}>
-        <ToggleButton value="vertical" aria-label={t('calendar.layout.vertical')}><VerticalIcon fontSize="small" /></ToggleButton>
-      </Tooltip>
-      <Tooltip title={t('calendar.layout.horizontal')}>
-        <ToggleButton value="horizontal" aria-label={t('calendar.layout.horizontal')}><HorizontalIcon fontSize="small" /></ToggleButton>
-      </Tooltip>
-    </ToggleButtonGroup>
-  )
-}
-
 /** A day of the month calendar; the days of the week on screen are highlighted together. */
 function WeekDay(props: PickerDayProps & { inWeek?: (date: Date) => boolean }) {
   const { inWeek, day, ...rest } = props
@@ -522,11 +501,7 @@ export function CalendarPage() {
   return (
     <Stack spacing={2}>
       <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { md: 'center' }, gap: 1 }}>
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
-          <Typography variant="h1" sx={{ color: 'primary.main', minWidth: 0 }}>{t('calendar.title')}</Typography>
-          <Box sx={{ flex: 1 }} />
-          <LayoutToggle />
-        </Stack>
+        <Typography variant="h1" sx={{ color: 'primary.main', flex: 1, minWidth: 0 }}>{t('calendar.title')}</Typography>
         <WeekBar monday={monday} thisMonday={thisMonday} onChange={goTo} />
       </Stack>
       <GenerationBanner generation={generation} progress={progress?.id === generation?.id ? progress : null}

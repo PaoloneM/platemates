@@ -326,8 +326,8 @@ team's rules for planning menus.
 
 The days are laid out one under the other with meals side by side ("vertical"), or side by side
 in columns that wrap, with meals one under the other ("horizontal"). The layout is the user's
-choice (`UserProfile.menu_layout`: the toggle on the screen, or the user menu, where "the
-team's" gives it back), else the team's (`Team.menu_layout`, set by its owner on the team page),
+choice (`UserProfile.menu_layout`, from the user menu, where "the team's" gives it
+back), else the team's (`Team.menu_layout`, set by its owner on the team page),
 else the application's setting (`ui.menu_layout`, administrators); blank means "follow the next
 one". Today's meals have an accent border and its date a "Today" chip. On wide screens the
 week navigator sits on the title's line, right-aligned; on narrow ones it wraps below,
