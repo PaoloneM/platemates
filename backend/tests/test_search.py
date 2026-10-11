@@ -153,6 +153,14 @@ def test_only_recipes_close_to_the_best_are_offered(team, user, fake_embeddings)
     assert titles(user, team, request) == ["Torta di zucca"]
 
 
+def test_the_margin_counts_from_the_best_keyword_match_too(team, user, fake_embeddings):
+    recipe(team, "Torta di zucca", "zucca", "dolce")
+    recipe(team, "Crema di zucca", "zucca")  # similar enough alone, far from the best
+    embed_all()
+    request = search.Request(query="dolce zucca", keywords=["torta"], dishes=[])
+    assert titles(user, team, request) == ["Torta di zucca"]
+
+
 def test_a_keyword_match_is_offered_even_when_not_similar(team, user, fake_embeddings):
     recipe(team, "Hummus di ceci", "cece")
     recipe(team, "Torta di zucca", "zucca")

@@ -277,7 +277,9 @@ def rank(user, request: Request) -> list[Scored]:
     )
     floor = registry.get("search.min_similarity") / 100
     margin = registry.get("search.margin") / 100
-    best = max((s.similarity for s in scored if not s.keyword), default=0.0)
+    # The best similarity of all, keyword matches included: measuring from the best of the
+    # rest let every unrelated recipe through whenever the right one had the keywords.
+    best = max((s.similarity for s in scored), default=0.0)
     for s in scored:
         s.kept = s.keyword or (s.similarity >= floor and s.similarity >= best - margin)
     return scored
