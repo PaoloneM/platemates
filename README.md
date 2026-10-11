@@ -25,7 +25,7 @@ application.
 | **Operations**: one-command Docker Compose stack, HTTPS on the home network for phones, backups and restore, export and import of teams, recipes and system data between installations, repeatable setup; a public server deployed with Ansible; application settings changed live by administrators (Keycloak role), with a Redis cache they can inspect and clear | Built |
 | **Menu planning rules**: rules in plain language at three levels (system, team, this week), each team rule switchable per week; the menu screen's button to plan the week | Built |
 | **Weekly menu generation**: in the background with the local LLM, following the rules; starts from a partly planned week, keeps the dishes already set, proposes new dishes beside the recipe book and changes to the people; everything is reviewed meal by meal before it counts | Built |
-| **Shopping list**: aggregated from the menu by supermarket aisle (the computation exists, the screen does not) | Planned |
+| **Shopping list**: generated for each week from the menu, quantities summed by supermarket aisle; lists merged into one, items added and corrected by hand, ticked off live by everyone in the team while shopping | Built |
 | **Tastes**: likes, dislikes and never-propose, per team or per person | Planned (data model ready) |
 | **Feedback and learning**: what was actually eaten, optional ratings, fed back as context (RAG) | Planned |
 | **Collaborative recommendation**: similar teams' favourites inform suggestions | Planned |

@@ -33,6 +33,7 @@ def merge_ingredients(source: Ingredient, target: Ingredient) -> dict[str, int]:
     A recipe that already uses both keeps the target's line; when both are measured in the same
     unit, the quantities are added up.
     """
+    from apps.menus.models import ShoppingItem
     from apps.recipes.models import RecipeIngredient
     from apps.teams.models import Preference
 
@@ -56,6 +57,8 @@ def merge_ingredients(source: Ingredient, target: Ingredient) -> dict[str, int]:
         line.delete()
         combined += 1
     preferences = Preference.objects.filter(ingredient=source).update(ingredient=target)
+    # Shopping lists keep their items' names and amounts; they now point at the target.
+    ShoppingItem.objects.filter(ingredient=source).update(ingredient=target)
 
     target.aliases = [*target.aliases, source.name, *source.aliases]
     target.save()  # normalizes and de-duplicates the aliases

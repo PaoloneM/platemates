@@ -9,11 +9,13 @@ from __future__ import annotations
 import uuid
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from apps.catalog.models import Ingredient, IngredientCategory, Unit
 from apps.recipes.models import Course, Recipe
 from apps.teams.calendar import calendar
 from apps.teams.models import PLANNED_MEALS, Meal, Team
@@ -240,3 +242,65 @@ class MenuGeneration(models.Model):
 
     def __str__(self) -> str:
         return f"{self.menu} ({self.status})"
+
+
+class ShoppingList(models.Model):
+    """A shopping list, as generated from one or more weeks' menus (apps/menus/shopping.py).
+
+    A snapshot: changing a menu afterwards does not change its list. A week whose menu is in a
+    list "has a list"; deleting the list makes the week available again. Merging lists makes
+    a new one and deletes them.
+    """
+
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="shopping_lists")
+    title = models.CharField(max_length=120)
+    menus = models.ManyToManyField(WeeklyMenu, blank=True, related_name="shopping_lists")
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class ShoppingItem(models.Model):
+    """One thing to buy. From the menus (with its ingredient), or added by hand (`manual`,
+    possibly without an ingredient: "detersivo"). Ticked when bought, live for the team."""
+
+    shopping_list = models.ForeignKey(ShoppingList, on_delete=models.CASCADE, related_name="items")
+    # Kept if the ingredient is merged into another (catalog services) or deleted.
+    ingredient = models.ForeignKey(
+        Ingredient, null=True, blank=True, on_delete=models.SET_NULL, related_name="shopping_items"
+    )
+    name = models.CharField(max_length=120)
+    category = models.CharField(
+        max_length=20, choices=IngredientCategory.choices, default=IngredientCategory.OTHER
+    )
+    unit = models.CharField(max_length=2, choices=Unit.choices, default=Unit.TO_TASTE)
+    # None: to taste, or an item added without an amount.
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # Every line asking for it is optional in its recipe.
+    optional = models.BooleanField(default=False)
+    needed_on = ArrayField(models.DateField(), default=list, blank=True)
+    note = models.CharField(max_length=200, blank=True)
+    manual = models.BooleanField(default=False)
+    bought = models.BooleanField(default=False)
+    bought_at = models.DateTimeField(null=True, blank=True)
+    bought_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "pk"]
+
+    def __str__(self) -> str:
+        return self.name

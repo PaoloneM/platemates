@@ -2,6 +2,8 @@ import MenuIcon from '@mui/icons-material/RestaurantMenuOutlined'
 import MenuActiveIcon from '@mui/icons-material/RestaurantMenu'
 import BookIcon from '@mui/icons-material/MenuBookOutlined'
 import BookActiveIcon from '@mui/icons-material/MenuBook'
+import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
+import CartActiveIcon from '@mui/icons-material/ShoppingCart'
 import { BottomNavigation, BottomNavigationAction, Box, ButtonBase, Paper, Typography } from '@mui/material'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -36,6 +38,13 @@ function useDestinations(): Destination[] {
       icon: <BookIcon />,
       activeIcon: <BookActiveIcon />,
       owns: (path) => path.startsWith('/recipes') || path.startsWith('/assistant'),
+    },
+    {
+      to: '/shopping',
+      label: t('nav.shopping'),
+      icon: <CartIcon />,
+      activeIcon: <CartActiveIcon />,
+      owns: (path) => path.startsWith('/shopping'),
     },
   ]
 }

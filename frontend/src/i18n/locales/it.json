@@ -72,7 +72,8 @@
   },
   "nav": {
     "calendar": "Menu",
-    "recipes": "Ricettario"
+    "recipes": "Ricettario",
+    "shopping": "Spesa"
   },
   "meal": {
     "breakfast": "Colazione",
@@ -844,5 +845,39 @@
   },
   "monitoring": {
     "title": "Monitoraggio"
+  },
+  "shopping": {
+    "title": "Spesa",
+    "weeks": "Settimane da preparare",
+    "noWeeks": "Nessuna settimana da preparare: le liste si generano dalle settimane con un menu, da questa in poi.",
+    "generate": "Genera lista",
+    "lists": "Le tue liste",
+    "noLists": "Ancora nessuna lista della spesa.",
+    "mergeStart": "Accorpa",
+    "mergeHint": "Scegli le liste da accorpare in una sola.",
+    "merge_one": "Accorpa",
+    "merge_other": "Accorpa {{count}}",
+    "mergeTitle_one": "Accorpare la lista?",
+    "mergeTitle_other": "Accorpare {{count}} liste?",
+    "mergeConfirm": "Le liste scelte diventano una sola, con le quantità sommate; le liste di partenza vengono eliminate. Un prodotto resta spuntato solo se lo era in tutte.",
+    "progress": "{{bought}} di {{total}} nel carrello",
+    "allBought": "Tutto nel carrello",
+    "empty": "La lista è vuota.",
+    "back": "Torna alle liste",
+    "rename": "Rinomina la lista",
+    "listTitle": "Titolo",
+    "delete": "Elimina la lista",
+    "deleteTitle": "Eliminare la lista?",
+    "deleteConfirm": "La lista e le spunte vanno perse; la settimana torna tra quelle da preparare.",
+    "addPlaceholder": "Aggiungi qualcosa da comprare",
+    "inCart_one": "Nel carrello ({{count}})",
+    "inCart_other": "Nel carrello ({{count}})",
+    "optional": "facoltativo",
+    "editItem": "Modifica",
+    "name": "Nome",
+    "quantity": "Quantità",
+    "unit": "Unità",
+    "aisle": "Reparto",
+    "note": "Nota"
   }
 }

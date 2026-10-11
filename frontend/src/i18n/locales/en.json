@@ -72,7 +72,8 @@
   },
   "nav": {
     "calendar": "Menu",
-    "recipes": "Recipes"
+    "recipes": "Recipes",
+    "shopping": "Shopping"
   },
   "meal": {
     "breakfast": "Breakfast",
@@ -844,5 +845,39 @@
   },
   "monitoring": {
     "title": "Monitoring"
+  },
+  "shopping": {
+    "title": "Shopping",
+    "weeks": "Weeks to shop for",
+    "noWeeks": "No weeks to shop for: lists are made from the weeks with a menu, from this one on.",
+    "generate": "Make list",
+    "lists": "Your lists",
+    "noLists": "No shopping lists yet.",
+    "mergeStart": "Merge",
+    "mergeHint": "Choose the lists to merge into one.",
+    "merge_one": "Merge",
+    "merge_other": "Merge {{count}}",
+    "mergeTitle_one": "Merge the list?",
+    "mergeTitle_other": "Merge {{count}} lists?",
+    "mergeConfirm": "The chosen lists become one, with quantities added up; the original lists are deleted. An item stays ticked only if it was ticked in all of them.",
+    "progress": "{{bought}} of {{total}} in the cart",
+    "allBought": "Everything in the cart",
+    "empty": "The list is empty.",
+    "back": "Back to the lists",
+    "rename": "Rename the list",
+    "listTitle": "Title",
+    "delete": "Delete the list",
+    "deleteTitle": "Delete the list?",
+    "deleteConfirm": "The list and its ticks are lost; the week goes back among those to shop for.",
+    "addPlaceholder": "Add something to buy",
+    "inCart_one": "In the cart ({{count}})",
+    "inCart_other": "In the cart ({{count}})",
+    "optional": "optional",
+    "editItem": "Edit",
+    "name": "Name",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "aisle": "Aisle",
+    "note": "Note"
   }
 }

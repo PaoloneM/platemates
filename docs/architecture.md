@@ -86,7 +86,7 @@ client, and access is invitation-only. Full design and setup: `docs/authenticati
 | `catalog` | `Ingredient`, `KitchenTool` | Kitchen tools are global. Ingredients are system ones (no `owner_team`, every team's) or a team's own (`owner_team`). Names are normalized on save (lowercase, single spaces); variants go in `aliases`. |
 | `recipes` | `Cuisine`, `Recipe`, `RecipeIngredient`, `RecipeEmbedding` | Recipes live in one common pool; quantities refer to `Recipe.servings` and scale linearly. The method is `Recipe.steps`, one entry per step. |
 | `teams` | `Team`, `Membership`, `Member`, `Preference`, `RecipeBookEntry`, `TeamEmbedding` | Everything team-specific. `RecipeBookEntry` is the per-team view of a recipe: candidate / approved / rejected, plus the explicit rating. |
-| `menus` | `WeeklyMenu`, `MealSlot`, `SlotDish` | 7 days × {lunch, dinner}. Shopping list in `menus/shopping.py`, computed, never stored. |
+| `menus` | `WeeklyMenu`, `MealSlot`, `SlotDish`, `ShoppingList`, `ShoppingItem` | 7 days × {lunch, dinner}. Shopping lists computed in `menus/shopping.py` and stored as snapshots (see Shopping lists). |
 | `accounts` | `OIDCIdentity`, `Invitation` | OIDC backend and login view (`oidc.py`), Keycloak realm setup (`keycloak_admin.py`), `/api/me/`, invitations. |
 | `assistant` | `AssistantSession` | The recipe assistant: conversation turns (`agent.py`), the recipe draft shape shared by every mode (`draft.py`). |
 | `core` | none (abstract mixins and helpers) | Seasonality and provenance helpers, shared serializer mixin. |
@@ -326,7 +326,7 @@ team's rules for planning menus.
 
 Material 3 adaptive navigation (`components/Navigation.tsx`): a navigation rail on tablets and
 desktops, a bottom navigation bar on phones, for the everyday destinations: **Menu** (the weekly menu and calendar, home,
-`/`) and **Recipes** (`/recipes`); the shopping list joins them once it has a screen. The team
+`/`), **Recipes** (`/recipes`) and **Shopping** (`/shopping`). The team
 page, the management section, the language and the theme stay in the user menu: they are visited
 rarely. The theme is light, dark or automatic (following the device), saved per user like the
 language (`UserProfile.theme`) and applied with MUI's `useColorScheme`; the Keycloak login
@@ -933,6 +933,30 @@ one that already has its own users.
   preview is exactly what the import will do. Values are restored as stored, provenance
   included (data moved, not decisions taken); embeddings are refreshed after commit.
 
+## Shopping lists (decided with Paolo 2026-10-11)
+
+- **Computed, then stored.** `menus/shopping.py` computes what a week's menu needs (accepted
+  dishes with a recipe, in slots where somebody eats and that were not skipped, scaled to each
+  slot's people, summed per ingredient and unit). `snapshot` stores the result as a
+  `ShoppingList` with its `ShoppingItem`s: a picture of the menu at that moment. Changing the
+  menu afterwards does not change the list; the user generates a new one (every generation is a
+  new list) or corrects items by hand. The menus a list came from are linked (`menus`), so the
+  Shopping screen offers only the weeks, from the current one on, with something to buy and no
+  list yet; deleting a list frees its weeks again.
+- **An item is optional** when every recipe line asking for it is optional.
+- **Merging** makes one new list and deletes the sources. Items of the same ingredient (or,
+  added by hand without one, the same normalized name) in the same unit are summed; dates and
+  notes are united; an item stays ticked only if it was ticked in every source, since the other
+  part still has to be bought.
+- **By hand**: anything can be added (an ingredient the team can use, or free text such as
+  washing-up liquid), corrected (name, amount, unit, aisle, note) and removed.
+- **In the shop**: what is still to buy is on top, grouped by aisle (the ingredient category);
+  ticked items go to one collapsible "In the cart" section at the bottom. Ticks record who and
+  when, and every change is announced to the team's browsers (`shopping`), which reload the
+  list: people shopping together see each other's ticks.
+- The computed view `GET /api/menus/{id}/shopping-list/` stays, for a quick look without
+  storing anything.
+
 ## Future: translated ingredient names (recorded 2026-10-07)
 
 Ingredient names are stored in a single language (Italian, the first deployment's). A team
@@ -957,5 +981,4 @@ any recipe. A possible shape:
 ## Not built yet
 
 Vector similarity in menu retrieval, recipe discovery, embedding computation jobs,
-collaborative recommendation, a UI for creating invitations, streaming replies, weekly menus
-and the shopping list UI.
+collaborative recommendation, a UI for creating invitations, streaming replies.

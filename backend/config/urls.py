@@ -7,6 +7,7 @@ from apps.assistant.views import AssistantSessionViewSet
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
 from apps.core.views import health
 from apps.curation.views import SystemDraftViewSet
+from apps.menus.shopping_api import ShoppingItemViewSet, ShoppingListViewSet
 from apps.menus.views import (
     MealSlotViewSet,
     MenuGenerationViewSet,
@@ -45,6 +46,8 @@ router.register("system-drafts", SystemDraftViewSet)
 router.register("system-rules", SystemRuleViewSet, basename="system-rule")
 router.register("slots", MealSlotViewSet)
 router.register("invitations", InvitationViewSet)
+router.register("shopping-lists", ShoppingListViewSet, basename="shopping-list")
+router.register("shopping-items", ShoppingItemViewSet, basename="shopping-item")
 router.register("usage/prices", ModelPriceViewSet)
 router.register("assistant/sessions", AssistantSessionViewSet, basename="assistant-session")
 

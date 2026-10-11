@@ -19,11 +19,12 @@ The functional and architectural design was defined in a planning session with t
 
 ## Project Status
 
-**Recipe book and menu generation built, shopping list next.** Built and in use: recipe book and editor, the recipe
+**Recipe book, menu generation and shopping lists built.** Built and in use: recipe book and editor, the recipe
 assistant in all four modes (tell, link, photo, search), sign-in with invitation-only teams,
 team management, the team calendar and menu screen, the menu planning rules (system, team,
 week), weekly menu generation with review, the management section for shared catalogs, phone
-access over HTTPS on the home network, backups. Not built yet: the shopping list screen, tastes,
+access over HTTPS on the home network, backups, shopping lists (generated per week, merged,
+ticked live). Not built yet: tastes,
 feedback, collaborative recommendation. The README's status table is kept current;
 `docs/architecture.md` explains how the code maps onto the concepts and the decisions taken.
 
@@ -197,6 +198,8 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   `MealSlot.proposed_people`) validated in `apps/menus/generation.py`, and counts only once the
   user accepts it (`apps/menus/review.py`). The generator never writes the calendar; people
   change only through `set_day`
+- A shopping list is a snapshot of the menu when it was generated: it never follows later menu
+  changes. Every change to a list or its items is announced with `announce` (`shopping` event)
 - Everything the assistant produces goes through `normalize_draft` and the editor's review;
   nothing it proposes is saved without the user
 - **Every initialization step must be idempotent** (safe to re-run, same result) and, where it

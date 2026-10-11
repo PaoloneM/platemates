@@ -16,6 +16,8 @@ import { DraftsPage } from './pages/manage/DraftsPage'
 import { SettingsPage } from './pages/manage/SettingsPage'
 import { TransferPage } from './pages/manage/TransferPage'
 import { MonitoringPage } from './pages/MonitoringPage'
+import { ShoppingListPage } from './pages/ShoppingListPage'
+import { ShoppingPage } from './pages/ShoppingPage'
 import { UsagePage } from './pages/manage/UsagePage'
 import { SystemRulesPage } from './pages/manage/SystemRulesPage'
 import { ManageIndex, ManageLayout } from './pages/manage/ManageLayout'
@@ -61,6 +63,8 @@ function Protected() {
             <Route path="/manage/usage" element={<ManageLayout><UsagePage /></ManageLayout>} />
             <Route path="/manage/cache" element={<ManageLayout><CachePage /></ManageLayout>} />
             <Route path="/monitoring" element={<MonitoringPage />} />
+            <Route path="/shopping" element={<ShoppingPage />} />
+            <Route path="/shopping/:id" element={<ShoppingListPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AppShell>

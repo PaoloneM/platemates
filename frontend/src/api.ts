@@ -580,3 +580,38 @@ export type ModelPrice = {
   updated_at: string
   updated_by: string | null
 }
+
+// Shopping lists (backend apps/menus/shopping.py): generated from a week's menu as a snapshot,
+// ticked live by the team, edited by hand, merged.
+export type ShoppingWeek = { menu: number; week_start: string }
+export type ShoppingListSummary = {
+  id: number
+  team: number
+  title: string
+  // Mondays of the weeks the list was made from.
+  weeks: string[]
+  created_at: string
+  total: number
+  bought: number
+}
+export type ShoppingItem = {
+  id: number
+  shopping_list: number
+  ingredient: number | null
+  name: string
+  category: string
+  unit: Unit
+  // Decimal as a string; null for "to taste" or no amount.
+  quantity: string | null
+  optional: boolean
+  needed_on: string[]
+  note: string
+  manual: boolean
+  bought: boolean
+  bought_at: string | null
+  bought_by_name: string | null
+  position: number
+}
+export type ShoppingList = ShoppingListSummary & { items: ShoppingItem[] }
+export type ShoppingEvent = { team: number; list: number | null }
+

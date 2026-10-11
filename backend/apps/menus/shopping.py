@@ -1,22 +1,30 @@
-"""Shopping list: a pure output computed from a menu, never stored.
+"""Shopping lists: computed from a week's menu, then stored as a list the team ticks off.
 
-Quantities are scaled to each slot's actual diners, summed per (ingredient, unit), and grouped by
-ingredient category so the list follows the supermarket aisles.
+`build_shopping_list` computes what a menu needs: quantities scaled to each slot's actual
+diners, summed per (ingredient, unit), in aisle order by ingredient category. `snapshot` stores
+that as a `ShoppingList`, a picture of the menu at that moment: changing the menu afterwards
+does not change the list. `merge` joins lists into one. `weeks_to_prepare` lists the weeks that
+have something to buy and no list yet.
 """
 
 from __future__ import annotations
 
+import datetime as dt
 from collections import defaultdict
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 
-from apps.catalog.models import Unit
+from django.db import transaction
+from django.db.models import Exists, OuterRef
+from django.utils import timezone
 
-from .models import MealSlot, SlotDish, WeeklyMenu
+from apps.catalog.models import Unit, normalize_name
+
+from .models import MealSlot, ShoppingItem, ShoppingList, SlotDish, WeeklyMenu
 
 
 @dataclass
-class ShoppingItem:
+class NeededIngredient:
     ingredient_id: int
     name: str
     category: str
@@ -25,6 +33,8 @@ class ShoppingItem:
     quantity: Decimal | None = None
     # Dates the ingredient is needed on, so the user can split the shopping.
     needed_on: set[str] = field(default_factory=set)
+    # Every recipe line asking for it is optional.
+    optional: bool = True
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -34,28 +44,34 @@ class ShoppingItem:
             "unit": self.unit,
             "quantity": None if self.quantity is None else str(_round(self.quantity, self.unit)),
             "needed_on": sorted(self.needed_on),
+            "optional": self.optional,
         }
 
 
-def build_shopping_list(menu: WeeklyMenu) -> list[ShoppingItem]:
+def _countable_dishes():
+    """The dishes that need shopping: accepted (proposals count once accepted), with a recipe
+    (a dish name alone has no ingredients), in a slot where somebody eats and was not skipped."""
+    return SlotDish.objects.filter(
+        slot__people__gt=0, recipe__isnull=False, proposed=False
+    ).exclude(slot__outcome=MealSlot.Outcome.SKIPPED)
+
+
+def build_shopping_list(menu: WeeklyMenu) -> list[NeededIngredient]:
     dishes = (
-        # Proposals count once accepted; dishes without a recipe have no ingredients to buy.
-        SlotDish.objects.filter(
-            slot__menu=menu, slot__people__gt=0, recipe__isnull=False, proposed=False
-        )
-        .exclude(slot__outcome=MealSlot.Outcome.SKIPPED)
+        _countable_dishes()
+        .filter(slot__menu=menu)
         .select_related("slot", "recipe")
         .prefetch_related("recipe__ingredients__ingredient")
     )
 
-    items: dict[tuple[int, str], ShoppingItem] = {}
+    items: dict[tuple[int, str], NeededIngredient] = {}
     for dish in dishes:
         for line in dish.recipe.ingredients.all():
             unit = Unit.TO_TASTE if line.quantity is None else line.unit
             key = (line.ingredient_id, unit)
             item = items.get(key)
             if item is None:
-                item = items[key] = ShoppingItem(
+                item = items[key] = NeededIngredient(
                     ingredient_id=line.ingredient_id,
                     name=line.ingredient.name,
                     category=line.ingredient.category,
@@ -65,11 +81,12 @@ def build_shopping_list(menu: WeeklyMenu) -> list[ShoppingItem]:
             if amount is not None:
                 item.quantity = (item.quantity or Decimal(0)) + amount
             item.needed_on.add(dish.slot.date.isoformat())
+            item.optional = item.optional and line.optional
 
     return sorted(items.values(), key=lambda i: (i.category, i.name, i.unit))
 
 
-def group_by_category(items: list[ShoppingItem]) -> dict[str, list[dict[str, object]]]:
+def group_by_category(items: list[NeededIngredient]) -> dict[str, list[dict[str, object]]]:
     grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
     for item in items:
         grouped[item.category].append(item.as_dict())
@@ -81,3 +98,108 @@ def _round(quantity: Decimal, unit: str) -> Decimal:
     # silently buying a different amount: keep one decimal for pieces, whole numbers otherwise.
     step = Decimal("0.1") if unit == Unit.PIECE else Decimal("1")
     return quantity.quantize(step, rounding=ROUND_HALF_UP)
+
+
+# -- stored lists -------------------------------------------------------------------------------
+
+
+def week_title(menus) -> str:
+    """ "12/10 - 18/10": the days the list covers, from its first week's Monday to its last
+    week's Sunday."""
+    starts = sorted(m.week_start for m in menus)
+    if not starts:
+        return ""
+    first, last = starts[0], starts[-1] + dt.timedelta(days=6)
+    return f"{first:%d/%m} - {last:%d/%m}"
+
+
+def weeks_to_prepare(team, today: dt.date | None = None):
+    """The team's menus from the current week on with something to buy and no list yet."""
+    today = today or timezone.localdate()
+    monday = today - dt.timedelta(days=today.weekday())
+    return (
+        WeeklyMenu.objects.filter(team=team, week_start__gte=monday, shopping_lists__isnull=True)
+        .filter(Exists(_countable_dishes().filter(slot__menu=OuterRef("pk"))))
+        .order_by("week_start")
+    )
+
+
+@transaction.atomic
+def snapshot(menu: WeeklyMenu, user=None) -> ShoppingList:
+    """A new list with what the menu needs now. Every call makes a new list."""
+    shopping_list = ShoppingList.objects.create(
+        team=menu.team, title=week_title([menu]), created_by=user
+    )
+    shopping_list.menus.add(menu)
+    ShoppingItem.objects.bulk_create(
+        ShoppingItem(
+            shopping_list=shopping_list,
+            ingredient_id=item.ingredient_id,
+            name=item.name,
+            category=item.category,
+            unit=item.unit,
+            quantity=None if item.quantity is None else _round(item.quantity, item.unit),
+            optional=item.optional,
+            needed_on=sorted(dt.date.fromisoformat(d) for d in item.needed_on),
+            position=position,
+        )
+        for position, item in enumerate(build_shopping_list(menu))
+    )
+    return shopping_list
+
+
+def _merge_key(item: ShoppingItem) -> tuple:
+    who = (
+        ("ingredient", item.ingredient_id)
+        if item.ingredient_id
+        else ("name", normalize_name(item.name))
+    )
+    return (*who, item.unit)
+
+
+@transaction.atomic
+def merge(lists: list[ShoppingList], user=None) -> ShoppingList:
+    """One list from several of the same team, which are deleted. Items of the same ingredient
+    (or, without one, the same name) in the same unit are summed; an item is bought only if it
+    was bought in every list it came from."""
+    team = lists[0].team
+    menus = WeeklyMenu.objects.filter(shopping_lists__in=lists).distinct()
+    merged = ShoppingList.objects.create(team=team, title=week_title(menus), created_by=user)
+    merged.menus.set(menus)
+
+    combined: dict[tuple, ShoppingItem] = {}
+    sources = ShoppingItem.objects.filter(shopping_list__in=lists).order_by(
+        "shopping_list__created_at", "position", "pk"
+    )
+    for item in sources:
+        key = _merge_key(item)
+        into = combined.get(key)
+        if into is None:
+            combined[key] = ShoppingItem(
+                shopping_list=merged,
+                ingredient_id=item.ingredient_id,
+                name=item.name,
+                category=item.category,
+                unit=item.unit,
+                quantity=item.quantity,
+                optional=item.optional,
+                needed_on=list(item.needed_on),
+                note=item.note,
+                manual=item.manual,
+                bought=item.bought,
+                bought_at=item.bought_at,
+                bought_by_id=item.bought_by_id,
+                position=len(combined),
+            )
+            continue
+        if item.quantity is not None:
+            into.quantity = (into.quantity or Decimal(0)) + item.quantity
+        into.optional = into.optional and item.optional
+        into.needed_on = sorted(set(into.needed_on) | set(item.needed_on))
+        into.note = "; ".join(n for n in dict.fromkeys([into.note, item.note]) if n)
+        into.manual = into.manual and item.manual
+        if into.bought and not item.bought:
+            into.bought, into.bought_at, into.bought_by_id = False, None, None
+    ShoppingItem.objects.bulk_create(combined.values())
+    ShoppingList.objects.filter(pk__in=[sl.pk for sl in lists]).delete()
+    return merged
