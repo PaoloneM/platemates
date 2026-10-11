@@ -959,8 +959,9 @@ one that already has its own users.
   has a send button, and one button sends everything not yet in the cart; what is sent goes
   into the cart (`POST /api/shopping-lists/{id}/buy/`), as it will be ticked off in the app.
   Listonic is reached through the public link behind its official website button
-  (`button.listonic.com/button/generateLink`, called from the browser): the items as text
-  ("pomodoro 600 g (ramati)") and the list's title as the suggested name in, a link out that
+  (`button.listonic.com/button/generateLink`, called from the browser): the items' names
+  only (the link takes plain text, and an amount in it would make "pomodoro 600 g" and
+  "pomodoro 300 g" two products in Listonic) and the list's title as the suggested name in, a link out that
   opens the app on phones and its web widget elsewhere. The app itself asks which list to use
   or makes a new one, so PlateMates holds no Listonic account or token. Listonic's private API
   (used by its own apps) was considered and refused: unofficial, fragile, and it would mean

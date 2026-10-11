@@ -23,16 +23,6 @@ export function formatAmount(
   return `${formatQuantity(Number(item.quantity), locale)} ${unitLabel(item.unit)}`
 }
 
-/** "pomodoro 1200 g (ramati)": an item as one line of text, for another shopping list app. */
-export function itemLine(
-  item: ShoppingItem,
-  unitLabel: (u: string) => string,
-  locale: string | undefined,
-): string {
-  const amount = item.unit === 'tt' ? '' : formatAmount(item, unitLabel, locale)
-  return [item.name, amount, item.note ? `(${item.note})` : ''].filter(Boolean).join(' ')
-}
-
 const MOBILE = /Android|iPhone|iPad|iPod/i
 
 /**

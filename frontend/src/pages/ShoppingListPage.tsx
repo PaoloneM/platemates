@@ -46,7 +46,7 @@ import { useAuth } from '../auth/context'
 import { ShoppingAppDialog } from '../components/ShoppingAppDialog'
 import { INGREDIENT_CATEGORIES, UNITS, useLabels } from '../labels'
 import { useOnConnect, useRealtimeEvent } from '../realtime'
-import { formatAmount, itemLine, sendToListonic } from '../shopping'
+import { formatAmount, sendToListonic } from '../shopping'
 
 type Suggestion = Pick<Ingredient, 'id' | 'name'>
 
@@ -55,8 +55,7 @@ type Suggestion = Pick<Ingredient, 'id' | 'name'>
  * is in the cart below. Ticks show up live on the phones of everyone in the team.
  */
 export function ShoppingListPage() {
-  const { t, i18n } = useTranslation()
-  const labels = useLabels()
+  const { t } = useTranslation()
   const { me } = useAuth()
   const app = me?.authenticated ? me.user.shopping_app : null
   const { id } = useParams()
@@ -104,7 +103,9 @@ export function ShoppingListPage() {
     setSendFailed(false)
     try {
       await sendToListonic(
-        items.map((i) => itemLine(i, labels.unit, i18n.resolvedLanguage)),
+        // Names only: Listonic takes items as text, and an amount in it would make
+        // "pomodoro 600 g" and "pomodoro 300 g" two products there.
+        items.map((i) => i.name),
         list.title,
         () => api(`/shopping-lists/${list.id}/buy/`, {
           method: 'POST',
