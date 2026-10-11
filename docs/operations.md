@@ -170,8 +170,10 @@ Everything that is not the app is served only on the VM's loopback (decided with
   appear, and Django admin and the admin-only APIs answer 404 (and are not routed either).
   Without the header (`DEFAULT_PLANE`): `public` on the server, `admin` on a developer's machine.
 - **Monitoring** (on the admin plane only): VictoriaMetrics (30 days) collects the VM
-  (node-exporter, with the backups' outcome from `platemates-backup`), the containers (cAdvisor,
-  through the read-only socket proxy), PostgreSQL and WAL archiving (postgres-exporter, role
+  (node-exporter, with textfile metrics written on the host: the backups' outcome from
+  `platemates-backup`, and each container's CPU and memory read from its cgroup by
+  `platemates-container-metrics` every 30 s; cAdvisor was dropped, as it now needs containerd's
+  socket, i.e. control of the machine), PostgreSQL and WAL archiving (postgres-exporter, role
   `monitoring`), both Traefiks (requests, errors and latency per service) and Keycloak
   (`monitoring/scrape.yml`). Grafana, at `/grafana`, is embedded in the app's Monitoring page
   (user menu, administrators, admin host only); it signs in through Keycloak (client

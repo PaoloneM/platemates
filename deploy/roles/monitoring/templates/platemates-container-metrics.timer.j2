@@ -1,0 +1,11 @@
+# Managed by Ansible (deploy/roles/monitoring).
+[Unit]
+Description=PlateMates container metrics, every 30 seconds
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

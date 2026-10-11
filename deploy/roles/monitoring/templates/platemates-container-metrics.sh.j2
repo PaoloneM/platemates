@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Managed by Ansible (deploy/roles/monitoring). Each container's memory and CPU time, read from
+# its cgroup (v2, systemd driver), for node-exporter's textfile collector. Replaces cAdvisor,
+# which needs containerd's socket (control of the whole machine) to tell containers apart.
+set -euo pipefail
+
+dir=/var/lib/node_exporter/textfile
+mapfile -t containers < <(docker ps --no-trunc --format '{{ '{{' }}.ID{{ '}}' }} {{ '{{' }}.Names{{ '}}' }}')
+tmp=$(mktemp "$dir/.containers.XXXXXX")
+
+{
+  echo "# HELP platemates_container_memory_bytes Memory a container uses (cgroup memory.current)."
+  echo "# TYPE platemates_container_memory_bytes gauge"
+  for line in "${containers[@]}"; do
+    read -r id name <<<"$line"
+    cgroup=/sys/fs/cgroup/system.slice/docker-$id.scope
+    [[ -r $cgroup/memory.current ]] || continue
+    echo "platemates_container_memory_bytes{name=\"$name\"} $(<"$cgroup/memory.current")"
+  done
+  echo "# HELP platemates_container_cpu_seconds_total CPU time a container has used."
+  echo "# TYPE platemates_container_cpu_seconds_total counter"
+  for line in "${containers[@]}"; do
+    read -r id name <<<"$line"
+    cgroup=/sys/fs/cgroup/system.slice/docker-$id.scope
+    [[ -r $cgroup/cpu.stat ]] || continue
+    usec=$(awk '/^usage_usec/ {print $2}' "$cgroup/cpu.stat")
+    echo "platemates_container_cpu_seconds_total{name=\"$name\"} $(awk -v u="$usec" 'BEGIN {printf "%.3f", u / 1e6}')"
+  done
+} >"$tmp"
+
+chmod 0644 "$tmp"
+mv "$tmp" "$dir/containers.prom"

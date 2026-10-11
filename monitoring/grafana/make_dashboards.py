@@ -108,9 +108,9 @@ server = dashboard("pm-server", "Server", [
 ])
 
 containers = dashboard("pm-containers", "Containers", [
-    metric("CPU by container", [('sum by (name) (rate(container_cpu_usage_seconds_total{name=~".+"}[5m]))', "{{name}}")],
+    metric("CPU by container", [("sum by (name) (rate(platemates_container_cpu_seconds_total[5m]))", "{{name}}")],
            unit="short", w=24, h=10, stack=True),
-    metric("Memory by container", [('sum by (name) (container_memory_working_set_bytes{name=~".+"})', "{{name}}")],
+    metric("Memory by container", [("sum by (name) (platemates_container_memory_bytes)", "{{name}}")],
            unit="bytes", w=24, h=10, stack=True),
 ])
 

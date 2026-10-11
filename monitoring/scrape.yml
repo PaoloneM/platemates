@@ -4,12 +4,10 @@ global:
   scrape_interval: 30s
 
 scrape_configs:
-  # The VM: CPU, memory, disk, load; and the backups (textfile written by platemates-backup).
+  # The VM: CPU, memory, disk, load; and, as textfile metrics written on the host, the backups
+  # (platemates-backup) and each container's CPU and memory (platemates-container-metrics).
   - job_name: node
     static_configs: [{ targets: ["node-exporter:9100"] }]
-  # Each container's CPU and memory.
-  - job_name: cadvisor
-    static_configs: [{ targets: ["cadvisor:8080"] }]
   # PostgreSQL: connections, sizes, WAL archiving into pgBackRest.
   - job_name: postgres
     static_configs: [{ targets: ["postgres-exporter:9187"] }]

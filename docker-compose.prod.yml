@@ -127,8 +127,8 @@ services:
     restart: unless-stopped
     profiles: [local-embeddings]
 
-  # The Docker API, read-only and reduced to what Traefik and cAdvisor need: listing containers,
-  # following their events, the daemon's description. They never see the socket itself.
+  # The Docker API, read-only and reduced to what Traefik needs: listing containers and
+  # following their events. Traefik never sees the socket itself.
   socket-proxy:
     image: tecnativa/docker-socket-proxy:v0.5.0
     environment:
@@ -136,8 +136,6 @@ services:
       EVENTS: 1
       PING: 1
       VERSION: 1
-      # The daemon's description (no control over anything): cAdvisor reads it at start.
-      INFO: 1
       POST: 0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -220,7 +218,8 @@ services:
       - ./monitoring/scrape.yml:/etc/vm/scrape.yml:ro
     restart: unless-stopped
 
-  # The VM itself, read from the host's filesystem; plus the backups' textfile metrics.
+  # The VM itself, read from the host's filesystem; plus textfile metrics written on the host:
+  # the backups' outcome and each container's CPU and memory (deploy/roles/backup, monitoring).
   node-exporter:
     image: prom/node-exporter:v1.12.1
     command:
@@ -231,24 +230,6 @@ services:
     volumes:
       - /:/host:ro,rslave
       - /var/lib/node_exporter/textfile:/textfile:ro
-    restart: unless-stopped
-
-  # Each container's CPU and memory. Container names come through the read-only socket proxy,
-  # never the Docker socket itself.
-  cadvisor:
-    image: ghcr.io/google/cadvisor:v0.60.6
-    command:
-      - --docker=tcp://socket-proxy:2375
-      - --docker_only=true
-      - --housekeeping_interval=30s
-      - --store_container_labels=false
-      - --disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl,advtcp,process
-    volumes:
-      - /:/rootfs:ro
-      - /sys:/sys:ro
-      - /var/lib/docker:/var/lib/docker:ro
-    depends_on:
-      - socket-proxy
     restart: unless-stopped
 
   # PostgreSQL's statistics, as the read-only `monitoring` role (pg_monitor, no table data).

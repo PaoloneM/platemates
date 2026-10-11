@@ -1,0 +1,8 @@
+# Managed by Ansible (deploy/roles/monitoring).
+[Unit]
+Description=PlateMates container metrics (for node-exporter)
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/platemates-container-metrics

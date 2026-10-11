@@ -1,0 +1,31 @@
+# Host-side metrics node-exporter cannot see: each container's CPU and memory, from cgroups.
+# The rest of the monitoring runs in Docker (docker-compose.prod.yml).
+
+- name: Create the folder for textfile metrics
+  ansible.builtin.file:
+    path: /var/lib/node_exporter/textfile
+    state: directory
+    mode: "0755"
+
+- name: Install the container metrics script
+  ansible.builtin.template:
+    src: platemates-container-metrics.sh.j2
+    dest: /usr/local/sbin/platemates-container-metrics
+    mode: "0755"
+
+- name: Install its service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop: [platemates-container-metrics.service, platemates-container-metrics.timer]
+  notify: Reload systemd
+
+- name: Load the units now
+  ansible.builtin.meta: flush_handlers
+
+- name: Collect container metrics every 30 seconds
+  ansible.builtin.systemd_service:
+    name: platemates-container-metrics.timer
+    enabled: true
+    state: started

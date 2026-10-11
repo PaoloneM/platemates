@@ -22,7 +22,7 @@
    "targets": [
     {
      "refId": "A",
-     "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\".+\"}[5m]))",
+     "expr": "sum by (name) (rate(platemates_container_cpu_seconds_total[5m]))",
      "legendFormat": "{{name}}",
      "datasource": {
       "type": "prometheus",
@@ -71,7 +71,7 @@
    "targets": [
     {
      "refId": "A",
-     "expr": "sum by (name) (container_memory_working_set_bytes{name=~\".+\"})",
+     "expr": "sum by (name) (platemates_container_memory_bytes)",
      "legendFormat": "{{name}}",
      "datasource": {
       "type": "prometheus",
