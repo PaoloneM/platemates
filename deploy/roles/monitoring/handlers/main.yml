@@ -1,3 +1,10 @@
 - name: Reload systemd
   ansible.builtin.systemd_service:
     daemon_reload: true
+
+# On a later deploy (the stack is running): Grafana reads provisioning only at start.
+- name: Restart Grafana
+  ansible.builtin.command:
+    cmd: docker compose restart grafana
+    chdir: "{{ platemates_dir }}"
+  failed_when: false

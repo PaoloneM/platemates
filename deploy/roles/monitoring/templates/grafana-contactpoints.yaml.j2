@@ -1,0 +1,13 @@
+# Managed by Ansible (deploy/roles/monitoring): where Grafana's alerts go. The chat id is quoted:
+# Telegram's integration wants text.
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: telegram
+    receivers:
+      - uid: pm-telegram
+        type: telegram
+        settings:
+          bottoken: {{ vault_telegram_bot_token | to_json }}
+          chatid: {{ vault_telegram_chat_id | string | to_json }}
+        disableResolveMessage: false

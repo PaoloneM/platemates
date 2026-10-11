@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Generate Grafana's alerting provisioning (monitoring/grafana/provisioning/alerting/alerts.json):
-the Telegram contact point, the notification policy and the alert rules.
+the notification policy and the alert rules.
 
 Alerts are code, like the dashboards: change this file and run it
 (`python3 monitoring/grafana/make_alerts.py`); provisioned rules cannot be edited in Grafana.
-The bot token and chat id come from Grafana's environment (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
-from the vault). Standard library only.
+The Telegram contact point the policy sends to is not here: Ansible writes it on the server
+(deploy/roles/monitoring), since Grafana turns a numeric chat id passed through an environment
+variable into a number its Telegram integration refuses. Standard library only.
 """
 
 from __future__ import annotations
@@ -89,20 +90,6 @@ WHERE u.created_at >= date_trunc('day', now())""",
 
 PROVISIONING = {
     "apiVersion": 1,
-    "contactPoints": [
-        {
-            "orgId": 1,
-            "name": "telegram",
-            "receivers": [
-                {
-                    "uid": "pm-telegram",
-                    "type": "telegram",
-                    "settings": {"bottoken": "$TELEGRAM_BOT_TOKEN", "chatid": "$TELEGRAM_CHAT_ID"},
-                    "disableResolveMessage": False,
-                }
-            ],
-        }
-    ],
     "policies": [
         {
             "orgId": 1,
