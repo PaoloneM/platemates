@@ -49,7 +49,8 @@ ROLES_MAPPER = {
         "multivalued": "true",
         "id.token.claim": "true",
         "access.token.claim": "true",
-        "userinfo.token.claim": "false",
+        # Grafana may read the roles from userinfo rather than the ID token.
+        "userinfo.token.claim": "true",
     },
 }
 
