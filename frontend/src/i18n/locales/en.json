@@ -878,6 +878,18 @@
     "quantity": "Quantity",
     "unit": "Unit",
     "aisle": "Aisle",
-    "note": "Note"
+    "note": "Note",
+    "sendAll": "Send all to {{app}}",
+    "send": "Send to {{app}}",
+    "sendFailed": "Sending failed: try again shortly."
+  },
+  "shoppingApp": {
+    "title": "Shopping list app",
+    "hint": "Choose the app to send list items to. The app itself asks which list to put them in (or makes a new one).",
+    "none": "None",
+    "activate": "Turn on integration",
+    "app": {
+      "listonic": "Listonic"
+    }
   }
 }

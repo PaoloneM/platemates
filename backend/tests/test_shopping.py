@@ -145,6 +145,27 @@ def test_items_are_added_corrected_and_removed_by_hand(api, team, pasta_recipe):
     assert "detersivo piatti" not in items_of(api, created["id"])
 
 
+def test_items_go_into_the_cart_at_once(
+    api, user, team, pasta_recipe, events, django_capture_on_commit_callbacks
+):
+    created = generate(api, planned_week(team, pasta_recipe))
+    other = generate(api, planned_week(team, pasta_recipe, monday=THIS_MONDAY + dt.timedelta(7)))
+    items = items_of(api, created["id"])
+    stranger = items_of(api, other["id"])["salt"]["id"]
+    with django_capture_on_commit_callbacks(execute=True):
+        response = api.post(
+            f"/api/shopping-lists/{created['id']}/buy/",
+            {"items": [items["spaghetti"]["id"], items["salt"]["id"], stranger]},
+            format="json",
+        )
+    assert response.json() == {"bought": 2}
+    assert events[-1] == ("shopping", {"team": team.pk, "list": created["id"]})
+    after = items_of(api, created["id"])
+    assert after["spaghetti"]["bought"] and not after["tomato"]["bought"]
+    assert ShoppingItem.objects.get(pk=items["salt"]["id"]).bought_by == user
+    assert not ShoppingItem.objects.get(pk=stranger).bought
+
+
 def test_another_teams_ingredient_cannot_be_added(api, team, pasta_recipe):
     created = generate(api, planned_week(team, pasta_recipe))
     theirs = Ingredient.objects.create(name="segreto", owner_team=Team.objects.create(name="Altri"))

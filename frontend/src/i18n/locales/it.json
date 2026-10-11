@@ -878,6 +878,18 @@
     "quantity": "Quantità",
     "unit": "Unità",
     "aisle": "Reparto",
-    "note": "Nota"
+    "note": "Nota",
+    "sendAll": "Manda tutto a {{app}}",
+    "send": "Manda a {{app}}",
+    "sendFailed": "Invio non riuscito: riprova tra poco."
+  },
+  "shoppingApp": {
+    "title": "App per la spesa",
+    "hint": "Scegli l'app in cui mandare gli articoli delle liste. Sarà l'app stessa a chiederti in quale lista metterli (o a crearne una nuova).",
+    "none": "Nessuna",
+    "activate": "Attiva integrazione",
+    "app": {
+      "listonic": "Listonic"
+    }
   }
 }

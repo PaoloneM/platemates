@@ -200,6 +200,8 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   change only through `set_day`
 - A shopping list is a snapshot of the menu when it was generated: it never follows later menu
   changes. Every change to a list or its items is announced with `announce` (`shopping` event)
+- Shopping list apps are reached only through their public "add to list" links, from the
+  browser: never store a user's account, password or token for another app
 - Everything the assistant produces goes through `normalize_draft` and the editor's review;
   nothing it proposes is saved without the user
 - **Every initialization step must be idempotent** (safe to re-run, same result) and, where it

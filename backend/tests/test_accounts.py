@@ -243,6 +243,15 @@ def test_theme_is_saved_per_user(api):
     assert (both["user"]["theme"], both["user"]["language"]) == ("light", "en")
 
 
+def test_the_shopping_app_is_opt_in_per_user(api):
+    assert api.get("/api/me/").json()["user"]["shopping_app"] is None
+    chosen = api.patch("/api/me/", {"shopping_app": "listonic"}, format="json").json()
+    assert chosen["user"]["shopping_app"] == "listonic"
+    none = api.patch("/api/me/", {"shopping_app": ""}, format="json").json()
+    assert none["user"]["shopping_app"] is None
+    assert api.patch("/api/me/", {"shopping_app": "keep"}, format="json").status_code == 400
+
+
 @pytest.mark.parametrize("body", [{"theme": "blue"}, {}])
 def test_bad_theme_changes_are_rejected(api, body):
     assert api.patch("/api/me/", body, format="json").status_code == 400

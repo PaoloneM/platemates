@@ -954,6 +954,17 @@ one that already has its own users.
   ticked items go to one collapsible "In the cart" section at the bottom. Ticks record who and
   when, and every change is announced to the team's browsers (`shopping`), which reload the
   list: people shopping together see each other's ticks.
+- **Shopping list apps** (decided 2026-10-11): a user may choose, in the user menu, an app to
+  send items to (`UserProfile.shopping_app`, none by default; today only Listonic). Each item
+  has a send button, and one button sends everything not yet in the cart; what is sent goes
+  into the cart (`POST /api/shopping-lists/{id}/buy/`), as it will be ticked off in the app.
+  Listonic is reached through the public link behind its official website button
+  (`button.listonic.com/button/generateLink`, called from the browser): the items as text
+  ("pomodoro 600 g (ramati)") and the list's title as the suggested name in, a link out that
+  opens the app on phones and its web widget elsewhere. The app itself asks which list to use
+  or makes a new one, so PlateMates holds no Listonic account or token. Listonic's private API
+  (used by its own apps) was considered and refused: unofficial, fragile, and it would mean
+  storing a token per user. Bring! imports only from public recipe pages, which lists are not.
 - The computed view `GET /api/menus/{id}/shopping-list/` stays, for a quick look without
   storing anything.
 

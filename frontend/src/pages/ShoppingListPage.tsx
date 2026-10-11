@@ -3,6 +3,7 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import EditIcon from '@mui/icons-material/EditOutlined'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import SendIcon from '@mui/icons-material/SendOutlined'
 import {
   Alert,
   Autocomplete,
@@ -41,9 +42,11 @@ import {
   type ShoppingList,
   type Unit,
 } from '../api'
+import { useAuth } from '../auth/context'
+import { ShoppingAppDialog } from '../components/ShoppingAppDialog'
 import { INGREDIENT_CATEGORIES, UNITS, useLabels } from '../labels'
 import { useOnConnect, useRealtimeEvent } from '../realtime'
-import { formatAmount } from '../shopping'
+import { formatAmount, itemLine, sendToListonic } from '../shopping'
 
 type Suggestion = Pick<Ingredient, 'id' | 'name'>
 
@@ -52,7 +55,10 @@ type Suggestion = Pick<Ingredient, 'id' | 'name'>
  * is in the cart below. Ticks show up live on the phones of everyone in the team.
  */
 export function ShoppingListPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const labels = useLabels()
+  const { me } = useAuth()
+  const app = me?.authenticated ? me.user.shopping_app : null
   const { id } = useParams()
   const navigate = useNavigate()
   const [list, setList] = useState<ShoppingList | null>(null)
@@ -61,6 +67,9 @@ export function ShoppingListPage() {
   const [editing, setEditing] = useState<ShoppingItem | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [choosingApp, setChoosingApp] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sendFailed, setSendFailed] = useState(false)
 
   const load = useCallback(() => {
     api<ShoppingList>(`/shopping-lists/${id}/`)
@@ -88,6 +97,28 @@ export function ShoppingListPage() {
     }
   }
 
+  /** To the user's shopping list app, then into the cart: they will be ticked off there. */
+  async function send(items: ShoppingItem[]) {
+    if (!list || items.length === 0) return
+    setSending(true)
+    setSendFailed(false)
+    try {
+      await sendToListonic(
+        items.map((i) => itemLine(i, labels.unit, i18n.resolvedLanguage)),
+        list.title,
+        () => api(`/shopping-lists/${list.id}/buy/`, {
+          method: 'POST',
+          body: JSON.stringify({ items: items.map((i) => i.id) }),
+        }),
+      )
+      load()
+    } catch {
+      setSendFailed(true)
+    } finally {
+      setSending(false)
+    }
+  }
+
   async function deleteList() {
     await api(`/shopping-lists/${id}/`, { method: 'DELETE' })
     navigate('/shopping', { replace: true })
@@ -112,13 +143,27 @@ export function ShoppingListPage() {
 
       <AddItem list={list} onAdded={load} />
 
+      <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
+        {app ? (
+          <Button variant="outlined" startIcon={<SendIcon />} disabled={sending || toBuy.length === 0}
+            onClick={() => void send(toBuy)}>
+            {t('shopping.sendAll', { app: t(`shoppingApp.app.${app}`) })}
+          </Button>
+        ) : (
+          <Button startIcon={<SendIcon />} onClick={() => setChoosingApp(true)}>{t('shoppingApp.activate')}</Button>
+        )}
+      </Stack>
+      {sendFailed && <Alert severity="error" onClose={() => setSendFailed(false)}>{t('shopping.sendFailed')}</Alert>}
+
       {toBuy.length === 0 ? (
         <Typography color="text.secondary">
           {list.items.length ? t('shopping.allBought') : t('shopping.empty')}
         </Typography>
       ) : (
         <Paper variant="outlined">
-          <ItemsByAisle items={toBuy} onTick={tick} onEdit={setEditing} />
+          <ItemsByAisle items={toBuy} onTick={tick} onEdit={setEditing}
+            onSend={app && !sending ? (item) => void send([item]) : undefined}
+            sendLabel={app ? t('shopping.send', { app: t(`shoppingApp.app.${app}`) }) : ''} />
         </Paper>
       )}
 
@@ -139,6 +184,7 @@ export function ShoppingListPage() {
         </Paper>
       )}
 
+      <ShoppingAppDialog open={choosingApp} onClose={() => setChoosingApp(false)} />
       {editing && (
         <EditItemDialog item={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load() }} />
       )}
@@ -157,10 +203,12 @@ export function ShoppingListPage() {
   )
 }
 
-function ItemsByAisle({ items, onTick, onEdit }: {
+function ItemsByAisle({ items, onTick, onEdit, onSend, sendLabel }: {
   items: ShoppingItem[]
   onTick: (item: ShoppingItem, bought: boolean) => void
   onEdit: (item: ShoppingItem) => void
+  onSend?: (item: ShoppingItem) => void
+  sendLabel: string
 }) {
   const labels = useLabels()
   const groups = useMemo(() => {
@@ -179,7 +227,9 @@ function ItemsByAisle({ items, onTick, onEdit }: {
         <li key={category}>
           <ul style={{ padding: 0 }}>
             <ListSubheader sx={{ lineHeight: 2.5, bgcolor: 'background.paper' }}>{labels.category(category)}</ListSubheader>
-            {group.map((item) => <ItemRow key={item.id} item={item} onTick={onTick} onEdit={onEdit} />)}
+            {group.map((item) => (
+              <ItemRow key={item.id} item={item} onTick={onTick} onEdit={onEdit} onSend={onSend} sendLabel={sendLabel} />
+            ))}
           </ul>
         </li>
       ))}
@@ -187,10 +237,12 @@ function ItemsByAisle({ items, onTick, onEdit }: {
   )
 }
 
-function ItemRow({ item, onTick, onEdit }: {
+function ItemRow({ item, onTick, onEdit, onSend, sendLabel }: {
   item: ShoppingItem
   onTick: (item: ShoppingItem, bought: boolean) => void
   onEdit: (item: ShoppingItem) => void
+  onSend?: (item: ShoppingItem) => void
+  sendLabel?: string
 }) {
   const { t, i18n } = useTranslation()
   const labels = useLabels()
@@ -198,13 +250,24 @@ function ItemRow({ item, onTick, onEdit }: {
   const secondary = [item.optional ? t('shopping.optional') : '', item.note].filter(Boolean).join(' · ')
   return (
     <ListItem disablePadding secondaryAction={
-      amount && <Typography variant="body2" color="text.secondary" sx={{ textDecoration: item.bought ? 'line-through' : undefined }}>{amount}</Typography>
+      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+        {amount && (
+          <Typography variant="body2" color="text.secondary" sx={{ textDecoration: item.bought ? 'line-through' : undefined }}>
+            {amount}
+          </Typography>
+        )}
+        {onSend && !item.bought && (
+          <IconButton edge="end" size="small" aria-label={`${sendLabel}: ${item.name}`} onClick={() => onSend(item)}>
+            <SendIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Stack>
     }>
       <ListItemIcon sx={{ minWidth: 0, pl: 1 }}>
         <Checkbox checked={item.bought} onChange={(e) => onTick(item, e.target.checked)}
           slotProps={{ input: { 'aria-label': item.name } }} />
       </ListItemIcon>
-      <ListItemButton onClick={() => onEdit(item)} sx={{ pl: 0.5, pr: amount ? 12 : 2 }}>
+      <ListItemButton onClick={() => onEdit(item)} sx={{ pl: 0.5, pr: (amount ? 10 : 2) + (onSend && !item.bought ? 5 : 0) }}>
         <ListItemText
           primary={item.name}
           secondary={secondary || undefined}

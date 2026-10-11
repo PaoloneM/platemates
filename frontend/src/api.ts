@@ -21,6 +21,8 @@ export type Me =
         is_admin: boolean
         language: string | null
         theme: ThemeChoice
+        // The shopping list app the user chose to send items to; null: none (opt-in).
+        shopping_app: ShoppingApp | null
       }
       teams: { id: number; name: string; role: 'owner' | 'member' }[]
       // Staff only: the system team, whose recipes are the curated part of the community.
@@ -33,6 +35,7 @@ export type Me =
     }
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
+export type ShoppingApp = 'listonic'
 // Recipe page actions as icons: never, on phones only, everywhere.
 export type CompactActions = 'off' | 'mobile' | 'always'
 
@@ -615,3 +618,22 @@ export type ShoppingItem = {
 export type ShoppingList = ShoppingListSummary & { items: ShoppingItem[] }
 export type ShoppingEvent = { team: number; list: number | null }
 
+
+/**
+ * Listonic's public "add to list" link (the service behind its official website button,
+ * buttons.listonic.com): the items and a suggested list name in, a link that opens Listonic
+ * out. No account here: Listonic itself asks which list, or makes a new one with that name.
+ */
+export async function listonicLink(items: string[], name: string): Promise<string> {
+  const response = await fetch('https://button.listonic.com/button/generateLink', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      version: '1.0',
+      sourceUrl: encodeURIComponent(window.location.href),
+      data: { items, name },
+    }),
+  })
+  if (!response.ok) throw new ApiError(response.status, `Listonic link: ${response.status}`)
+  return response.json()
+}

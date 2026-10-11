@@ -20,6 +20,9 @@ INVITATION_VALIDITY = dt.timedelta(days=14)
 
 
 THEMES = [("system", "System"), ("light", "Light"), ("dark", "Dark")]
+# Shopping list apps a list can be sent to, through the app's own public "add to list" link
+# (no account linking here: the app itself knows who the user is). Blank: none.
+SHOPPING_APPS = [("", "None"), ("listonic", "Listonic")]
 
 
 class UserProfile(models.Model):
@@ -33,6 +36,8 @@ class UserProfile(models.Model):
     language = models.CharField(max_length=8, choices=settings.LANGUAGES, blank=True)
     # Light or dark interface, or "system" to follow the device's own setting.
     theme = models.CharField(max_length=6, choices=THEMES, default="system")
+    # The shopping list app the user sends items to, chosen by the user (opt-in).
+    shopping_app = models.CharField(max_length=16, choices=SHOPPING_APPS, blank=True, default="")
     # Holds Keycloak's realm role `admin` (assigned from APP_ADMINS by setup_keycloak), copied
     # from the ID token at every login: application settings are theirs to change.
     is_admin = models.BooleanField(default=False)

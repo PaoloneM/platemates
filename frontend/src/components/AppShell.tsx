@@ -1,3 +1,4 @@
+import ShoppingAppIcon from '@mui/icons-material/AddShoppingCart'
 import GroupsIcon from '@mui/icons-material/GroupsOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
@@ -28,6 +29,7 @@ import { saveLanguage } from '../auth/language'
 import { useTeam } from '../team'
 import { supportedLanguages } from '../i18n'
 import { Flag } from './Flag'
+import { ShoppingAppDialog } from './ShoppingAppDialog'
 import { ThemeModeSwitch } from './ThemeMode'
 import { Logo } from './Logo'
 import { hasMonitoring } from '../monitoring'
@@ -38,6 +40,7 @@ function UserMenu() {
   const { t, i18n } = useTranslation()
   const { me } = useAuth()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const [choosingApp, setChoosingApp] = useState(false)
   const logoutForm = useRef<HTMLFormElement>(null)
   if (!me?.authenticated) return null
   const { first_name, last_name, email } = me.user
@@ -88,6 +91,15 @@ function UserMenu() {
           </ListItemIcon>
           <ListItemText>{t('team.menu')}</ListItemText>
         </MenuItem>
+        <MenuItem onClick={() => { setAnchor(null); setChoosingApp(true) }}>
+          <ListItemIcon>
+            <ShoppingAppIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            secondary={me.user.shopping_app ? t(`shoppingApp.app.${me.user.shopping_app}`) : t('shoppingApp.none')}>
+            {t('shoppingApp.title')}
+          </ListItemText>
+        </MenuItem>
         {(me.user.is_staff || me.user.is_admin) && (
           <MenuItem component={RouterLink} to="/manage" onClick={() => setAnchor(null)}>
             <ListItemIcon>
@@ -112,6 +124,7 @@ function UserMenu() {
           <ListItemText>{t('auth.logout')}</ListItemText>
         </MenuItem>
       </Menu>
+      <ShoppingAppDialog open={choosingApp} onClose={() => setChoosingApp(false)} />
       {/* Logout must be a CSRF-protected POST; Django then ends the Keycloak session too. */}
       <form ref={logoutForm} method="post" action="/oidc/logout/" hidden>
         <input type="hidden" name="csrfmiddlewaretoken" value={csrfToken()} />

@@ -1,4 +1,4 @@
-import type { ShoppingItem } from './api'
+import { listonicLink, type ShoppingItem } from './api'
 import { formatQuantity } from './labels'
 
 /** "12–18 ottobre", or across months/weeks "28 settembre – 11 ottobre": the days covered. */
@@ -21,4 +21,47 @@ export function formatAmount(
   if (item.unit === 'tt') return item.ingredient === null ? '' : unitLabel('tt')
   if (item.quantity === null) return ''
   return `${formatQuantity(Number(item.quantity), locale)} ${unitLabel(item.unit)}`
+}
+
+/** "pomodoro 1200 g (ramati)": an item as one line of text, for another shopping list app. */
+export function itemLine(
+  item: ShoppingItem,
+  unitLabel: (u: string) => string,
+  locale: string | undefined,
+): string {
+  const amount = item.unit === 'tt' ? '' : formatAmount(item, unitLabel, locale)
+  return [item.name, amount, item.note ? `(${item.note})` : ''].filter(Boolean).join(' ')
+}
+
+const MOBILE = /Android|iPhone|iPad|iPod/i
+
+/**
+ * Opens Listonic with these lines, as its own website button does: the app on phones (on
+ * Android through an intent, which falls back to the Play Store), its web widget elsewhere.
+ * The window is opened before the link is ready, while the tap still allows it; `ready` runs
+ * once the link exists and before leaving the page (on phones the app takes over).
+ */
+export async function sendToListonic(
+  lines: string[],
+  listName: string,
+  ready: () => Promise<unknown>,
+): Promise<void> {
+  const mobile = MOBILE.test(navigator.userAgent)
+  const popup = mobile ? null : window.open('', '_blank')
+  try {
+    const link = await listonicLink(lines, listName)
+    await ready()
+    if (!mobile) {
+      const hash = link.substring(link.lastIndexOf('/') + 1)
+      if (popup) popup.location.href = `https://button.listonic.com/widget?hash=${hash}`
+      else window.open(`https://button.listonic.com/widget?hash=${hash}`, '_blank')
+    } else if (/Android/i.test(navigator.userAgent)) {
+      window.location.href = `intent${link.substring(5)}#Intent;scheme=https;package=com.l;S.browser_fallback_url=${encodeURIComponent(link)};end`
+    } else {
+      window.location.href = link
+    }
+  } catch (error) {
+    popup?.close()
+    throw error
+  }
 }

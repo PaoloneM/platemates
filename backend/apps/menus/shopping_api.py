@@ -128,6 +128,10 @@ class MergeSerializer(serializers.Serializer):
         return list(dict.fromkeys(lists))
 
 
+class BuySerializer(serializers.Serializer):
+    items = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+
+
 class ShoppingListViewSet(
     TeamScopedMixin,
     mixins.ListModelMixin,
@@ -182,6 +186,19 @@ class ShoppingListViewSet(
         if team is None:
             raise serializers.ValidationError({"team": "Not one of your teams."})
         return team
+
+    @action(detail=True, methods=["post"])
+    def buy(self, request, pk=None):
+        """`{items: [ids]}`: into the cart at once (e.g. once sent to a shopping list app).
+        Items already bought keep who and when; ids of other lists are ignored."""
+        shopping_list = self.get_object()
+        data = BuySerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        moved = shopping_list.items.filter(
+            pk__in=data.validated_data["items"], bought=False
+        ).update(bought=True, bought_at=timezone.now(), bought_by=request.user)
+        announce(shopping_list.team_id, shopping_list.pk)
+        return Response({"bought": moved})
 
     @action(detail=False, methods=["get"])
     def weeks(self, request):
