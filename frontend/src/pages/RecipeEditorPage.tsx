@@ -224,7 +224,8 @@ function fromDraft(session: AssistantSession, cuisines: Cuisine[]): Form {
         key: nextKey++,
         ingredient: candidate
           ? { id: candidate.id, name: candidate.name, category: candidate.category,
-              default_unit: candidate.default_unit, season_months: candidate.season_months }
+              default_unit: candidate.default_unit, season_months: candidate.season_months,
+              team: candidate.team }
           : null,
         suggestion: line,
         matchedFrom: candidate && !match.exact ? line.name : undefined,
@@ -368,6 +369,8 @@ export function RecipeEditorPage() {
   }
   const setStep = (index: number, value: string) =>
     set('steps', form.steps.map((s, i) => (i === index ? value : s)))
+  // A system recipe uses system ingredients only: the team's own are to replace or create.
+  const teamOnly = (line: Line) => form.system && line.ingredient != null && line.ingredient.team != null
 
   async function resolveCuisine(): Promise<number | null> {
     const c = form!.cuisine
@@ -412,6 +415,11 @@ export function RecipeEditorPage() {
     if (unresolved.length) {
       problems.save = t('editor.unresolved')
       where.push([`line-${unresolved[0].key}`, t('editor.unresolvedCount', { count: unresolved.length })])
+    }
+    const teamOwned = form!.lines.filter(teamOnly)
+    if (teamOwned.length) {
+      problems.save = t('editor.teamIngredientsInSystem', { count: teamOwned.length })
+      where.push([`line-${teamOwned[0].key}`, t('editor.teamIngredientsInSystem', { count: teamOwned.length })])
     }
     if (!form!.system && form!.visibility === null) {
       problems.visibility = t('community.chooseSharing')
@@ -471,10 +479,11 @@ export function RecipeEditorPage() {
       }
       navigate(`/recipes/${saved.id}`, { replace: editing || !!sessionId })
     } catch (e) {
-      const body = e instanceof ApiError ? (e.body as Record<string, unknown>) : null
-      const first = body && Object.entries(body)[0]
-      const message = first ? `${first[0]}: ${JSON.stringify(first[1])}` : t('common.error')
-      setErrors({ save: message })
+      // The backend's messages are for developers (English): say it in the user's words, by field.
+      const body = e instanceof ApiError ? (e.body as Record<string, unknown> | null) : null
+      const field = body && typeof body === 'object' ? Object.keys(body)[0] : null
+      if (body) console.warn('Recipe not saved', body)
+      setErrors({ save: t(`editor.serverError.${field}`, { defaultValue: t('editor.serverError.other') }) })
       reveal('editor-errors', t('editor.saveFailed'))
       setSaving(false)
     }
@@ -687,8 +696,18 @@ export function RecipeEditorPage() {
                     })
                   }
                   onCreate={(name) => setCreating({ name, lineKey: line.key, suggestion: line.suggestion })}
-                  error={!!line.suggestion && !line.ingredient}
+                  error={(!!line.suggestion && !line.ingredient) || teamOnly(line)}
                 />
+                {teamOnly(line) && (
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
+                    <Typography variant="caption" color="error">
+                      {t('community.teamIngredient', { name: line.ingredient!.name })}
+                    </Typography>
+                    <Button size="small" onClick={() => setCreating({ name: line.ingredient!.name, lineKey: line.key })}>
+                      {t('editor.create')}
+                    </Button>
+                  </Stack>
+                )}
                 {line.suggestion && !line.ingredient && (
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
                     <Typography variant="caption" color="warning.main">

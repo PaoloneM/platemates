@@ -244,7 +244,19 @@
     "titleMissing": "The recipe has no title.",
     "unresolvedCount_one": "One ingredient is not in the catalog: create it or pick an existing one.",
     "unresolvedCount_other": "{{count}} ingredients are not in the catalog: create them or pick existing ones.",
-    "saveFailed": "Could not save: see the message at the top."
+    "saveFailed": "Could not save: see the message at the top.",
+    "teamIngredientsInSystem_one": "A system recipe uses system ingredients only: replace or create the team's ingredient highlighted.",
+    "teamIngredientsInSystem_other": "A system recipe uses system ingredients only: replace or create the {{count}} team ingredients highlighted.",
+    "serverError": {
+      "ingredients": "Some ingredients cannot be used in this recipe: a team's recipe uses system or team ingredients, a system recipe system ones only.",
+      "visibility": "System recipes are always shared.",
+      "team": "You cannot save the recipe for this team.",
+      "title": "The title is missing.",
+      "servings": "The number of servings is not valid.",
+      "promote_from": "This recipe cannot be made a system recipe.",
+      "system_draft": "This draft can no longer be published.",
+      "other": "Saving failed. Try again; if it happens again, tell the staff."
+    }
   },
   "ingredient": {
     "newTitle": "New ingredient",

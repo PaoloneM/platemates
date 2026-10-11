@@ -244,7 +244,19 @@
     "titleMissing": "Manca il titolo della ricetta.",
     "unresolvedCount_one": "Un ingrediente non è nel catalogo: crealo o scegline uno esistente.",
     "unresolvedCount_other": "{{count}} ingredienti non sono nel catalogo: creali o scegline di esistenti.",
-    "saveFailed": "Salvataggio non riuscito: vedi il messaggio in alto."
+    "saveFailed": "Salvataggio non riuscito: vedi il messaggio in alto.",
+    "teamIngredientsInSystem_one": "Una ricetta di sistema usa solo ingredienti di sistema: sostituisci o crea l'ingrediente del team evidenziato.",
+    "teamIngredientsInSystem_other": "Una ricetta di sistema usa solo ingredienti di sistema: sostituisci o crea i {{count}} ingredienti del team evidenziati.",
+    "serverError": {
+      "ingredients": "Alcuni ingredienti non si possono usare in questa ricetta: una ricetta del team usa ingredienti di sistema o del team, una ricetta di sistema solo quelli di sistema.",
+      "visibility": "Le ricette di sistema sono sempre condivise.",
+      "team": "Non puoi salvare la ricetta per questo team.",
+      "title": "Manca il titolo.",
+      "servings": "Il numero di porzioni non è valido.",
+      "promote_from": "Questa ricetta non si può rendere di sistema.",
+      "system_draft": "Questa bozza non si può più pubblicare.",
+      "other": "Il salvataggio non è riuscito. Riprova; se succede ancora, avvisa lo staff."
+    }
   },
   "ingredient": {
     "newTitle": "Nuovo ingrediente",
