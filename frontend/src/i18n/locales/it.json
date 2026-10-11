@@ -679,7 +679,13 @@
     "editMineStaff": "Modifica (la tua versione)",
     "notChangedYet": "Non l'hai ancora modificata: è uguale all'originale. Modificandola crei la tua versione, e l'originale non cambia.",
     "removeChanged": "Hai modificato questa ricetta: rimuovendola dal ricettario la tua versione e le modifiche andranno perse. L'originale resta nella community.",
-    "removeReference": "La ricetta resta nella community: potrai aggiungerla di nuovo quando vuoi."
+    "removeReference": "La ricetta resta nella community: potrai aggiungerla di nuovo quando vuoi.",
+    "promote": "Rendi di sistema",
+    "promoting": "Stai rendendo di sistema «{{title}}»",
+    "promoteMove": "Sposta: la ricetta stessa diventa di sistema (resta nel ricettario del team, che non la modifica più direttamente)",
+    "promoteCopy": "Copia: nasce una nuova ricetta di sistema, l'originale resta al suo team com'è",
+    "promoteIngredients": "Le ricette di sistema usano solo ingredienti di sistema: sostituisci quelli del team evidenziati o creali.",
+    "teamIngredient": "«{{name}}» è un ingrediente del team: scegline uno di sistema o crealo"
   },
   "drafts": {
     "hint": "Ricette di sistema (PlateMates) scritte dal modello partendo da pagine di ricette vere trovate in rete. Ogni bozza va rivista e pubblicata da te: niente diventa una ricetta da solo.",

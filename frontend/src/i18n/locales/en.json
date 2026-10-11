@@ -679,7 +679,13 @@
     "editMineStaff": "Edit (your version)",
     "notChangedYet": "You have not changed it yet: it is the same as the original. Changing it creates your version, and the original does not change.",
     "removeChanged": "You changed this recipe: removing it from the book loses your version and its changes. The original stays in the community.",
-    "removeReference": "The recipe stays in the community: you can add it again whenever you like."
+    "removeReference": "The recipe stays in the community: you can add it again whenever you like.",
+    "promote": "Make it a system recipe",
+    "promoting": "Making «{{title}}» a system recipe",
+    "promoteMove": "Move: the recipe itself becomes a system recipe (it stays in its team's book, which no longer edits it directly)",
+    "promoteCopy": "Copy: a new system recipe is made, the original stays with its team as it is",
+    "promoteIngredients": "System recipes use system ingredients only: replace the team's own ones highlighted, or create them.",
+    "teamIngredient": "«{{name}}» is the team's own ingredient: pick a system one or create it"
   },
   "drafts": {
     "hint": "System recipes (PlateMates) written by the model from real recipe pages found on the web. Every draft is reviewed and published by you: nothing becomes a recipe by itself.",

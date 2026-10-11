@@ -65,6 +65,8 @@ type Line = {
   // From an assistant draft: what it proposed for this line, kept until the user resolves it.
   suggestion?: DraftLine
   // Set when the draft name was matched to a catalog entry by similarity, not exactly.
+  // A team's own ingredient in a recipe becoming a system one: to replace or create.
+  teamOwned?: boolean
   matchedFrom?: string
   quantity: string
   unit: Unit
@@ -171,6 +173,38 @@ function fromRecipe(r: Recipe, tools: KitchenTool[]): Form {
   }
 }
 
+/**
+ * A team's recipe as the system recipe it is about to become: system ingredients only, so
+ * each of the team's own ingredients is left to replace with a system one or to create, like
+ * an unknown ingredient in an assistant draft.
+ */
+function toSystem(r: Recipe, tools: KitchenTool[]): Form {
+  const form = fromRecipe(r, tools)
+  return {
+    ...form,
+    system: true,
+    visibility: 'shared',
+    lines: form.lines.map((line, index) => {
+      const source = r.ingredients[index]
+      if (source.ingredient_team == null) return line
+      return {
+        ...line,
+        ingredient: null,
+        teamOwned: true,
+        suggestion: {
+          name: source.ingredient_name ?? '',
+          quantity: source.quantity,
+          unit: source.unit,
+          note: source.note,
+          optional: source.optional,
+          category: source.ingredient_category ?? 'other',
+          season_months: source.ingredient_season_months ?? [],
+        },
+      }
+    }),
+  }
+}
+
 /** Turn an assistant draft into the editor's form: everything stays to be reviewed. */
 function fromDraft(session: AssistantSession, cuisines: Cuisine[]): Form {
   const d = session.draft!
@@ -234,6 +268,9 @@ export function RecipeEditorPage() {
   const sessionId = params.get('session')
   // Importing a community recipe to change it: the copy is ours, linked to the original.
   const importing = params.get('from')
+  // Staff turning a team's recipe into a system recipe: moved (the default) or copied.
+  const promoting = params.get('promote')
+  const [promoteMode, setPromoteMode] = useState<'move' | 'copy'>('move')
   // Staff reviewing a system recipe draft: publishing it is saving this form.
   const draftId = params.get('draft')
   const [systemDraft, setSystemDraft] = useState<SystemDraft | null>(null)
@@ -246,7 +283,7 @@ export function RecipeEditorPage() {
   // Editing or reviewing a draft: show a spinner until the data is loaded, rather than an empty
   // form the user might start typing into.
   const [form, setForm] = useState<Form | null>(
-    editing || sessionId || importing || draftId ? null : { ...EMPTY, lines: [newLine()] },
+    editing || sessionId || importing || draftId || promoting ? null : { ...EMPTY, lines: [newLine()] },
   )
   const [cuisines, setCuisines] = useState<Cuisine[]>([])
   const [tools, setTools] = useState<KitchenTool[]>([])
@@ -302,10 +339,17 @@ export function RecipeEditorPage() {
               setForm({ ...fromRecipe(r, all), visibility: null, system: false })
             })
             .catch(() => setErrors({ load: t('recipe.notFound') }))
+        } else if (promoting) {
+          api<Recipe>(`/recipes/${promoting}/`)
+            .then((r) => {
+              setSource(r)
+              setForm(toSystem(r, all))
+            })
+            .catch(() => setErrors({ load: t('recipe.notFound') }))
         }
       })
       .catch(() => setErrors({ load: t('common.error') }))
-  }, [editing, id, importing, t])
+  }, [editing, id, importing, promoting, t])
 
   const derived = useMemo(() => (form ? deriveSeason(form.lines) : []), [form])
 
@@ -406,6 +450,10 @@ export function RecipeEditorPage() {
         source_url: f.sourceUrl.trim(),
       }
       if (importing && !editing) payload.derived_from = Number(importing)
+      if (promoting && !editing) {
+        payload.promote_from = Number(promoting)
+        payload.promote_mode = promoteMode
+      }
       if (systemDraft && !editing) payload.system_draft = systemDraft.id
       if (!f.seasonAuto) payload.season_months = { months: f.seasonMonths }
       else if (editing) payload.season_months = { auto: true }
@@ -441,12 +489,24 @@ export function RecipeEditorPage() {
           <CloseIcon />
         </IconButton>
         <Typography variant="h1" sx={{ flex: 1 }}>
-          {editing ? t('editor.editTitle') : t('editor.newTitle')}
+          {editing ? t('editor.editTitle') : promoting ? t('community.promote') : t('editor.newTitle')}
         </Typography>
         <Button variant="contained" onClick={() => void save()} disabled={saving}>
           {t('common.save')}
         </Button>
       </Stack>
+      {promoting && source && !editing && (
+        <Alert severity="info">
+          <Typography sx={{ fontWeight: 500 }}>{t('community.promoting', { title: source.title })}</Typography>
+          <RadioGroup value={promoteMode} onChange={(e) => setPromoteMode(e.target.value as 'move' | 'copy')}>
+            <FormControlLabel value="move" control={<Radio size="small" />} label={t('community.promoteMove')} />
+            <FormControlLabel value="copy" control={<Radio size="small" />} label={t('community.promoteCopy')} />
+          </RadioGroup>
+          {form.lines.some((l) => l.suggestion && !l.ingredient) && (
+            <Typography variant="body2">{t('community.promoteIngredients')}</Typography>
+          )}
+        </Alert>
+      )}
       {systemDraft && !editing && (
         <Alert severity={systemDraft.reliability === 'high' ? 'success' : systemDraft.reliability === 'low' ? 'error' : 'warning'}>
           {t('drafts.reviewing', { dish: systemDraft.dish })}{' '}
@@ -459,7 +519,7 @@ export function RecipeEditorPage() {
           <Box sx={{ mt: 0.5 }}><WebRating rating={systemDraft.web_rating} count={systemDraft.web_rating_count} /></Box>
         </Alert>
       )}
-      {source && !editing && (
+      {source && !editing && !promoting && (
         <Alert severity="info" icon={<ImportIcon />}>
           {t('community.importing', { title: source.title })}
         </Alert>
@@ -632,7 +692,9 @@ export function RecipeEditorPage() {
                 {line.suggestion && !line.ingredient && (
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
                     <Typography variant="caption" color="warning.main">
-                      {t('editor.newIngredient', { name: line.suggestion.name })}
+                      {line.teamOwned
+                        ? t('community.teamIngredient', { name: line.suggestion.name })
+                        : t('editor.newIngredient', { name: line.suggestion.name })}
                     </Typography>
                     <Button size="small" onClick={() =>
                       setCreating({ name: line.suggestion!.name, lineKey: line.key, suggestion: line.suggestion })}>
@@ -765,7 +827,7 @@ export function RecipeEditorPage() {
 
       <Section title={t('editor.sharing')}>
         <Stack spacing={2} id="sharing">
-          {systemTeam !== null && (!editing || form.system) && (
+          {systemTeam !== null && !promoting && (!editing || form.system) && (
             <FormControlLabel disabled={editing}
               control={<Switch checked={form.system} onChange={(e) => set('system', e.target.checked)} />}
               label={t('community.systemRecipe')} />

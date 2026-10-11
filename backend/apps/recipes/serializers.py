@@ -53,6 +53,10 @@ class CuisineSerializer(serializers.ModelSerializer):
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     ingredient_name = serializers.CharField(source="ingredient.name", read_only=True)
+    # The team that added the ingredient for itself; null for a system ingredient.
+    ingredient_team = serializers.IntegerField(
+        source="ingredient.owner_team_id", read_only=True, default=None
+    )
     ingredient_category = serializers.CharField(source="ingredient.category", read_only=True)
     # Lets the editor preview the derived recipe season while ingredients change.
     ingredient_season_months = serializers.ListField(
@@ -65,6 +69,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
             "id",
             "ingredient",
             "ingredient_name",
+            "ingredient_team",
             "ingredient_category",
             "ingredient_season_months",
             "quantity",
@@ -103,6 +108,15 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
     system_draft = serializers.PrimaryKeyRelatedField(
         queryset=SystemDraft.objects.all(), write_only=True, required=False
     )
+    # Staff, on create: the team recipe this system recipe is promoted from, reviewed in the
+    # editor. "move" (the default) turns that recipe itself into the system one, keeping its
+    # identity (books, menus, variants); "copy" leaves it to its team and makes a new one.
+    promote_from = serializers.PrimaryKeyRelatedField(
+        queryset=Recipe.objects.all(), write_only=True, required=False
+    )
+    promote_mode = serializers.ChoiceField(
+        choices=["move", "copy"], write_only=True, required=False, default="move"
+    )
     can_edit = serializers.SerializerMethodField()
     # How the requesting user's teams relate to the recipe.
     book_entries = serializers.SerializerMethodField()
@@ -133,6 +147,8 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             "author",
             "my_version",
             "system_draft",
+            "promote_from",
+            "promote_mode",
             "web_rating",
             "web_rating_count",
             "can_edit",
@@ -199,6 +215,13 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             raise serializers.ValidationError("Recipe not found.")
         return source.derived_from or source
 
+    def validate_promote_from(self, source):
+        if not Recipe.objects.visible_to(self._user()).filter(pk=source.pk).exists():
+            raise serializers.ValidationError("Recipe not found.")
+        if source.owner_team is not None and source.owner_team.is_system:
+            raise serializers.ValidationError("Already a system recipe.")
+        return source
+
     def validate_system_draft(self, draft):
         if draft.status != SystemDraft.Status.READY:
             raise serializers.ValidationError("This draft is not ready to publish.")
@@ -211,6 +234,17 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
             raise serializers.ValidationError(
                 {"system_draft": "A draft is published as a new system recipe."}
             )
+        if attrs.get("promote_from") is not None:
+            if self.instance is not None or not getattr(attrs.get("team"), "is_system", False):
+                raise serializers.ValidationError(
+                    {"promote_from": "A recipe is promoted by creating a system recipe."}
+                )
+            if attrs.get("system_draft") is not None:
+                raise serializers.ValidationError({"promote_from": "Not with a draft."})
+            # A system recipe is nobody's variant: it stands on its own.
+            attrs.pop("derived_from", None)
+        else:
+            attrs.pop("promote_mode", None)
         if self.instance is None and "team" not in attrs:
             raise serializers.ValidationError({"team": "Required when creating a recipe."})
         if self.instance is not None:
@@ -245,6 +279,9 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
 
     @transaction.atomic
     def create(self, validated_data):
+        source = validated_data.pop("promote_from", None)
+        if source is not None and validated_data.pop("promote_mode") == "move":
+            return self._move_to_system(source, validated_data)
         team = validated_data.pop("team")
         lines = validated_data.pop("ingredients", [])
         draft = validated_data.pop("system_draft", None)
@@ -268,6 +305,22 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
         RecipeBookEntry.objects.create(
             team=team, recipe=recipe, status=RecipeBookEntry.Status.APPROVED
         )
+        return recipe
+
+    def _move_to_system(self, recipe: Recipe, validated_data) -> Recipe:
+        """The team's recipe becomes the system one, as reviewed: same recipe, so books, menus
+        and variants keep pointing to it, and its team keeps it in the book (changing it
+        from there makes the team's own version, as for any community recipe)."""
+        system = validated_data.pop("team")
+        former_owner = recipe.owner_team
+        validated_data["owner_team"] = system
+        self.instance = recipe
+        recipe = self.update(recipe, validated_data)
+        for team in (system, former_owner):
+            if team is not None:
+                RecipeBookEntry.objects.get_or_create(
+                    team=team, recipe=recipe, defaults={"status": RecipeBookEntry.Status.APPROVED}
+                )
         return recipe
 
     @transaction.atomic

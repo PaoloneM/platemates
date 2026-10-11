@@ -553,6 +553,20 @@ System drafts with sources (2026-10-09), `apps/curation`:
   `system_draft` creates the system recipe, copies the web rating (`Recipe.web_rating`, read
   only, shown to everyone) and marks the draft published. Drafts can be discarded and retried.
 
+Promoting a team's recipe to a system recipe (decided with Paolo 2026-10-11):
+
+- Staff (admin plane) can make any recipe they can see, their teams' or one shared by another
+  team, a system recipe: "Make it a system recipe" on the recipe page opens the editor filled
+  from it (`/recipes/new?promote=<id>`), to review before saving, like a system draft.
+- Staff choose **move** (the default) or **copy**. Moving turns the recipe itself into the
+  system one (`promote_from`, `promote_mode` on create): same id, so books, menus, ratings and
+  variants keep pointing to it; its team keeps it in the book as a system recipe and, like any
+  community recipe, changing it from there makes the team's own version. Copying makes a new
+  system recipe and leaves the original to its team. Neither is a variant (`derived_from`) of
+  the other: a system recipe stands on its own.
+- System recipes use system ingredients only: each of the team's own ingredients comes to the
+  editor unresolved, to be replaced with a system one or created as a system ingredient.
+
 ## Application settings (decided with Paolo 2026-10-08)
 
 Settings that tune how the app behaves live in the database (`apps/siteconfig`), so an

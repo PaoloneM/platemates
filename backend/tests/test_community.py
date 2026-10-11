@@ -309,3 +309,71 @@ def test_browse_needs_a_team_of_the_user_and_a_scope(api, team, neighbours):
 def test_browse_filters_by_title(api, team, neighbours, system_recipe):
     found = browse(api, team, mine=0, community=1, search="lasa")
     assert set(found) == {"Lasagne alla bolognese"}
+
+
+# -- promoting a team's recipe to a system recipe ----------------------------------------------
+
+
+@pytest.fixture
+def staff(user):
+    user.is_staff = True
+    user.save()
+    return user
+
+
+def promote(client, source, mode=None, **changes):
+    body = new_recipe(Team.system(), visibility="shared", promote_from=source.pk, **changes)
+    if mode:
+        body["promote_mode"] = mode
+    return client.post("/api/recipes/", body, format="json")
+
+
+def test_promoting_moves_the_recipe_itself_by_default(api, staff, team, neighbours):
+    other, other_client, shared, _private = neighbours
+    response = promote(api, shared, title="Ribollita toscana")
+    assert response.status_code == 201, response.json()
+    assert response.json()["id"] == shared.pk
+    shared.refresh_from_db()
+    assert (shared.title, shared.owner_team) == ("Ribollita toscana", Team.system())
+    assert shared.derived_from is None
+    assert RecipeBookEntry.objects.filter(recipe=shared, team=other).exists()
+    assert RecipeBookEntry.objects.filter(recipe=shared, team=Team.system()).exists()
+    # The former owner keeps it in the book, as a system recipe it no longer edits.
+    assert browse(other_client, other, mine=1)["Ribollita toscana"]["author"]["kind"] == "system"
+    patch = other_client.patch(f"/api/recipes/{shared.pk}/", {"title": "x"}, format="json")
+    assert patch.status_code == 403
+
+
+def test_promoting_as_a_copy_leaves_the_original_to_its_team(api, staff, team, neighbours):
+    other, _client, shared, _private = neighbours
+    response = promote(api, shared, mode="copy", title="Ribollita")
+    assert response.status_code == 201, response.json()
+    copy = Recipe.objects.get(pk=response.json()["id"])
+    assert copy.pk != shared.pk and copy.owner_team == Team.system()
+    assert copy.derived_from is None
+    shared.refresh_from_db()
+    assert shared.owner_team == other
+
+
+def test_a_promoted_recipe_uses_system_ingredients_only(api, staff, team, neighbours):
+    from apps.catalog.models import Ingredient
+
+    other, _client, shared, _private = neighbours
+    theirs = Ingredient.objects.create(name="cavolo nero di casa", owner_team=other)
+    system = Ingredient.objects.create(name="cavolo nero")
+    shared.ingredients.create(ingredient=theirs, quantity=200)
+    line = {"ingredient": theirs.pk, "quantity": "200", "unit": "g"}
+    assert promote(api, shared, ingredients=[line]).status_code == 400
+    line["ingredient"] = system.pk
+    assert promote(api, shared, ingredients=[line]).status_code == 201
+
+
+def test_only_staff_promote_what_they_can_see(api, user, team, neighbours, system_recipe):
+    _other, _client, shared, private = neighbours
+    assert promote(api, shared).status_code == 400  # not staff
+    user.is_staff = True
+    user.save()
+    assert promote(api, private).status_code == 400  # another team's private recipe
+    assert promote(api, system_recipe).status_code == 400  # already a system recipe
+    to_a_team = new_recipe(team, visibility="shared", promote_from=shared.pk)
+    assert api.post("/api/recipes/", to_a_team, format="json").status_code == 400

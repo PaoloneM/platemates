@@ -80,6 +80,8 @@ export type RecipeLine = {
   id?: number
   ingredient: number
   ingredient_name?: string
+  // The team that added the ingredient for itself; null for a system ingredient.
+  ingredient_team?: number | null
   ingredient_category?: string
   ingredient_season_months?: number[]
   quantity: string | null

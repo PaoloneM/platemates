@@ -5,6 +5,7 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import EditIcon from '@mui/icons-material/EditOutlined'
 import LockIcon from '@mui/icons-material/LockOutlined'
 import PublicIcon from '@mui/icons-material/PublicOutlined'
+import PromoteIcon from '@mui/icons-material/UpgradeOutlined'
 import {
   Alert,
   Box,
@@ -208,6 +209,15 @@ export function RecipeDetailPage() {
     actions.push({ key: 'edit', to: `/recipes/${recipe.id}/edit`, icon: <EditIcon />, primary: true, label: t('common.edit') })
   } else if (canEditOriginal) {
     actions.push({ key: 'edit', to: `/recipes/${theOriginal.id}/edit`, icon: <EditIcon />, label: t('community.editOriginal') })
+  }
+  // Staff: the recipe on screen (a team's, or a team's version) becomes a system recipe,
+  // reviewed in the editor first.
+  const promotable = tabbed && tab === 'original' ? theOriginal : recipe
+  if (me?.authenticated && me.user.is_staff && promotable.author.kind !== 'system') {
+    actions.push({
+      key: 'promote', to: `/recipes/new?promote=${promotable.id}`, icon: <PromoteIcon />,
+      label: t('community.promote'),
+    })
   }
   if (entry) {
     actions.push({
