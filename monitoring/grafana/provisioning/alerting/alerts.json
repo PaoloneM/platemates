@@ -366,7 +366,7 @@
      "execErrState": "Error",
      "for": "5m",
      "annotations": {
-      "summary": "{{ $$labels.job }} ({{ $$labels.instance }}) has not answered for 5 minutes."
+      "summary": "{{ $labels.job }} ({{ $labels.instance }}) has not answered for 5 minutes."
      },
      "labels": {
       "severity": "critical"

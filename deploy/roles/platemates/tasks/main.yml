@@ -18,6 +18,7 @@
     repo: "{{ platemates_repo }}"
     dest: "{{ platemates_dir }}"
     version: "{{ platemates_git_ref }}"
+  register: checkout
 
 - name: Keep secrets readable by root only
   ansible.builtin.file:
@@ -64,6 +65,28 @@
     remove_orphans: true
     state: present
   register: compose
+
+# Services that read mounted configuration files only when they start: restarted when the
+# checkout changed those files (compose does not notice a mounted file's content changing).
+- name: Find what the checkout changed
+  ansible.builtin.command:
+    cmd: git diff --name-only {{ checkout.before }} {{ checkout.after }}
+    chdir: "{{ platemates_dir }}"
+  register: changed_files
+  changed_when: false
+  when: checkout.changed and checkout.before is truthy
+
+- name: Restart services whose configuration files changed
+  ansible.builtin.command:
+    cmd: docker compose restart {{ item.service }}
+    chdir: "{{ platemates_dir }}"
+  loop:
+    - { path: monitoring/grafana/, service: grafana }
+    - { path: monitoring/scrape.yml, service: victoriametrics }
+    - { path: traefik-admin/, service: traefik-admin }
+  loop_control:
+    label: "{{ item.service }}"
+  when: changed_files.stdout is defined and item.path in changed_files.stdout
 
 - name: Wait for the backend behind Traefik
   ansible.builtin.uri:

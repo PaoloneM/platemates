@@ -74,8 +74,8 @@ RULES = [
          "Less than 10% of memory available for 10 minutes.",
          "100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes", "lt", 10, for_="10m"),
     rule("pm-target-down", "A monitored service is down",
-         # $$: Grafana expands $NAME in provisioning files; $$ leaves a literal $ for templating.
-         "{{ $$labels.job }} ({{ $$labels.instance }}) has not answered for 5 minutes.",
+         # Annotations are not env-expanded by Grafana: $labels stays as it is, for templating.
+         "{{ $labels.job }} ({{ $labels.instance }}) has not answered for 5 minutes.",
          "up", "lt", 1, severity="critical"),
     rule("pm-public-5xx", "Errors on the public site",
          "The public site has been answering with server errors (5xx) for 5 minutes.",
