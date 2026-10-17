@@ -599,7 +599,8 @@
       "llm": "Language model",
       "menu": "Menu generation",
       "ui": "Interface",
-      "search": "Recipe search"
+      "search": "Recipe search",
+      "audit": "Team activity"
     },
     "item": {
       "llm_context_tokens": {
@@ -642,6 +643,14 @@
           "vertical": "Days one under the other",
           "horizontal": "Days side by side"
         }
+      },
+      "audit_retention_days": {
+        "label": "Activity retention (days)",
+        "hint": "Team activity events older than this are deleted at the next change and are never shown again. The server's backups keep them until they expire."
+      },
+      "audit_max_events": {
+        "label": "Maximum number of events",
+        "hint": "For the whole installation, every team together: beyond it the oldest are deleted."
       }
     },
     "on": "on",
@@ -984,5 +993,82 @@
     "dropped": "Dropped",
     "none": "No candidate recipes.",
     "legend": "Score = similarity + bonus when the recipe has every keyword in its title or main ingredients. Recipes the request rules out are not listed. Users get at most the first 6 offered."
+  },
+  "audit": {
+    "title": "Activity",
+    "hint": "Changes made by the team's people, newest first. Only owners see them; older events are deleted by themselves.",
+    "who": "Who",
+    "everyone": "Everyone",
+    "none": "No activity recorded.",
+    "more": "Show more",
+    "andMore_one": "and one more change",
+    "andMore_other": "and {{count}} more changes",
+    "weekOf": "week of {{date}}",
+    "yes": "yes",
+    "no": "no",
+    "op": {
+      "create": "created {{what}} «{{target}}»",
+      "update": "changed {{what}} «{{target}}»",
+      "delete": "deleted {{what}} «{{target}}»"
+    },
+    "type": {
+      "recipe": "the recipe",
+      "day": "the day",
+      "week": "the",
+      "team": "the team's profile",
+      "membership": "the access of",
+      "member": "the person",
+      "preference": "the preference",
+      "book_entry": "in the recipe book",
+      "team_rule": "the rule",
+      "generation": "a menu generation for the",
+      "shopping_list": "the shopping list",
+      "shopping_item": "the item",
+      "ingredient": "the ingredient",
+      "invitation": "the invitation"
+    },
+    "action": {
+      "weeklymenu.review": "reviewed the menu proposal ({{target}})",
+      "weeklymenu.generate": "asked to generate the menu for the {{target}}",
+      "shopping-list.generate": "created the shopping list «{{target}}»",
+      "shopping-list.merge": "merged lists into «{{target}}»",
+      "CalendarDayView.put": "changed the menu of {{target}}",
+      "CalendarDayView.delete": "set {{target}} back to the typical week",
+      "invitation.accept": "joined the team"
+    },
+    "field": {
+      "people": "People at {{meal}}",
+      "dishes": "Dishes at {{meal}}",
+      "note": "Note",
+      "title": "Title",
+      "ingredients": "Ingredients",
+      "name": "Name",
+      "servings": "Servings",
+      "description": "Description",
+      "steps": "Method",
+      "visibility": "Sharing",
+      "course": "Course",
+      "cuisine": "Cuisine",
+      "prep_minutes": "Preparation (min)",
+      "cook_minutes": "Cooking (min)",
+      "role": "Role",
+      "text": "Text",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "category": "Aisle",
+      "rating": "Rating",
+      "status": "Status",
+      "max_weekday_minutes": "Weekday time limit",
+      "typical_week": "Typical week",
+      "sign_shared_recipes": "Signing shared recipes",
+      "menu_layout": "Menu layout",
+      "season_months": "Seasonality",
+      "climate_months": "Suits the weather",
+      "source_url": "Source",
+      "aliases": "Other names",
+      "default_unit": "Default unit",
+      "kind": "Kind",
+      "birth_year": "Birth year"
+    }
   }
 }

@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from apps.accounts.views import InvitationViewSet, login_options, me
 from apps.assistant.probe import probe_view
 from apps.assistant.views import AssistantSessionViewSet
+from apps.audit.views import AuditEventViewSet
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
 from apps.core.views import health
 from apps.curation.views import SystemDraftViewSet
@@ -49,6 +50,7 @@ router.register("slots", MealSlotViewSet)
 router.register("invitations", InvitationViewSet)
 router.register("shopping-lists", ShoppingListViewSet, basename="shopping-list")
 router.register("shopping-items", ShoppingItemViewSet, basename="shopping-item")
+router.register("audit-events", AuditEventViewSet, basename="audit-event")
 router.register("usage/prices", ModelPriceViewSet)
 router.register("assistant/sessions", AssistantSessionViewSet, basename="assistant-session")
 

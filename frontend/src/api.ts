@@ -366,6 +366,7 @@ export type Person = { id: number; team: number; name: string; birth_year: numbe
 export type TeamMembership = {
   id: number
   team: number
+  user: number
   name: string
   email: string
   role: Role
@@ -669,4 +670,25 @@ export type SearchProbe = {
     score: number
     kept: boolean
   }[]
+}
+
+// The team's activity log (backend apps/audit), for its owners.
+export type AuditChange = {
+  type: string
+  id: string
+  label: string
+  op: 'create' | 'update' | 'delete'
+  // Changed fields: [before, after].
+  fields?: Record<string, [unknown, unknown]>
+}
+export type AuditEvent = {
+  id: number
+  created_at: string
+  user: number | null
+  user_name: string
+  // "<resource>.<action>" of the request, e.g. "shopping-list.merge".
+  action: string
+  target_type: string
+  target_label: string
+  changes: AuditChange[]
 }

@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.audit.recorder import collecting, note
 from apps.catalog.models import Ingredient
 from apps.core.planes import staff_powers
 from apps.core.provenance import Source
@@ -43,6 +44,15 @@ def origin_of(recipe: Recipe, teams: set[int]) -> dict | None:
     if original.visibility != Visibility.SHARED and original.owner_team_id not in teams:
         return None
     return {"id": original.pk, "title": original.title, "author": author_of(original, teams)}
+
+
+def _line_texts(recipe: Recipe) -> list[str]:
+    """A recipe's ingredients as the activity log shows them: "160 g spaghetti"."""
+    texts = []
+    for line in recipe.ingredients.select_related("ingredient").order_by("position"):
+        amount = "" if line.quantity is None else f"{line.quantity.normalize():f} {line.unit} "
+        texts.append(f"{amount}{line.ingredient.name}")
+    return texts
 
 
 class CuisineSerializer(serializers.ModelSerializer):
@@ -344,11 +354,25 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
 
     @staticmethod
     def _replace_lines(recipe: Recipe, lines: list[dict]) -> None:
+        before = _line_texts(recipe)
         recipe.ingredients.all().delete()
         RecipeIngredient.objects.bulk_create(
             RecipeIngredient(recipe=recipe, **{**line, "position": index})
             for index, line in enumerate(lines)
         )
+        # The lines are written in bulk: the activity log hears of them here.
+        team = recipe.owner_team
+        if collecting() and team is not None and not team.is_system:
+            after = _line_texts(recipe)
+            note(
+                team.pk,
+                "recipe",
+                recipe.pk,
+                recipe.title,
+                "update",
+                before={"ingredients": before},
+                after={"ingredients": after},
+            )
 
 
 class RecipeCardSerializer(serializers.ModelSerializer):

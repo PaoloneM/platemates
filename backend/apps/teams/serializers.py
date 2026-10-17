@@ -129,8 +129,8 @@ class MembershipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Membership
-        fields = ["id", "team", "name", "email", "role", "is_me"]
-        read_only_fields = ["team"]
+        fields = ["id", "team", "user", "name", "email", "role", "is_me"]
+        read_only_fields = ["team", "user"]
 
     def get_name(self, membership) -> str:
         user = membership.user

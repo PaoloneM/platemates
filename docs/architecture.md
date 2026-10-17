@@ -578,6 +578,34 @@ Promoting a team's recipe to a system recipe (decided with Paolo 2026-10-11):
 - System recipes use system ingredients only: each of the team's own ingredients comes to the
   editor unresolved, to be replaced with a system one or created as a system ingredient.
 
+## Team activity log (decided with Paolo 2026-10-17)
+
+What a team's people change is recorded for the team's owners (Team page > Activity, filtered
+by person), in `apps/audit`.
+
+- **One event per action, per team.** `AuditMiddleware` collects during every writing request
+  (POST, PUT, PATCH, DELETE); on success the changes become one `AuditEvent` per team they
+  touched: who, when, the request's action (`<resource>.<action>`, worded by the interface)
+  and each object created, deleted or changed, with every changed field before and after
+  (foreign keys by name). Merging two lists is one event, not one per item: an object whose
+  parent was created or deleted in the same request has no line of its own.
+- **How changes are seen.** The models in `audit/tracked.py` report through Django's signals
+  (only while a request collects: no cost elsewhere). Code that writes in bulk, which signals
+  do not see, reports with `recorder.note`: a day's people, note and dishes (`calendar.set_day`,
+  `menus/review.py`, the meal slot serializer) as a before/after summary of the day, and a
+  recipe's ingredients as lines ("160 g spaghetti").
+- **Left out:** shopping item ticks (frequent, and the item says who bought it), the
+  assistant's sessions, writes outside requests (the worker's proposals: their acceptance is
+  recorded), anything without a team or of the system team.
+- **Retention is lazy and installation-wide** (no worker, no timer): after recording, at most
+  once a minute per process and in a thread, events older than `audit.retention_days` (90) go,
+  and so do those beyond the newest `audit.max_events` (1000, every team together). Two range
+  deletes: on the `created_at` index, and on the primary key below a threshold read from its
+  index backwards. Reads leave out what is past its age, so an installation where nobody writes
+  never shows expired events. pgBackRest's backups keep deleted events until they expire.
+- A failure to record never fails the change: signal handlers and the writing of events log
+  their errors and carry on.
+
 ## Application settings (decided with Paolo 2026-10-08)
 
 Settings that tune how the app behaves live in the database (`apps/siteconfig`), so an

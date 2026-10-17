@@ -599,7 +599,8 @@
       "llm": "Modello linguistico",
       "menu": "Generazione del menu",
       "ui": "Interfaccia",
-      "search": "Ricerca delle ricette"
+      "search": "Ricerca delle ricette",
+      "audit": "Attività dei team"
     },
     "item": {
       "llm_context_tokens": {
@@ -642,6 +643,14 @@
           "vertical": "Giorni uno sotto l'altro",
           "horizontal": "Giorni affiancati"
         }
+      },
+      "audit_retention_days": {
+        "label": "Conservazione attività (giorni)",
+        "hint": "Gli eventi dell'attività dei team più vecchi di così vengono cancellati alla prima modifica successiva e comunque non vengono più mostrati. I backup del server li conservano fino alla loro scadenza."
+      },
+      "audit_max_events": {
+        "label": "Numero massimo di eventi",
+        "hint": "Per tutta l'installazione, tutti i team insieme: oltre questo numero si cancellano i più vecchi."
       }
     },
     "on": "attivo",
@@ -984,5 +993,82 @@
     "dropped": "Scartata",
     "none": "Nessuna ricetta candidata.",
     "legend": "Punteggio = somiglianza + bonus se la ricetta ha tutte le parole chiave nel titolo o negli ingredienti principali. Le ricette escluse dalla richiesta non compaiono. All'utente arrivano al massimo le prime 6 proposte."
+  },
+  "audit": {
+    "title": "Attività",
+    "hint": "Le modifiche fatte dalle persone del team, le più recenti prima. Le vedono solo i proprietari; gli eventi più vecchi vengono cancellati da soli.",
+    "who": "Chi",
+    "everyone": "Tutti",
+    "none": "Nessuna attività registrata.",
+    "more": "Mostra altre",
+    "andMore_one": "e un'altra modifica",
+    "andMore_other": "e altre {{count}} modifiche",
+    "weekOf": "settimana del {{date}}",
+    "yes": "sì",
+    "no": "no",
+    "op": {
+      "create": "ha creato {{what}} «{{target}}»",
+      "update": "ha modificato {{what}} «{{target}}»",
+      "delete": "ha eliminato {{what}} «{{target}}»"
+    },
+    "type": {
+      "recipe": "la ricetta",
+      "day": "il giorno",
+      "week": "la",
+      "team": "il profilo del team",
+      "membership": "l'accesso di",
+      "member": "la persona",
+      "preference": "la preferenza",
+      "book_entry": "nel ricettario",
+      "team_rule": "la regola",
+      "generation": "una generazione del menu per la",
+      "shopping_list": "la lista della spesa",
+      "shopping_item": "l'articolo",
+      "ingredient": "l'ingrediente",
+      "invitation": "l'invito"
+    },
+    "action": {
+      "weeklymenu.review": "ha rivisto la proposta del menu ({{target}})",
+      "weeklymenu.generate": "ha chiesto di generare il menu della {{target}}",
+      "shopping-list.generate": "ha creato la lista della spesa «{{target}}»",
+      "shopping-list.merge": "ha accorpato liste in «{{target}}»",
+      "CalendarDayView.put": "ha cambiato il menu di {{target}}",
+      "CalendarDayView.delete": "ha riportato {{target}} alla settimana tipo",
+      "invitation.accept": "è entrato nel team"
+    },
+    "field": {
+      "people": "Persone a {{meal}}",
+      "dishes": "Piatti a {{meal}}",
+      "note": "Nota",
+      "title": "Titolo",
+      "ingredients": "Ingredienti",
+      "name": "Nome",
+      "servings": "Porzioni",
+      "description": "Descrizione",
+      "steps": "Procedimento",
+      "visibility": "Condivisione",
+      "course": "Portata",
+      "cuisine": "Cucina",
+      "prep_minutes": "Preparazione (min)",
+      "cook_minutes": "Cottura (min)",
+      "role": "Ruolo",
+      "text": "Testo",
+      "quantity": "Quantità",
+      "unit": "Unità",
+      "category": "Reparto",
+      "rating": "Voto",
+      "status": "Stato",
+      "max_weekday_minutes": "Tempo massimo nei giorni feriali",
+      "typical_week": "Settimana tipo",
+      "sign_shared_recipes": "Firma delle ricette condivise",
+      "menu_layout": "Disposizione del menu",
+      "season_months": "Stagionalità",
+      "climate_months": "Adatta al clima",
+      "source_url": "Fonte",
+      "aliases": "Altri nomi",
+      "default_unit": "Unità predefinita",
+      "kind": "Tipo",
+      "birth_year": "Anno di nascita"
+    }
   }
 }

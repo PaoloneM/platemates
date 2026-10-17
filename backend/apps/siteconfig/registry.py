@@ -83,6 +83,10 @@ SETTINGS: dict[str, Setting] = {
             choices=MENU_LAYOUTS,
             public=True,
         ),
+        # The team activity log (apps/audit): events older than this many days are deleted,
+        # and beyond this many events in all (every team together) the oldest go first.
+        Setting("audit.retention_days", "int", 90, "audit", minimum=1, maximum=3650),
+        Setting("audit.max_events", "int", 1000, "audit", minimum=100, maximum=1000000),
         # Compact recipe pages: actions as icons beside the tabs instead of labelled buttons,
         # never, on phones only, or everywhere.
         Setting(

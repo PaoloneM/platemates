@@ -117,6 +117,27 @@ def calendar(team: Team, start: dt.date, days: int) -> list[Day]:
     return result
 
 
+def day_summary(day: Day) -> dict[str, object]:
+    """A date as the activity log shows it: people and dishes per meal, the note. A dish the
+    generator proposed and the user has not accepted yet is marked with ✦."""
+    summary: dict[str, object] = {f"people.{meal}": count for meal, count in day.people.items()}
+    summary["note"] = day.note
+    for meal, dishes in day.dishes.items():
+        summary[f"dishes.{meal}"] = [d.title + (" ✦" if d.proposed else "") for d in dishes]
+    return summary
+
+
+def audit_day(team: Team, date: dt.date, before: dict[str, object]) -> None:
+    """Tell the activity log how a date changed since `before` (`day_summary`)."""
+    from apps.audit.recorder import collecting, note
+
+    if collecting():
+        after = day_summary(calendar(team, date, 1)[0])
+        note(
+            team.pk, "day", date.isoformat(), date.isoformat(), "update", before=before, after=after
+        )
+
+
 @transaction.atomic
 def set_day(
     team: Team,
@@ -131,6 +152,7 @@ def set_day(
     Setting the people of a meal settles any change the generator proposed for it. Dishes kept
     from before keep whether they are still a proposal; new ones are the user's."""
     current = calendar(team, date, 1)[0]
+    before = day_summary(current)
     usual = current.usual
     merged = {**current.people, **(people or {})}
     overrides = {meal: count for meal, count in merged.items() if count != usual[meal]}
@@ -142,6 +164,7 @@ def set_day(
     else:
         CalendarDay.objects.filter(team=team, date=date).delete()
     _sync_menu(team, date, merged, dishes or {}, frozenset(people or {}))
+    audit_day(team, date, before)
     return calendar(team, date, 1)[0]
 
 

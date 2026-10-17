@@ -90,7 +90,7 @@ Full detail in `README.md`:
 
 - `backend/`: Django project (`config/`), domain apps in `apps/` (`accounts`, `catalog`,
   `recipes`, `teams`, `menus`, `assistant`, `siteconfig`, `curation`, `transfer` (export and
-  import between installations), `usage` (AI consumption by team); `core` holds abstract mixins and the
+  import between installations), `usage` (AI consumption by team), `audit` (team activity log); `core` holds abstract mixins and the
   cache manager), AI
   adapters in `ai/`, tests in `tests/`
 - `frontend/`: React + TypeScript (Vite) with **MUI 9** (theme in `src/theme.ts`);
@@ -200,6 +200,9 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   change only through `set_day`
 - A shopping list is a snapshot of the menu when it was generated: it never follows later menu
   changes. Every change to a list or its items is announced with `announce` (`shopping` event)
+- Team data changes reach the activity log (`apps/audit`): a new team-owned model goes in
+  `audit/tracked.py`, and code that writes team data in bulk (`.update()`, `bulk_create`)
+  reports with `apps.audit.recorder.note`, or the change goes unrecorded
 - Shopping list apps are reached only through their public "add to list" links, from the
   browser: never store a user's account, password or token for another app
 - Everything the assistant produces goes through `normalize_draft` and the editor's review;

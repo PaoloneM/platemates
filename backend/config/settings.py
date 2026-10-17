@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     "apps.curation",
     "apps.transfer",
     "apps.usage",
+    "apps.audit",
 ]
 
 MIDDLEWARE = [
@@ -85,6 +86,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # What a team's people change (apps/audit): collected while the view runs.
+    "apps.audit.recorder.AuditMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

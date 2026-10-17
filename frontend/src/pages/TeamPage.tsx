@@ -45,6 +45,7 @@ import {
   type TeamProfile,
 } from '../api'
 import { useAuth } from '../auth/context'
+import { TeamActivity } from '../components/TeamActivity'
 import { Section } from '../components/Section'
 import { useLabels } from '../labels'
 import { useTeam } from '../team'
@@ -495,6 +496,7 @@ export function TeamPage() {
       <PeopleSection team={team} owner={owner} onChanged={() => void load()} />
       <UsersSection team={team} owner={owner} onMessage={setMessage} />
       <InvitationsSection team={team} owner={owner} onMessage={setMessage} />
+      {owner && <TeamActivity team={team.id} />}
       <Snackbar open={!!message} autoHideDuration={4000} onClose={() => setMessage(null)} message={message} />
     </Stack>
   )

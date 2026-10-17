@@ -39,6 +39,10 @@ class MealSlotSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        from apps.teams.calendar import audit_day, calendar, day_summary
+
+        team = instance.menu.team
+        before = day_summary(calendar(team, instance.date, 1)[0])
         dishes = validated_data.pop("dishes", None)
         slot = super().update(instance, validated_data)
         if dishes is not None:
@@ -47,6 +51,7 @@ class MealSlotSerializer(serializers.ModelSerializer):
                 SlotDish(slot=slot, recipe=recipe, position=index)
                 for index, recipe in enumerate(dishes)
             )
+        audit_day(team, slot.date, before)
         return slot
 
 
