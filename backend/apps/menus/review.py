@@ -11,8 +11,7 @@ import datetime as dt
 
 from django.db import transaction
 
-from apps.audit.recorder import collecting
-from apps.teams.calendar import audit_day, calendar, day_summary, set_day
+from apps.teams.calendar import calendar, day_changed, day_summary, set_day
 
 from .models import MealSlot, SlotDish, WeeklyMenu
 
@@ -29,19 +28,19 @@ def _slots(menu: WeeklyMenu, keys: SlotKeys):
 
 
 def _days_before(menu: WeeklyMenu, keys: SlotKeys) -> dict[dt.date, dict[str, object]]:
-    """How the reviewed dates were, for the activity log."""
+    """How the reviewed dates were, for the activity log and the team's browsers."""
     dates = sorted({slot.date for slot in _slots(menu, keys)})
     return {date: day_summary(calendar(menu.team, date, 1)[0]) for date in dates}
 
 
 def _audit(menu: WeeklyMenu, before: dict[dt.date, dict[str, object]]) -> None:
     for date, summary in before.items():
-        audit_day(menu.team, date, summary)
+        day_changed(menu.team, date, summary)
 
 
 @transaction.atomic
 def accept(menu: WeeklyMenu, keys: SlotKeys = None) -> None:
-    before = _days_before(menu, keys) if collecting() else {}
+    before = _days_before(menu, keys)
     for slot in _slots(menu, keys):
         SlotDish.objects.filter(slot=slot, proposed=True).update(proposed=False)
         if slot.proposed_people is not None:
@@ -51,7 +50,7 @@ def accept(menu: WeeklyMenu, keys: SlotKeys = None) -> None:
 
 @transaction.atomic
 def reject(menu: WeeklyMenu, keys: SlotKeys = None) -> None:
-    before = _days_before(menu, keys) if collecting() else {}
+    before = _days_before(menu, keys)
     for slot in _slots(menu, keys):
         SlotDish.objects.filter(slot=slot, proposed=True).delete()
     MealSlot.objects.filter(pk__in=[s.pk for s in _slots(menu, keys)]).update(

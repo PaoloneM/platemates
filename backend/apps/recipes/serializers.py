@@ -55,6 +55,39 @@ def _line_texts(recipe: Recipe) -> list[str]:
     return texts
 
 
+def _snapshot(recipe: Recipe) -> dict[str, object]:
+    """What a recipe's page shows, part by part, to tell which parts a change touched."""
+    return {
+        "title": recipe.title,
+        "description": recipe.description,
+        "steps": list(recipe.steps),
+        "servings": recipe.servings,
+        "prep_minutes": recipe.prep_minutes,
+        "cook_minutes": recipe.cook_minutes,
+        "course": recipe.course,
+        "cuisine": recipe.cuisine_id,
+        "visibility": recipe.visibility,
+        "source_url": recipe.source_url,
+        "season_months": list(recipe.season_months),
+        "climate_months": list(recipe.climate_months),
+        "tools": sorted(recipe.tools.values_list("pk", flat=True)),
+        "ingredients": _line_texts(recipe),
+        "owner_team": recipe.owner_team_id,
+    }
+
+
+def _announce_recipe(recipe: Recipe, fields: list[str]) -> None:
+    """Tell the browsers that may be showing the recipe which parts changed (`recipe` event):
+    the team that owns it and the teams that keep it in their book. Once saved."""
+    from apps.realtime.events import publish_on_commit
+
+    teams = set(RecipeBookEntry.objects.filter(recipe=recipe).values_list("team_id", flat=True))
+    if recipe.owner_team_id:
+        teams.add(recipe.owner_team_id)
+    data = {"recipe": recipe.pk, "fields": fields}
+    publish_on_commit(teams, "recipe", data)
+
+
 class CuisineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cuisine
@@ -335,12 +368,16 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        before = _snapshot(instance)
         validated_data.pop("team", None)
         lines = validated_data.pop("ingredients", None)
         recipe = super().update(instance, validated_data)
         if lines is not None:
             self._replace_lines(recipe, lines)
         self._derive(recipe)
+        after = _snapshot(recipe)
+        if changed := sorted(k for k in after if after[k] != before.get(k)):
+            _announce_recipe(recipe, changed)
         return recipe
 
     @staticmethod

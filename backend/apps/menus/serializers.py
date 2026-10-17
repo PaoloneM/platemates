@@ -39,7 +39,7 @@ class MealSlotSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        from apps.teams.calendar import audit_day, calendar, day_summary
+        from apps.teams.calendar import calendar, day_changed, day_summary
 
         team = instance.menu.team
         before = day_summary(calendar(team, instance.date, 1)[0])
@@ -51,7 +51,7 @@ class MealSlotSerializer(serializers.ModelSerializer):
                 SlotDish(slot=slot, recipe=recipe, position=index)
                 for index, recipe in enumerate(dishes)
             )
-        audit_day(team, slot.date, before)
+        day_changed(team, slot.date, before)
         return slot
 
 

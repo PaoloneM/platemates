@@ -6,7 +6,6 @@ each other's ticks; they reload the list from here (events are notices, never th
 
 from __future__ import annotations
 
-from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import mixins, serializers, status, viewsets
@@ -14,7 +13,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.catalog.models import Ingredient, Unit
-from apps.realtime.events import publish
+from apps.realtime.events import publish_on_commit
 from apps.recipes.models import Recipe
 from apps.teams.models import Team
 from apps.teams.permissions import TeamScopedMixin, user_teams
@@ -25,7 +24,7 @@ from .models import Meal, MealSlot, ShoppingItem, ShoppingList, WeeklyMenu
 
 def announce(team_id: int, list_id: int | None) -> None:
     """Tell the team's browsers a list changed, once the change is saved."""
-    transaction.on_commit(lambda: publish(team_id, "shopping", {"team": team_id, "list": list_id}))
+    publish_on_commit([team_id], "shopping", {"team": team_id, "list": list_id})
 
 
 class ShoppingItemSerializer(serializers.ModelSerializer):

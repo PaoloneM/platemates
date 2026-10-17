@@ -88,6 +88,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # What a team's people change (apps/audit): collected while the view runs.
     "apps.audit.recorder.AuditMiddleware",
+    # Which browser tab made a change, for the real-time events it causes (apps/realtime).
+    "apps.realtime.events.OriginMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

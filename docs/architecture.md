@@ -652,8 +652,19 @@ threads.
 - **Events are notices, not data**: one missed while disconnected is lost, so a screen reloads
   its state from the API whenever the connection is (re)established (`useOnConnect`). While it
   is down, the menu screen falls back to reading a running generation every 15 s.
-- Events so far: `generation`. Planned: `calendar.changed`, so that members see the week change
-  as someone else edits it.
+- Events: `generation` (a menu generation's phases), `shopping` (a list or its items),
+  `calendar` (a date's meals changed: which meal, and whether people, dishes or the note, from
+  `teams.calendar.day_changed`, called wherever a date is written: `set_day`, the review of a
+  proposal, the meal slot API) and `recipe` (which parts of a recipe changed, to the team that
+  owns it and the teams that keep it in their book).
+- **Live updates with a highlight** (decided with Paolo 2026-10-17): the menu screen, a meal's
+  page and a recipe's page reload what changed and make it pulse three times in the accent
+  colour (`frontend/src/flash.ts`): the meal's card or the day's line, the people or dishes
+  section, the recipe's header, ingredients, method or description. Not in the tab that made
+  the change: every API call carries the tab's id (`X-PlateMates-Client`), events carry it back
+  as `origin` (`publish_on_commit` reads it when the change is made, as the commit may come
+  later), and that tab updates without the highlight. The same user's other tabs and devices
+  do show it.
 
 ### Cache (decided with Paolo 2026-10-08)
 

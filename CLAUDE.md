@@ -189,8 +189,8 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
 - Data read often and changed rarely (rules, settings) is read through
   `apps.core.cache.cache_manager`, never at start-up; its models clear the cache from their
   signals, so write them with `save()` / `delete()`, never a bulk `update()`
-- Real-time events (`apps.realtime.events.publish`) are notices to a team's browsers, never the
-  only way state reaches them: every screen that listens also reloads from the API on
+- Real-time events (`apps.realtime.events.publish`, `publish_on_commit` for changes made in a
+  request) are notices to a team's browsers, never the only way state reaches them: every screen that listens also reloads from the API on
   (re)connection. Never send data a user of another team must not see: rooms are per team
 - The administrator role comes only from `APP_ADMINS` through `setup_keycloak`, and reaches the
   app as the ID token's `roles` claim; never grant it by hand or decide it in Django

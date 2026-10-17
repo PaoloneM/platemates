@@ -6,6 +6,7 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import {
   Alert,
   Autocomplete,
+  Box,
   Button,
   Card,
   CardContent,
@@ -21,10 +22,10 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, Navigate, useParams } from 'react-router'
-import { api, type BookEntry, type CalendarDay, type CalendarDayChange, type DishInput, type GenerationEvent, type Meal, type Paginated } from '../api'
+import { api, fromThisTab, type BookEntry, type CalendarDay, type CalendarDayChange, type CalendarEvent, type DishInput, type GenerationEvent, type Meal, type Paginated } from '../api'
 import { changeDay, dishInput, fromIso, hasProposal, isIsoDate, isoDate, mondayOf, reviewMeal, snapshot, weekUrl } from '../calendar'
 import { DishLine } from '../components/DishLine'
 import { RecipeDialog } from '../components/RecipeDialog'
@@ -32,7 +33,8 @@ import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useNewShoppingList } from '../components/NewShoppingList'
 import { mealHasShopping } from '../shopping'
-import { useRealtimeEvent } from '../realtime'
+import { useOnConnect, useRealtimeEvent } from '../realtime'
+import { useFlash, withFlash } from '../flash'
 import { useTeam } from '../team'
 
 const MAX_PEOPLE = 50
@@ -226,10 +228,23 @@ export function MealPage() {
   const shopping = useNewShoppingList()
   const owner = team.role === 'owner'
 
-  useEffect(() => {
-    if (!valid) return
-    api<CalendarDay[]>(`/calendar/?team=${team.id}&start=${date}&days=1`).then(([loaded]) => setDay(loaded))
-  }, [valid, team.id, date])
+  const { flash, flashSx } = useFlash()
+  const reload = useCallback(
+    () => (valid ? api<CalendarDay[]>(`/calendar/?team=${team.id}&start=${date}&days=1`).then(([loaded]) => setDay(loaded)) : Promise.resolve()),
+    [valid, team.id, date],
+  )
+  useEffect(() => void reload(), [reload])
+
+  // Someone changed this date: read it again, and show what changed for this meal (people,
+  // dishes) or the day's note; not in the tab that made the change.
+  useRealtimeEvent<CalendarEvent>('calendar', (event) => {
+    if (!valid || event.team !== team.id || event.date !== date) return
+    void reload().then(() => {
+      if (fromThisTab(event.origin)) return
+      flash(event.changes.filter((c) => c.meal === meal || c.meal === null).map((c) => c.what))
+    })
+  })
+  useOnConnect(() => void reload())
 
   // A generation of this week that ends while the page is open brings its proposal here too.
   useRealtimeEvent<GenerationEvent>('generation', (event) => {
@@ -303,7 +318,7 @@ export function MealPage() {
           </>
         )}
       </Stack>
-      {day.note && <Alert severity="info" icon={false}>{day.note}</Alert>}
+      {day.note && <Alert severity="info" icon={false} sx={flashSx('note')}>{day.note}</Alert>}
       {hasProposal(day, which) && (
         <Alert severity="success" icon={false}
           action={
@@ -322,13 +337,17 @@ export function MealPage() {
         </Alert>
       )}
       {!owner && <Alert severity="info">{t('meal.memberNotice')}</Alert>}
-      <PeopleSection key={`${day.people[which]}`} day={day} meal={which} owner={owner} onChange={(u) => change(u)} />
+      <Box sx={withFlash({ borderRadius: 1 }, flashSx('people'))}>
+        <PeopleSection key={`${day.people[which]}`} day={day} meal={which} owner={owner} onChange={(u) => change(u)} />
+      </Box>
       {day.dishes[which] ? (
-        <DishesSection day={day} meal={which} owner={owner} onChange={(u) => change(u)}
-          onShop={(recipe, dishTitle) => {
-            const people = Math.max(1, day.proposed_people[which] ?? day.people[which])
-            void shopping.create({ recipe, people, title: t('shopping.recipeTitle', { title: dishTitle, count: people }) })
-          }} />
+<Box sx={withFlash({ borderRadius: 1 }, flashSx('dishes'))}>
+                  <DishesSection day={day} meal={which} owner={owner} onChange={(u) => change(u)}
+            onShop={(recipe, dishTitle) => {
+              const people = Math.max(1, day.proposed_people[which] ?? day.people[which])
+              void shopping.create({ recipe, people, title: t('shopping.recipeTitle', { title: dishTitle, count: people }) })
+            }} />
+        </Box>
       ) : (
         <Typography variant="body2" color="text.secondary">{t('meal.breakfastHint')}</Typography>
       )}

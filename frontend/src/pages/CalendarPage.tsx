@@ -32,12 +32,12 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { PickerDay, type PickerDayProps } from '@mui/x-date-pickers/PickerDay'
-import type { Theme } from '@mui/material/styles'
+import type { SxProps, Theme } from '@mui/material/styles'
 import { enGB, it } from 'date-fns/locale'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useSearchParams } from 'react-router'
-import { api, type CalendarDay, type CalendarDayChange, type GenerationEvent, type Meal, type MenuGeneration, type MenuLayout } from '../api'
+import { api, type CalendarDay, type CalendarDayChange, type GenerationEvent, type Meal, type MenuGeneration, type MenuLayout, type CalendarEvent, fromThisTab } from '../api'
 import {
   addDays,
   changeDay,
@@ -64,6 +64,7 @@ import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useOnConnect, useRealtimeConnected, useRealtimeEvent } from '../realtime'
 import { DAY_ACTION, MEAL_ACTION, revealOnHover } from '../hover'
 import { useMenuLayout } from '../menuLayout'
+import { useFlash, withFlash } from '../flash'
 import { useNewShoppingList } from '../components/NewShoppingList'
 import { mealHasShopping } from '../shopping'
 import { useTeam } from '../team'
@@ -72,13 +73,15 @@ const MAX_PEOPLE = 50
 // Only while the real-time connection is down: the progress then comes from the API.
 const FALLBACK_POLL_MS = 15000
 
-function MealCard({ day, meal, owner, today, narrow, onClear, onReview, onShop }: {
+function MealCard({ day, meal, owner, today, narrow, flashSx, onClear, onReview, onShop }: {
   day: CalendarDay
   meal: Meal
   owner: boolean
   today: boolean
   // In a day's column (horizontal layout): dishes wrap rather than being cut.
   narrow: boolean
+  // Pulses when someone else changed the meal.
+  flashSx: SxProps<Theme>
   onClear: () => void
   onReview: (action: 'accept' | 'reject') => void
   // A shopping list for this meal; absent when there is nothing to buy.
@@ -96,13 +99,13 @@ function MealCard({ day, meal, owner, today, narrow, onClear, onReview, onShop }
   // The card's icons sit in a row at its top right, on the title's line.
   const icons = [clearable, recipes.length > 0, !!onShop].filter(Boolean).length
   return (
-    <Card sx={{
+    <Card sx={withFlash({
       ...revealOnHover(MEAL_ACTION),
       position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', opacity: nobody ? 0.6 : 1,
       // Today's meals stand out in the accent colour.
       ...(today && { border: 2, borderColor: 'primary.main' }),
       ...(proposal && { outline: '1px dashed', outlineColor: 'primary.main', outlineOffset: -1 }),
-    }}>
+    }, flashSx)}>
       <CardActionArea component={RouterLink} to={mealUrl(day.date, meal)}
         sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', p: 1.5, pr: 1.5 }}>
         {/* Only the title's line makes room for the icons; the dishes use the whole width. */}
@@ -164,12 +167,14 @@ function MealCard({ day, meal, owner, today, narrow, onClear, onReview, onShop }
   )
 }
 
-function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview, onShop }: {
+function DayRow({ day, today, owner, layout, flashSx, onConfigure, onClear, onReview, onShop }: {
   day: CalendarDay
   today: boolean
   owner: boolean
   // Vertical: the days one under the other, meals side by side; horizontal: the reverse.
   layout: MenuLayout
+  // By key: the date (its note), or "date:meal".
+  flashSx: (key: string) => SxProps<Theme>
   onConfigure: () => void
   onClear: (meals: Meal[]) => void
   onReview: (meal: Meal, action: 'accept' | 'reject') => void
@@ -181,7 +186,8 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview, onS
   const { weekday, dayMonth, inSentence } = useDayTitle(day.date)
   const shoppable = MEALS.filter((meal) => mealHasShopping(day, meal))
   const title = (
-    <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
+    <Stack direction="row" spacing={1}
+      sx={withFlash({ alignItems: 'baseline', borderRadius: 1 }, flashSx(day.date))}>
       <Typography variant="h3" sx={{ color: today ? 'primary.main' : undefined }}>{weekday}</Typography>
       <Typography variant="body2" color={today ? 'primary.main' : 'text.secondary'}>{dayMonth}</Typography>
     </Stack>
@@ -234,6 +240,7 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview, onS
       }}>
         {MEALS.map((meal) => (
           <MealCard key={meal} day={day} meal={meal} owner={owner} today={today} narrow={layout === 'horizontal'}
+            flashSx={flashSx(`${day.date}:${meal}`)}
             onShop={shoppable.includes(meal)
               ? () => onShop(t('shopping.mealTitle', { meal: labels.meal(meal), day: `${inSentence(weekday)} ${dayMonth}` }), meal)
               : undefined}
@@ -408,6 +415,7 @@ type Notice = { message: string; undo?: { date: string; change: CalendarDayChang
 
 export function CalendarPage() {
   const { layout } = useMenuLayout()
+  const { flash, flashSx } = useFlash()
   const shopping = useNewShoppingList()
   const { t } = useTranslation()
   const labels = useLabels()
@@ -466,8 +474,20 @@ export function CalendarPage() {
       void refresh()
     }
   })
-  // Whatever happened while disconnected (a generation started or ended) is read again.
-  useOnConnect(() => void refresh())
+  // Someone changed a day of this week: read the week again, and show which meals changed
+  // (not in the tab that made the change).
+  useRealtimeEvent<CalendarEvent>('calendar', (event) => {
+    if (event.team !== team.id || mondayOf(fromIso(event.date)).getTime() !== monday.getTime()) return
+    void loadDays().then(() => {
+      if (fromThisTab(event.origin)) return
+      flash(event.changes.map((c) => (c.meal ? `${event.date}:${c.meal}` : event.date)))
+    })
+  })
+  // Whatever happened while disconnected (a generation, someone's changes) is read again.
+  useOnConnect(() => {
+    void refresh()
+    void loadDays()
+  })
 
   useEffect(() => {
     if (!active || connected) return
@@ -549,7 +569,7 @@ export function CalendarPage() {
           ? { display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', alignItems: 'start' }
           : { display: 'flex', flexDirection: 'column', gap: 3 }}>
           {current.map((day) => (
-            <DayRow key={day.date} day={day} today={day.date === todayIso} owner={owner} layout={layout}
+            <DayRow key={day.date} day={day} today={day.date === todayIso} owner={owner} layout={layout} flashSx={flashSx}
               onShop={(title, meal) => void shopping.create({ date: day.date, meal, title })}
               onConfigure={() => setConfiguring(day)} onClear={(meals) => void clear(day, meals)}
               onReview={(meal, action) => void review(action, [{ date: day.date, meal }])} />

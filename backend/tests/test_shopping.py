@@ -23,7 +23,7 @@ THIS_MONDAY = TODAY - dt.timedelta(days=TODAY.weekday())
 def events(monkeypatch):
     sent = []
     monkeypatch.setattr(
-        "apps.menus.shopping_api.publish", lambda team, event, data: sent.append((event, data))
+        "apps.realtime.events._emit", lambda event, data, room: sent.append((event, data))
     )
     return sent
 

@@ -31,10 +31,10 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
-import { api, type KitchenTool, type Recipe, type RecipeVariants } from '../api'
+import { api, fromThisTab, type KitchenTool, type Recipe, type RecipeEvent, type RecipeVariants } from '../api'
 import { useAuth } from '../auth/context'
 import { useNewShoppingList } from '../components/NewShoppingList'
 import { AuthorChip } from '../components/RecipeAuthor'
@@ -42,9 +42,18 @@ import { WebRating } from '../components/WebRating'
 import { IngredientList, PeopleStepper, StepList } from '../components/RecipeView'
 import { compareIngredients } from '../recipeDiff'
 import { useTeam } from '../team'
+import { useFlash, withFlash } from '../flash'
+import { useOnConnect, useRealtimeEvent } from '../realtime'
 import { useDescribeMonths, useLabels } from '../labels'
 
 type Tab = 'mine' | 'original'
+
+/** Which part of the page shows a recipe's field, for highlighting a change to it. */
+function recipePart(field: string): string {
+  if (['ingredients', 'servings', 'tools', 'season_months', 'climate_months'].includes(field)) return 'ingredients'
+  if (field === 'steps' || field === 'description') return field
+  return 'header'
+}
 
 // A page action: a labelled button, or an icon with a tooltip in compact mode.
 type Action = {
@@ -120,6 +129,10 @@ export function RecipeDetailPage() {
     api<KitchenTool[]>('/kitchen-tools/').then(setAllTools).catch(() => undefined)
   }, [])
 
+  // Someone changed this recipe or its original: read them again, then show which parts.
+  const [originalRound, setOriginalRound] = useState(0)
+  const { flash, flashSx } = useFlash()
+
   // The team's copy of a community recipe: its original is the second tab.
   const originId = recipe?.author.kind === 'mine' ? recipe.origin?.id : undefined
   useEffect(() => {
@@ -131,7 +144,7 @@ export function RecipeDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [originId])
+  }, [originId, originalRound])
 
   useEffect(() => {
     api<RecipeVariants>(`/recipes/${id}/variants/`).then(setVariants).catch(() => setVariants(null))
@@ -145,6 +158,22 @@ export function RecipeDetailPage() {
       })
       .catch(() => setError(true))
   }, [id])
+
+  // Reading the recipe again keeps the people chosen for the quantities.
+  const reload = useCallback(
+    () => api<Recipe>(`/recipes/${id}/`).then((r) => {
+      setRecipe(r)
+      setOriginalRound((n) => n + 1)
+    }),
+    [id],
+  )
+  useRealtimeEvent<RecipeEvent>('recipe', (event) => {
+    if (!recipe || (event.recipe !== recipe.id && event.recipe !== recipe.origin?.id)) return
+    void reload().then(() => {
+      if (!fromThisTab(event.origin)) flash([...new Set(event.fields.map(recipePart))])
+    }).catch(() => undefined)
+  })
+  useOnConnect(() => void reload().catch(() => undefined))
 
   if (error) return <Alert severity="error">{t('recipe.notFound')}</Alert>
   if (!recipe || people == null) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 6 }} />
@@ -253,7 +282,7 @@ export function RecipeDetailPage() {
       <Stack direction={compact ? 'row' : { xs: 'column', sm: 'row' }} spacing={2}
         sx={{ alignItems: compact ? 'flex-start' : { sm: 'flex-start' } }}>
         {/* The header describes the recipe the team has (its version): it stays put across tabs. */}
-        <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
+        <Stack spacing={1.5} sx={withFlash({ flex: 1, minWidth: 0, borderRadius: 1 }, flashSx('header'))}>
           <Typography variant="h1">{recipe.title}</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             <Chip variant="outlined" label={labels.course(recipe.course)} />
@@ -293,7 +322,9 @@ export function RecipeDetailPage() {
         {!(compact && tabbed) && actionBar}
       </Stack>
 
-      {!tabbed && recipe.description && <Typography color="text.secondary">{recipe.description}</Typography>}
+      {!tabbed && recipe.description && (
+        <Typography color="text.secondary" sx={withFlash({ borderRadius: 1 }, flashSx('description'))}>{recipe.description}</Typography>
+      )}
       {tabbed && (
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: 1, borderColor: 'divider' }}>
@@ -313,13 +344,15 @@ export function RecipeDetailPage() {
                   : t('community.differencesHint')}
           </Typography>
           {/* What the tabs switch: the description, the ingredients and the steps. */}
-          {shown.description && <Typography color="text.secondary" sx={{ mt: 1.5 }}>{shown.description}</Typography>}
+          {shown.description && (
+            <Typography color="text.secondary" sx={withFlash({ mt: 1.5, borderRadius: 1 }, flashSx('description'))}>{shown.description}</Typography>
+          )}
         </Box>
       )}
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 5 }}>
-          <Card>
+          <Card sx={flashSx('ingredients')}>
             <CardContent>
               <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="h2">{t('recipe.ingredients')}</Typography>
@@ -339,13 +372,15 @@ export function RecipeDetailPage() {
           </Card>
         </Grid>
         <Grid size={{ xs: 12, md: 7 }}>
-          <Typography variant="h2" sx={{ mb: 1.5 }}>
-            {t('recipe.steps')}
-          </Typography>
-          {diff && !diff.sameSteps && (
-            <Chip size="small" variant="outlined" color="warning" label={t('community.stepsDiffer')} sx={{ mb: 1.5 }} />
-          )}
-          <StepList recipe={shown} />
+<Box sx={withFlash({ borderRadius: 1 }, flashSx('steps'))}>
+                    <Typography variant="h2" sx={{ mb: 1.5 }}>
+              {t('recipe.steps')}
+            </Typography>
+            {diff && !diff.sameSteps && (
+              <Chip size="small" variant="outlined" color="warning" label={t('community.stepsDiffer')} sx={{ mb: 1.5 }} />
+            )}
+            <StepList recipe={shown} />
+          </Box>
           {shown.source_url && (
             <Typography variant="body2" sx={{ mt: 3 }}>
               {t('recipe.source')}:{' '}

@@ -127,15 +127,27 @@ def day_summary(day: Day) -> dict[str, object]:
     return summary
 
 
-def audit_day(team: Team, date: dt.date, before: dict[str, object]) -> None:
-    """Tell the activity log how a date changed since `before` (`day_summary`)."""
+def day_changed(team: Team, date: dt.date, before: dict[str, object]) -> None:
+    """A date changed since `before` (`day_summary`): tell the activity log, and the team's
+    browsers which meals changed and how (`calendar` event, once the change is saved)."""
     from apps.audit.recorder import collecting, note
+    from apps.realtime.events import publish_on_commit
 
+    after = day_summary(calendar(team, date, 1)[0])
+    changed = sorted(key for key in after if after[key] != before.get(key))
+    if not changed:
+        return
     if collecting():
-        after = day_summary(calendar(team, date, 1)[0])
         note(
             team.pk, "day", date.isoformat(), date.isoformat(), "update", before=before, after=after
         )
+    # "people.dinner" -> the dinner's people; "note" -> the day itself.
+    changes = [
+        {"meal": key.split(".")[1] if "." in key else None, "what": key.split(".")[0]}
+        for key in changed
+    ]
+    data = {"team": team.pk, "date": date.isoformat(), "changes": changes}
+    publish_on_commit([team.pk], "calendar", data)
 
 
 @transaction.atomic
@@ -164,7 +176,7 @@ def set_day(
     else:
         CalendarDay.objects.filter(team=team, date=date).delete()
     _sync_menu(team, date, merged, dishes or {}, frozenset(people or {}))
-    audit_day(team, date, before)
+    day_changed(team, date, before)
     return calendar(team, date, 1)[0]
 
 

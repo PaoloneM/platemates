@@ -483,6 +483,16 @@ export function csrfToken(): string {
   return document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] ?? ''
 }
 
+// This browser tab, for the real-time events its own changes cause: they come back with it as
+// `origin`, and the tab skips the highlight it shows for other people's changes.
+const CLIENT_ID =
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Math.random()).slice(2)
+
+/** Whether a real-time event comes from a change made in this very tab. */
+export function fromThisTab(origin: string | undefined): boolean {
+  return origin === CLIENT_ID
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     credentials: 'same-origin',
@@ -492,6 +502,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       'X-CSRFToken': csrfToken(),
       // Backend messages (validation errors, choice labels) follow the interface language.
       'Accept-Language': i18n.resolvedLanguage ?? 'it',
+      'X-PlateMates-Client': CLIENT_ID,
       ...init.headers,
     },
   })
@@ -703,3 +714,14 @@ export type AuditStats = {
   max_events: number
   teams: { team: number; name: string; events: number; last: string; bytes: number }[]
 }
+
+// Real-time notices of changes (backend apps/realtime): a date's meals, a recipe's parts.
+// `origin`: the tab that made the change (`fromThisTab`).
+export type CalendarEvent = {
+  team: number
+  date: string
+  // meal null: the day itself (its note). what: people, dishes or note.
+  changes: { meal: Meal | null; what: 'people' | 'dishes' | 'note' }[]
+  origin?: string
+}
+export type RecipeEvent = { recipe: number; fields: string[]; origin?: string }
