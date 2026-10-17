@@ -80,7 +80,7 @@ services:
       # The public plane: the app's API and login only. Django admin and the admin-only APIs are
       # not routed here (and the backend answers 404 for them on this plane anyway).
       - traefik.http.middlewares.plane-public.headers.customrequestheaders.X-PlateMates-Plane=public
-      - "traefik.http.routers.backend-tls.rule=(PathPrefix(`/api`) && !PathPrefix(`/api/config`) && !PathPrefix(`/api/cache`) && !PathPrefix(`/api/usage`) && !PathPrefix(`/api/search-probe`) && !PathPrefix(`/api/transfer`) && !PathPrefix(`/api/system-drafts`)) || PathPrefix(`/oidc`) || PathPrefix(`/static`)"
+      - "traefik.http.routers.backend-tls.rule=(PathPrefix(`/api`) && !PathPrefix(`/api/config`) && !PathPrefix(`/api/cache`) && !PathPrefix(`/api/usage`) && !PathPrefix(`/api/search-probe`) && !PathPrefix(`/api/audit-stats`) && !PathPrefix(`/api/transfer`) && !PathPrefix(`/api/system-drafts`)) || PathPrefix(`/oidc`) || PathPrefix(`/static`)"
       - traefik.http.routers.backend-tls.middlewares=plane-public
 
   realtime:

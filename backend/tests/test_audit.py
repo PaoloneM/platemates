@@ -169,3 +169,21 @@ def test_recording_triggers_the_lazy_purge(api, user, team):
     recipe = own_recipe(team)
     api.patch(f"/api/recipes/{recipe.pk}/", {"title": "Altro"}, format="json")
     assert AuditEvent.objects.count() == 1  # the new one; the old one was purged
+
+
+# -- statistics (administrators) ----------------------------------------------------------------
+
+
+def test_administrators_see_the_most_active_teams(api, user, team):
+    from apps.accounts.models import UserProfile
+
+    other = Team.objects.create(name="Altri")
+    make_events(team, user, 3)
+    make_events(other, user, 1, age_days=4)
+    assert api.get("/api/audit-stats/").status_code == 403
+    UserProfile.objects.create(user=user, is_admin=True)
+    data = api.get("/api/audit-stats/").json()
+    assert data["total_events"] == 4 and data["table_bytes"] > 0
+    assert (data["retention_days"], data["max_events"]) == (90, 1000)
+    assert [(t["name"], t["events"]) for t in data["teams"]] == [(team.name, 3), ("Altri", 1)]
+    assert all(t["bytes"] > 0 and t["last"] for t in data["teams"])

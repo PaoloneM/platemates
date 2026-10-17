@@ -603,6 +603,10 @@ by person), in `apps/audit`.
   deletes: on the `created_at` index, and on the primary key below a threshold read from its
   index backwards. Reads leave out what is past its age, so an installation where nobody writes
   never shows expired events. pgBackRest's backups keep deleted events until they expire.
+- **Statistics** (Manage > Team activity, administrators, admin plane: `/api/audit-stats/`):
+  events in all against the maximum, the table's size with its indexes, the oldest event, and
+  the teams by number of events with their last activity and the size of their rows
+  (`pg_column_size`).
 - A failure to record never fails the change: signal handlers and the writing of events log
   their errors and carry on.
 

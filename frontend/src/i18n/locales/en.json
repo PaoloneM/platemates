@@ -384,7 +384,8 @@
       "drafts": "System drafts",
       "transfer": "Export / import",
       "usage": "Usage",
-      "searchProbe": "Search probe"
+      "searchProbe": "Search probe",
+      "activity": "Team activity"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -1070,5 +1071,19 @@
       "kind": "Kind",
       "birth_year": "Birth year"
     }
+  },
+  "activityStats": {
+    "hint": "The log of what teams change: it keeps events for {{days}} days and at most {{max}} in all, deleting the oldest.",
+    "settingsLink": "Change the limits in Settings.",
+    "events": "Recorded events",
+    "fill": "{{percent}}% of the maximum ({{max}})",
+    "storage": "Disk space (with indexes)",
+    "oldest": "Oldest event",
+    "team": "Team",
+    "operations": "Operations",
+    "last": "Last activity",
+    "teamStorage": "Estimated space",
+    "none": "No activity recorded.",
+    "storageNote": "A team's space is the sum of its rows; the total also counts the indexes and space PostgreSQL has not reclaimed yet."
   }
 }

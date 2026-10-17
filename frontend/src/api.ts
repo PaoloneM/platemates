@@ -692,3 +692,14 @@ export type AuditEvent = {
   target_label: string
   changes: AuditChange[]
 }
+
+// Manage > Activity (administrators): the activity log's size, and the teams by events.
+export type AuditStats = {
+  total_events: number
+  // The table with its indexes, on disk.
+  table_bytes: number
+  oldest: string | null
+  retention_days: number
+  max_events: number
+  teams: { team: number; name: string; events: number; last: string; bytes: number }[]
+}

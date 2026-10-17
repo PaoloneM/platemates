@@ -384,7 +384,8 @@
       "drafts": "Bozze di sistema",
       "transfer": "Esporta / importa",
       "usage": "Consumi",
-      "searchProbe": "Prova ricerca"
+      "searchProbe": "Prova ricerca",
+      "activity": "Attività dei team"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -1070,5 +1071,19 @@
       "kind": "Tipo",
       "birth_year": "Anno di nascita"
     }
+  },
+  "activityStats": {
+    "hint": "Il registro delle modifiche dei team: conserva gli eventi per {{days}} giorni e al massimo {{max}} in tutto, cancellando i più vecchi.",
+    "settingsLink": "Cambia i limiti nelle Impostazioni.",
+    "events": "Eventi registrati",
+    "fill": "{{percent}}% del massimo ({{max}})",
+    "storage": "Spazio su disco (con gli indici)",
+    "oldest": "Evento più vecchio",
+    "team": "Team",
+    "operations": "Operazioni",
+    "last": "Ultima attività",
+    "teamStorage": "Spazio stimato",
+    "none": "Nessuna attività registrata.",
+    "storageNote": "Lo spazio di un team è la somma delle sue righe; il totale comprende anche gli indici e lo spazio non ancora recuperato da PostgreSQL."
   }
 }

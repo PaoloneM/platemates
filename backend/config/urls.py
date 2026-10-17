@@ -5,7 +5,7 @@ from rest_framework.routers import DefaultRouter
 from apps.accounts.views import InvitationViewSet, login_options, me
 from apps.assistant.probe import probe_view
 from apps.assistant.views import AssistantSessionViewSet
-from apps.audit.views import AuditEventViewSet
+from apps.audit.views import AuditEventViewSet, stats_view
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
 from apps.core.views import health
 from apps.curation.views import SystemDraftViewSet
@@ -66,6 +66,7 @@ urlpatterns = [
     path("api/config/<str:key>/", config_detail),
     path("api/usage/", usage_view),
     path("api/search-probe/", probe_view),
+    path("api/audit-stats/", stats_view),
     path("api/transfer/export/", export_view),
     path("api/transfer/import/", import_view),
     path("api/transfer/choices/", choices_view),

@@ -38,6 +38,7 @@ def test_me_reports_powers_not_roles(api, staff_admin, plane, powers):
         "/api/transfer/choices/",
         "/api/system-drafts/",
         "/api/search-probe/",
+        "/api/audit-stats/",
     ],
 )
 def test_admin_paths_do_not_exist_on_the_public_plane(api, staff_admin, path):
