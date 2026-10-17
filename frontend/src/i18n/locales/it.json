@@ -934,7 +934,16 @@
     "note": "Nota",
     "sendAll": "Manda tutto a {{app}}",
     "send": "Manda a {{app}}",
-    "sendFailed": "Invio non riuscito: riprova tra poco."
+    "sendFailed": "Invio non riuscito: riprova tra poco.",
+    "forDay": "Lista della spesa del giorno",
+    "forMeal": "Lista della spesa del pasto",
+    "forRecipe": "Lista della spesa",
+    "mealTitle": "{{meal}} di {{day}}",
+    "recipeTitle_one": "{{title}} · {{count}} persona",
+    "recipeTitle_other": "{{title}} · {{count}} persone",
+    "created": "Lista «{{title}}» creata",
+    "open": "Apri",
+    "nothingToBuy": "Niente da comprare: nessun piatto con una ricetta per cui ci sia qualcuno a tavola."
   },
   "shoppingApp": {
     "title": "App per la spesa",

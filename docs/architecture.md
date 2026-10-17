@@ -988,6 +988,13 @@ one that already has its own users.
   new list) or corrects items by hand. The menus a list came from are linked (`menus`), so the
   Shopping screen offers only the weeks, from the current one on, with something to buy and no
   list yet; deleting a list frees its weeks again.
+- **A day, a meal or a recipe** (decided 2026-10-17): besides a week, a list can be made for one
+  day or one meal (cart among the day's and the meal's actions on the menu screen, and on the
+  meal page) or for one recipe and a number of people (on the meal page for each recipe, with
+  the meal's people; on the recipe page, with the people chosen beside the ingredients). Such a
+  list is not linked to its week, which stays among those to prepare. Its title is the one the
+  interface words ("Cena di lunedì 12 ott", "Hummus · 4 persone"); merging lists that are not
+  all weeks joins their titles. Nothing to buy: no list (`nothing_to_buy`).
 - **An item is optional** when every recipe line asking for it is optional.
 - **Merging** makes one new list and deletes the sources. Items of the same ingredient (or,
   added by hand without one, the same normalized name) in the same unit are summed; dates and

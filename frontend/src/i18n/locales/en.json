@@ -934,7 +934,16 @@
     "note": "Note",
     "sendAll": "Send all to {{app}}",
     "send": "Send to {{app}}",
-    "sendFailed": "Sending failed: try again shortly."
+    "sendFailed": "Sending failed: try again shortly.",
+    "forDay": "The day's shopping list",
+    "forMeal": "The meal's shopping list",
+    "forRecipe": "Shopping list",
+    "mealTitle": "{{meal}}, {{day}}",
+    "recipeTitle_one": "{{title}} · {{count}} person",
+    "recipeTitle_other": "{{title}} · {{count}} people",
+    "created": "List «{{title}}» created",
+    "open": "Open",
+    "nothingToBuy": "Nothing to buy: no dish with a recipe and somebody at the table."
   },
   "shoppingApp": {
     "title": "Shopping list app",

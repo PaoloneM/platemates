@@ -48,14 +48,16 @@ export function useLabels() {
   }
 }
 
-/** "Sabato" and "10 ott" for a calendar date (YYYY-MM-DD). */
+/** "Sabato" and "10 ott" for a calendar date (YYYY-MM-DD); `inSentence` turns the weekday back to
+ * how the language writes it mid-sentence ("Cena di sabato"; English keeps "Saturday"). */
 export function useDayTitle(date: string) {
   const { i18n } = useTranslation()
   const labels = useLabels()
   const [year, month, day] = date.split('-').map(Number)
   const value = new Date(year, month - 1, day)
   const dayMonth = new Intl.DateTimeFormat(i18n.resolvedLanguage, { day: 'numeric', month: 'short' }).format(value)
-  return { weekday: labels.weekday((value.getDay() + 6) % 7), dayMonth }
+  const inSentence = (weekday: string) => (i18n.resolvedLanguage === 'it' ? weekday.toLowerCase() : weekday)
+  return { weekday: labels.weekday((value.getDay() + 6) % 7), dayMonth, inSentence }
 }
 
 /** Short human description of a month set: "Estate", "Estate, autunno", "Mag-Ago", "Tutto l'anno". */

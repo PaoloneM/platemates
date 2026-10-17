@@ -1,3 +1,4 @@
+import CartIcon from '@mui/icons-material/AddShoppingCartOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CheckIcon from '@mui/icons-material/Check'
@@ -35,6 +36,7 @@ import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { api, type KitchenTool, type Recipe, type RecipeVariants } from '../api'
 import { useAuth } from '../auth/context'
+import { useNewShoppingList } from '../components/NewShoppingList'
 import { AuthorChip } from '../components/RecipeAuthor'
 import { WebRating } from '../components/WebRating'
 import { IngredientList, PeopleStepper, StepList } from '../components/RecipeView'
@@ -106,6 +108,7 @@ export function RecipeDetailPage() {
   const [error, setError] = useState(false)
   const [people, setPeople] = useState<number | null>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const shopping = useNewShoppingList()
   const [allTools, setAllTools] = useState<KitchenTool[]>([])
   const [variants, setVariants] = useState<RecipeVariants | null>(null)
   // The original of the team's copy, shown in the second tab.
@@ -200,6 +203,15 @@ export function RecipeDetailPage() {
   const canEditOriginal = tabbed ? theOriginal.can_edit : recipe.can_edit
   // Always "edit" first, then "remove" or "add": only the edit action depends on the tab.
   const actions: Action[] = []
+  // First, left of the others: a shopping list for the recipe on screen (the tab's), for the
+  // people chosen beside the ingredients.
+  const shopFor = people ?? shown.servings
+  actions.push({
+    key: 'shopping', icon: <CartIcon />, label: t('shopping.forRecipe'),
+    onClick: () => void shopping.create({
+      recipe: shown.id, people: shopFor, title: t('shopping.recipeTitle', { title: shown.title, count: shopFor }),
+    }),
+  })
   if (tabbed && tab === 'mine') {
     actions.push({
       key: 'edit', to: editMine, icon: <EditIcon />, primary: true,
@@ -361,6 +373,7 @@ export function RecipeDetailPage() {
         </Stack>
       )}
 
+      {shopping.snackbar}
       <Dialog open={confirmRemove} onClose={() => setConfirmRemove(false)}>
         <DialogTitle>{t('recipe.removeTitle')}</DialogTitle>
         <DialogContent>

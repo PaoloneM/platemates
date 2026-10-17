@@ -1,3 +1,4 @@
+import CartIcon from '@mui/icons-material/AddShoppingCartOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
@@ -29,6 +30,8 @@ import { DishLine } from '../components/DishLine'
 import { RecipeDialog } from '../components/RecipeDialog'
 import { PeopleCount } from '../components/PeopleCount'
 import { MEALS, useDayTitle, useLabels } from '../labels'
+import { useNewShoppingList } from '../components/NewShoppingList'
+import { mealHasShopping } from '../shopping'
 import { useRealtimeEvent } from '../realtime'
 import { useTeam } from '../team'
 
@@ -90,11 +93,13 @@ function PeopleSection({ day, meal, owner, onChange }: {
   )
 }
 
-function DishesSection({ day, meal, owner, onChange }: {
+function DishesSection({ day, meal, owner, onChange, onShop }: {
   day: CalendarDay
   meal: Meal
   owner: boolean
   onChange: (change: CalendarDayChange) => Promise<void>
+  // A shopping list for one of the meal's recipes, for the meal's people.
+  onShop: (recipe: number, title: string) => void
 }) {
   const { t } = useTranslation()
   const labels = useLabels()
@@ -141,9 +146,17 @@ function DishesSection({ day, meal, owner, onChange }: {
             )
             return (
               <ListItem key={index} disablePadding={dish.recipe !== null} divider
-                sx={{ pr: (owner ? 6 : 0) + (dish.recipe !== null ? 6 : 0) }}
+                sx={{ pr: (owner ? 6 : 0) + (dish.recipe !== null ? 12 : 0) }}
                 secondaryAction={(owner || dish.recipe !== null) && (
                   <Stack direction="row">
+                    {dish.recipe !== null && (
+                      <Tooltip title={t('shopping.forRecipe')}>
+                        <IconButton aria-label={`${t('shopping.forRecipe')}: ${dish.title}`}
+                          onClick={() => onShop(dish.recipe!, dish.title)}>
+                          <CartIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     {dish.recipe !== null && (
                       <Tooltip title={t('meal.viewRecipe')}>
                         <IconButton aria-label={`${t('meal.viewRecipe')}: ${dish.title}`}
@@ -210,6 +223,7 @@ export function MealPage() {
   const valid = isIsoDate(date) && MEALS.includes(meal as Meal)
   const [day, setDay] = useState<CalendarDay | null>(null)
   const [notice, setNotice] = useState<{ message: string; undo?: CalendarDayChange } | null>(null)
+  const shopping = useNewShoppingList()
   const owner = team.role === 'owner'
 
   useEffect(() => {
@@ -228,6 +242,11 @@ export function MealPage() {
   if (!valid) return <Navigate to="/" replace />
   if (!day || day.date !== date) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 6 }} />
   const which = meal as Meal
+  const shopMeal = () => void shopping.create({
+    date: day.date,
+    meal: which,
+    title: t('shopping.mealTitle', { meal: labels.meal(which), day: `${title.inSentence(title.weekday)} ${title.dayMonth}` }),
+  })
 
   async function change(update: CalendarDayChange, message = t('meal.saved')) {
     const before = snapshot(day!, [which])
@@ -265,10 +284,24 @@ export function MealPage() {
         <IconButton component={RouterLink} to={weekUrl(day.date)} aria-label={t('calendar.title')}>
           <ArrowBackIcon />
         </IconButton>
-        <Stack sx={{ minWidth: 0 }}>
+        <Stack sx={{ minWidth: 0, flex: 1 }}>
           <Typography variant="h1">{labels.meal(which)}</Typography>
           <Typography color="text.secondary">{title.weekday} {title.dayMonth}</Typography>
         </Stack>
+        {mealHasShopping(day, which) && (
+          <>
+            <Button variant="outlined" startIcon={<CartIcon />} disabled={shopping.busy} onClick={shopMeal}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' }, flexShrink: 0 }}>
+              {t('shopping.forMeal')}
+            </Button>
+            <Tooltip title={t('shopping.forMeal')}>
+              <IconButton color="primary" disabled={shopping.busy} onClick={shopMeal} aria-label={t('shopping.forMeal')}
+                sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>
+                <CartIcon />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
       </Stack>
       {day.note && <Alert severity="info" icon={false}>{day.note}</Alert>}
       {hasProposal(day, which) && (
@@ -291,10 +324,15 @@ export function MealPage() {
       {!owner && <Alert severity="info">{t('meal.memberNotice')}</Alert>}
       <PeopleSection key={`${day.people[which]}`} day={day} meal={which} owner={owner} onChange={(u) => change(u)} />
       {day.dishes[which] ? (
-        <DishesSection day={day} meal={which} owner={owner} onChange={(u) => change(u)} />
+        <DishesSection day={day} meal={which} owner={owner} onChange={(u) => change(u)}
+          onShop={(recipe, dishTitle) => {
+            const people = Math.max(1, day.proposed_people[which] ?? day.people[which])
+            void shopping.create({ recipe, people, title: t('shopping.recipeTitle', { title: dishTitle, count: people }) })
+          }} />
       ) : (
         <Typography variant="body2" color="text.secondary">{t('meal.breakfastHint')}</Typography>
       )}
+      {shopping.snackbar}
       <Snackbar open={!!notice} autoHideDuration={notice?.undo ? 6000 : 3000} onClose={() => setNotice(null)}
         message={notice?.message}
         action={notice?.undo && (

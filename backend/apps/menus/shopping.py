@@ -1,10 +1,13 @@
 """Shopping lists: computed from a week's menu, then stored as a list the team ticks off.
 
 `build_shopping_list` computes what a menu needs: quantities scaled to each slot's actual
-diners, summed per (ingredient, unit), in aisle order by ingredient category. `snapshot` stores
-that as a `ShoppingList`, a picture of the menu at that moment: changing the menu afterwards
-does not change the list. `merge` joins lists into one. `weeks_to_prepare` lists the weeks that
-have something to buy and no list yet.
+diners, summed per (ingredient, unit), in aisle order by ingredient category; `for_slots` does
+the same for a day or a meal, `for_recipe` for one recipe and a number of people. `snapshot`
+(a week) and `store` keep the result as a `ShoppingList`, a picture of the menu at that moment:
+changing the menu afterwards does not change the list. Only a week's list is linked to its
+menu: a list for a day, a meal or a recipe leaves the week among those to prepare. `merge`
+joins lists into one. `weeks_to_prepare` lists the weeks that have something to buy and no
+list yet.
 """
 
 from __future__ import annotations
@@ -56,17 +59,12 @@ def _countable_dishes():
     ).exclude(slot__outcome=MealSlot.Outcome.SKIPPED)
 
 
-def build_shopping_list(menu: WeeklyMenu) -> list[NeededIngredient]:
-    dishes = (
-        _countable_dishes()
-        .filter(slot__menu=menu)
-        .select_related("slot", "recipe")
-        .prefetch_related("recipe__ingredients__ingredient")
-    )
-
+def _needed(portions) -> list[NeededIngredient]:
+    """What `portions` need: (recipe, people, date or None) each, summed per (ingredient, unit),
+    in aisle order."""
     items: dict[tuple[int, str], NeededIngredient] = {}
-    for dish in dishes:
-        for line in dish.recipe.ingredients.all():
+    for recipe, people, date in portions:
+        for line in recipe.ingredients.all():
             unit = Unit.TO_TASTE if line.quantity is None else line.unit
             key = (line.ingredient_id, unit)
             item = items.get(key)
@@ -77,13 +75,34 @@ def build_shopping_list(menu: WeeklyMenu) -> list[NeededIngredient]:
                     category=line.ingredient.category,
                     unit=unit,
                 )
-            amount = line.scaled_quantity(dish.slot.people)
+            amount = line.scaled_quantity(people)
             if amount is not None:
                 item.quantity = (item.quantity or Decimal(0)) + amount
-            item.needed_on.add(dish.slot.date.isoformat())
+            if date is not None:
+                item.needed_on.add(date.isoformat())
             item.optional = item.optional and line.optional
-
     return sorted(items.values(), key=lambda i: (i.category, i.name, i.unit))
+
+
+def _for_dishes(dishes) -> list[NeededIngredient]:
+    dishes = dishes.select_related("slot", "recipe").prefetch_related(
+        "recipe__ingredients__ingredient"
+    )
+    return _needed((dish.recipe, dish.slot.people, dish.slot.date) for dish in dishes)
+
+
+def build_shopping_list(menu: WeeklyMenu) -> list[NeededIngredient]:
+    return _for_dishes(_countable_dishes().filter(slot__menu=menu))
+
+
+def for_slots(slots) -> list[NeededIngredient]:
+    """What some meals need: a day's, or one meal's."""
+    return _for_dishes(_countable_dishes().filter(slot__in=slots))
+
+
+def for_recipe(recipe, people: int) -> list[NeededIngredient]:
+    """What one recipe needs for `people`, outside any menu."""
+    return _needed([(recipe, people, None)])
 
 
 def group_by_category(items: list[NeededIngredient]) -> dict[str, list[dict[str, object]]]:
@@ -124,13 +143,16 @@ def weeks_to_prepare(team, today: dt.date | None = None):
     )
 
 
-@transaction.atomic
 def snapshot(menu: WeeklyMenu, user=None) -> ShoppingList:
-    """A new list with what the menu needs now. Every call makes a new list."""
-    shopping_list = ShoppingList.objects.create(
-        team=menu.team, title=week_title([menu]), created_by=user
-    )
-    shopping_list.menus.add(menu)
+    """A new list with what the week's menu needs now. Every call makes a new list."""
+    return store(menu.team, week_title([menu]), build_shopping_list(menu), [menu], user)
+
+
+@transaction.atomic
+def store(team, title: str, needed: list[NeededIngredient], menus=(), user=None) -> ShoppingList:
+    """A new list with these items. `menus`: the weeks it covers whole (a week's list)."""
+    shopping_list = ShoppingList.objects.create(team=team, title=title[:120], created_by=user)
+    shopping_list.menus.add(*menus)
     ShoppingItem.objects.bulk_create(
         ShoppingItem(
             shopping_list=shopping_list,
@@ -143,7 +165,7 @@ def snapshot(menu: WeeklyMenu, user=None) -> ShoppingList:
             needed_on=sorted(dt.date.fromisoformat(d) for d in item.needed_on),
             position=position,
         )
-        for position, item in enumerate(build_shopping_list(menu))
+        for position, item in enumerate(needed)
     )
     return shopping_list
 
@@ -164,7 +186,10 @@ def merge(lists: list[ShoppingList], user=None) -> ShoppingList:
     was bought in every list it came from."""
     team = lists[0].team
     menus = WeeklyMenu.objects.filter(shopping_lists__in=lists).distinct()
-    merged = ShoppingList.objects.create(team=team, title=week_title(menus), created_by=user)
+    # Weeks only: their dates. With a day's, a meal's or a recipe's list: the titles joined.
+    weeks_only = all(sl.menus.exists() for sl in lists)
+    title = week_title(menus) if weeks_only else " + ".join(sl.title for sl in lists)
+    merged = ShoppingList.objects.create(team=team, title=title[:120], created_by=user)
     merged.menus.set(menus)
 
     combined: dict[tuple, ShoppingItem] = {}

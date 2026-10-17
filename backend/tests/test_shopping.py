@@ -12,6 +12,7 @@ from apps.catalog.models import Ingredient
 from apps.catalog.services import merge_ingredients
 from apps.menus.models import ShoppingItem, ShoppingList, SlotDish, WeeklyMenu
 from apps.menus.shopping import weeks_to_prepare
+from apps.recipes.models import Recipe
 from apps.teams.models import Membership, Team
 
 TODAY = timezone.localdate()
@@ -98,6 +99,78 @@ def test_a_list_does_not_follow_later_menu_changes(api, team, pasta_recipe):
     created = generate(api, menu)
     SlotDish.objects.filter(slot__menu=menu).delete()
     assert items_of(api, created["id"])["spaghetti"]["quantity"] == "400.00"
+
+
+def post_generate(api, body):
+    return api.post("/api/shopping-lists/generate/", body, format="json")
+
+
+def test_a_day_or_a_meal_becomes_a_list_and_the_week_stays_to_prepare(api, team, pasta_recipe):
+    planned_week(team, pasta_recipe)
+    day = post_generate(api, {"team": team.pk, "date": THIS_MONDAY.isoformat(), "title": "Lunedì"})
+    assert day.status_code == 201, day.json()
+    assert (day.json()["title"], day.json()["weeks"]) == ("Lunedì", [])
+    assert items_of(api, day.json()["id"])["spaghetti"]["quantity"] == "400.00"
+    dinner = post_generate(
+        api, {"team": team.pk, "date": THIS_MONDAY.isoformat(), "meal": "dinner"}
+    ).json()
+    # planned_week: dinner for 2, lunch for 3 (slots in meal order).
+    assert items_of(api, dinner["id"])["spaghetti"]["quantity"] == "160.00"
+    assert dinner["title"] == f"{THIS_MONDAY:%d/%m} dinner"
+    assert len(weeks_to_prepare(team)) == 1
+
+
+def test_a_recipe_becomes_a_list_for_some_people(api, team, pasta_recipe):
+    created = post_generate(api, {"team": team.pk, "recipe": pasta_recipe.pk, "people": 4})
+    assert created.status_code == 201, created.json()
+    items = items_of(api, created.json()["id"])
+    assert items["spaghetti"]["quantity"] == "320.00"  # 160 for 2
+    assert items["spaghetti"]["needed_on"] == []
+    assert created.json()["title"] == pasta_recipe.title
+
+
+def test_nothing_to_buy_makes_no_list(api, team, pasta_recipe):
+    planned_week(team, pasta_recipe)
+    tuesday = (THIS_MONDAY + dt.timedelta(days=1)).isoformat()
+    response = post_generate(api, {"team": team.pk, "date": tuesday})
+    assert response.status_code == 400 and response.json()["code"] == "nothing_to_buy"
+    assert not ShoppingList.objects.exists()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"date": "2026-10-12"},  # no team
+        {"team": 0, "date": "2026-10-12", "recipe": 1},  # two things at once
+        {"meal": "dinner"},  # a meal without a date
+    ],
+)
+def test_what_to_shop_for_must_be_clear(api, team, body):
+    body = {**body, "team": team.pk} if body.get("team") == 0 else body
+    assert post_generate(api, body).status_code == 400
+
+
+def test_no_list_from_another_teams_days_or_private_recipes(api, team, pasta_recipe):
+    other = Team.objects.create(name="Altri")
+    planned_week(other, pasta_recipe)
+    body = {"team": other.pk, "date": THIS_MONDAY.isoformat()}
+    assert post_generate(api, body).status_code == 400
+    secret = Recipe.objects.create(title="Segreto", owner_team=other, visibility="private")
+    body = {"team": team.pk, "recipe": secret.pk, "people": 2}
+    assert post_generate(api, body).status_code == 400
+
+
+def test_merging_other_lists_joins_their_titles(api, team, pasta_recipe):
+    planned_week(team, pasta_recipe)
+    week = generate(api, WeeklyMenu.objects.get(team=team))
+    recipe = post_generate(
+        api, {"team": team.pk, "recipe": pasta_recipe.pk, "people": 2, "title": "Pasta"}
+    ).json()
+    merged = api.post(
+        "/api/shopping-lists/merge/", {"lists": [week["id"], recipe["id"]]}, format="json"
+    ).json()
+    assert merged["title"] == f"{week['title']} + Pasta"
+    assert items_of(api, merged["id"])["spaghetti"]["quantity"] == "560.00"
 
 
 # -- ticking and editing -----------------------------------------------------------------------

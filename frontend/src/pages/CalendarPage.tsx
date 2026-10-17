@@ -1,3 +1,4 @@
+import CartIcon from '@mui/icons-material/AddShoppingCartOutlined'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -63,13 +64,15 @@ import { MEALS, useDayTitle, useLabels } from '../labels'
 import { useOnConnect, useRealtimeConnected, useRealtimeEvent } from '../realtime'
 import { DAY_ACTION, MEAL_ACTION, revealOnHover } from '../hover'
 import { useMenuLayout } from '../menuLayout'
+import { useNewShoppingList } from '../components/NewShoppingList'
+import { mealHasShopping } from '../shopping'
 import { useTeam } from '../team'
 
 const MAX_PEOPLE = 50
 // Only while the real-time connection is down: the progress then comes from the API.
 const FALLBACK_POLL_MS = 15000
 
-function MealCard({ day, meal, owner, today, narrow, onClear, onReview }: {
+function MealCard({ day, meal, owner, today, narrow, onClear, onReview, onShop }: {
   day: CalendarDay
   meal: Meal
   owner: boolean
@@ -78,6 +81,8 @@ function MealCard({ day, meal, owner, today, narrow, onClear, onReview }: {
   narrow: boolean
   onClear: () => void
   onReview: (action: 'accept' | 'reject') => void
+  // A shopping list for this meal; absent when there is nothing to buy.
+  onShop?: () => void
 }) {
   const { t } = useTranslation()
   const labels = useLabels()
@@ -88,6 +93,8 @@ function MealCard({ day, meal, owner, today, narrow, onClear, onReview }: {
   const clearable = owner && mealInUse(day, meal)
   // Dishes without a recipe (a new dish, "pizza out") have nothing to show.
   const recipes = (dishes ?? []).flatMap((d) => (d.recipe === null ? [] : [{ recipe: d.recipe, title: d.title }]))
+  // The card's icons sit in a row at its top right, on the title's line.
+  const icons = [clearable, recipes.length > 0, !!onShop].filter(Boolean).length
   return (
     <Card sx={{
       ...revealOnHover(MEAL_ACTION),
@@ -97,8 +104,9 @@ function MealCard({ day, meal, owner, today, narrow, onClear, onReview }: {
       ...(proposal && { outline: '1px dashed', outlineColor: 'primary.main', outlineOffset: -1 }),
     }}>
       <CardActionArea component={RouterLink} to={mealUrl(day.date, meal)}
-        sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', p: 1.5, pr: clearable || recipes.length > 0 ? 6 : 1.5 }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.75 }}>
+        sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', p: 1.5, pr: 1.5 }}>
+        {/* Only the title's line makes room for the icons; the dishes use the whole width. */}
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.75, pr: icons * 4.5 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{labels.meal(meal)}</Typography>
           <PeopleCount day={day} meal={meal} />
         </Stack>
@@ -122,20 +130,28 @@ function MealCard({ day, meal, owner, today, narrow, onClear, onReview }: {
             aria-label={`${t('generation.accept')}: ${labels.meal(meal)}`}>{t('generation.accept')}</Button>
         </CardActions>
       )}
-      {(clearable || recipes.length > 0) && (
-        <Stack sx={{ position: 'absolute', top: 8, right: 8 }}>
+      {icons > 0 && (
+        <Stack direction="row" sx={{ position: 'absolute', top: 8, right: 8 }}>
           {clearable && (
-            <Tooltip title={t('calendar.clearMeal')} placement="left">
+            <Tooltip title={t('calendar.clearMeal')}>
               <IconButton size="small" className={MEAL_ACTION} onClick={onClear} aria-label={`${t('calendar.clearMeal')}: ${labels.meal(meal)}`}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
           {recipes.length > 0 && (
-            <Tooltip title={t('meal.viewRecipe')} placement="left">
+            <Tooltip title={t('meal.viewRecipe')}>
               <IconButton size="small" className={MEAL_ACTION} onClick={() => setViewing(true)}
                 aria-label={`${t('meal.viewRecipe')}: ${labels.meal(meal)}`}>
                 <ZoomInIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {onShop && (
+            <Tooltip title={t('shopping.forMeal')}>
+              <IconButton size="small" className={MEAL_ACTION} onClick={onShop}
+                aria-label={`${t('shopping.forMeal')}: ${labels.meal(meal)}`}>
+                <CartIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
@@ -148,7 +164,7 @@ function MealCard({ day, meal, owner, today, narrow, onClear, onReview }: {
   )
 }
 
-function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview }: {
+function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview, onShop }: {
   day: CalendarDay
   today: boolean
   owner: boolean
@@ -157,9 +173,13 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview }: {
   onConfigure: () => void
   onClear: (meals: Meal[]) => void
   onReview: (meal: Meal, action: 'accept' | 'reject') => void
+  // A shopping list for the day (no meal) or one meal; its title as the user reads it.
+  onShop: (title: string, meal?: Meal) => void
 }) {
   const { t } = useTranslation()
-  const { weekday, dayMonth } = useDayTitle(day.date)
+  const labels = useLabels()
+  const { weekday, dayMonth, inSentence } = useDayTitle(day.date)
+  const shoppable = MEALS.filter((meal) => mealHasShopping(day, meal))
   const title = (
     <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
       <Typography variant="h3" sx={{ color: today ? 'primary.main' : undefined }}>{weekday}</Typography>
@@ -190,6 +210,15 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview }: {
             )}
           </>
         )}
+        {/* For every member: the lists are the team's. */}
+        {shoppable.length > 0 && (
+          <Tooltip title={t('shopping.forDay')}>
+            <IconButton size="small" className={DAY_ACTION} onClick={() => onShop(`${weekday} ${dayMonth}`)}
+              aria-label={`${t('shopping.forDay')}: ${weekday} ${dayMonth}`}>
+              <CartIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         {day.note && (
           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', ml: 1, minWidth: 0 }}>
             <NoteIcon sx={{ fontSize: 16 }} />
@@ -205,6 +234,9 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview }: {
       }}>
         {MEALS.map((meal) => (
           <MealCard key={meal} day={day} meal={meal} owner={owner} today={today} narrow={layout === 'horizontal'}
+            onShop={shoppable.includes(meal)
+              ? () => onShop(t('shopping.mealTitle', { meal: labels.meal(meal), day: `${inSentence(weekday)} ${dayMonth}` }), meal)
+              : undefined}
             onClear={() => onClear([meal])}
             onReview={(action) => onReview(meal, action)} />
         ))}
@@ -376,6 +408,7 @@ type Notice = { message: string; undo?: { date: string; change: CalendarDayChang
 
 export function CalendarPage() {
   const { layout } = useMenuLayout()
+  const shopping = useNewShoppingList()
   const { t } = useTranslation()
   const labels = useLabels()
   const { team } = useTeam()
@@ -517,6 +550,7 @@ export function CalendarPage() {
           : { display: 'flex', flexDirection: 'column', gap: 3 }}>
           {current.map((day) => (
             <DayRow key={day.date} day={day} today={day.date === todayIso} owner={owner} layout={layout}
+              onShop={(title, meal) => void shopping.create({ date: day.date, meal, title })}
               onConfigure={() => setConfiguring(day)} onClear={(meals) => void clear(day, meals)}
               onReview={(meal, action) => void review(action, [{ date: day.date, meal }])} />
           ))}
@@ -533,6 +567,7 @@ export function CalendarPage() {
             setNotice({ message: t('calendar.saved') })
           }} />
       )}
+      {shopping.snackbar}
       <MenuFab weekStart={start} generating={active} onGenerate={(useWeek) => void generate(useWeek)}
         onSaved={() => setNotice({ message: t('plan.saved') })} />
       <Snackbar open={!!notice} autoHideDuration={notice?.undo ? 6000 : 3000} onClose={() => setNotice(null)}

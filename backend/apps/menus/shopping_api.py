@@ -15,11 +15,12 @@ from rest_framework.response import Response
 
 from apps.catalog.models import Ingredient, Unit
 from apps.realtime.events import publish
+from apps.recipes.models import Recipe
 from apps.teams.models import Team
 from apps.teams.permissions import TeamScopedMixin, user_teams
 
 from . import shopping
-from .models import ShoppingItem, ShoppingList, WeeklyMenu
+from .models import Meal, MealSlot, ShoppingItem, ShoppingList, WeeklyMenu
 
 
 def announce(team_id: int, list_id: int | None) -> None:
@@ -112,7 +113,29 @@ class ShoppingListDetailSerializer(ShoppingListSerializer):
 
 
 class GenerateSerializer(serializers.Serializer):
-    menu = serializers.PrimaryKeyRelatedField(queryset=WeeklyMenu.objects.all())
+    """What to shop for: a week (`menu`), a day (`team`, `date`), a meal (`team`, `date`,
+    `meal`) or a recipe (`team`, `recipe`, `people`). `title` names the list, as the user's
+    interface words it; a plain default otherwise."""
+
+    menu = serializers.PrimaryKeyRelatedField(queryset=WeeklyMenu.objects.all(), required=False)
+    team = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all(), required=False)
+    date = serializers.DateField(required=False)
+    meal = serializers.ChoiceField(choices=Meal.choices, required=False)
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all(), required=False)
+    people = serializers.IntegerField(min_value=1, max_value=100, required=False)
+    title = serializers.CharField(max_length=120, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        kinds = [k for k in ("menu", "date", "recipe") if k in attrs]
+        if len(kinds) != 1:
+            raise serializers.ValidationError("Give one of: menu, date, recipe.")
+        if "menu" not in attrs and "team" not in attrs:
+            raise serializers.ValidationError({"team": "Which team?"})
+        if "meal" in attrs and "date" not in attrs:
+            raise serializers.ValidationError({"meal": "A meal is on a date."})
+        if "recipe" in attrs and "people" not in attrs:
+            raise serializers.ValidationError({"people": "For how many?"})
+        return attrs
 
 
 class MergeSerializer(serializers.Serializer):
@@ -213,14 +236,38 @@ class ShoppingListViewSet(
 
     @action(detail=False, methods=["post"])
     def generate(self, request):
-        """`{menu}`: a new list with what that week's menu needs now (each call a new list)."""
+        """A new list with what a week, a day, a meal or a recipe needs now (see
+        `GenerateSerializer`); each call a new list. 400 `nothing_to_buy` when there is none."""
         data = GenerateSerializer(data=request.data)
         data.is_valid(raise_exception=True)
-        menu = data.validated_data["menu"]
-        if not user_teams(request.user).filter(pk=menu.team_id).exists():
-            raise serializers.ValidationError({"menu": "Not a menu of yours."})
-        shopping_list = shopping.snapshot(menu, user=request.user)
-        announce(menu.team_id, shopping_list.pk)
+        values = data.validated_data
+        team = values["menu"].team if "menu" in values else values["team"]
+        if not user_teams(request.user).filter(pk=team.pk).exists():
+            raise serializers.ValidationError({"team": "Not a team of yours."})
+        title = (values.get("title") or "").strip()
+        if "menu" in values:
+            shopping_list = shopping.snapshot(values["menu"], user=request.user)
+        else:
+            if "date" in values:
+                slots = MealSlot.objects.filter(menu__team=team, date=values["date"])
+                if "meal" in values:
+                    slots = slots.filter(meal=values["meal"])
+                needed = shopping.for_slots(slots)
+                default = f"{values['date']:%d/%m}" + (
+                    f" {values['meal']}" if "meal" in values else ""
+                )
+            else:
+                recipe = values["recipe"]
+                if not Recipe.objects.visible_to(request.user).filter(pk=recipe.pk).exists():
+                    raise serializers.ValidationError({"recipe": "Recipe not found."})
+                needed = shopping.for_recipe(recipe, values["people"])
+                default = recipe.title
+            if not needed:
+                raise serializers.ValidationError(
+                    {"detail": "Nothing to buy.", "code": "nothing_to_buy"}
+                )
+            shopping_list = shopping.store(team, title or default, needed, user=request.user)
+        announce(team.pk, shopping_list.pk)
         return Response(
             ShoppingListSerializer(self.get_queryset().get(pk=shopping_list.pk)).data,
             status=status.HTTP_201_CREATED,

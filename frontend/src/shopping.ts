@@ -1,4 +1,4 @@
-import { listonicLink, type ShoppingItem } from './api'
+import { listonicLink, type CalendarDay, type Meal, type ShoppingItem } from './api'
 import { formatQuantity } from './labels'
 
 /** "12–18 ottobre", or across months/weeks "28 settembre – 11 ottobre": the days covered. */
@@ -55,3 +55,15 @@ export async function sendToListonic(
     throw error
   }
 }
+
+/** Whether a meal has something to buy: people at home and an accepted dish with a recipe, as
+ * the backend counts (`apps/menus/shopping.py`). */
+export function mealHasShopping(day: CalendarDay, meal: Meal): boolean {
+  return day.people[meal] > 0 && (day.dishes[meal] ?? []).some((d) => d.recipe !== null && !d.proposed)
+}
+
+/** What a new list is for: a day (`date`), a meal (`date`, `meal`) or a recipe (`recipe`,
+ * `people`), named by `title`. */
+export type ShoppingFor =
+  | { date: string; meal?: Meal; title: string }
+  | { recipe: number; people: number; title: string }
