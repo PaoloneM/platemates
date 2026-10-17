@@ -192,6 +192,15 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview, onS
         {owner ? (
           <ButtonBase onClick={onConfigure} sx={{ borderRadius: 1, px: 0.5, mx: -0.5 }}>{title}</ButtonBase>
         ) : title}
+        {/* First of the day's actions, for every member: the lists are the team's. */}
+        {shoppable.length > 0 && (
+          <Tooltip title={t('shopping.forDay')}>
+            <IconButton size="small" className={DAY_ACTION} onClick={() => onShop(`${weekday} ${dayMonth}`)}
+              aria-label={`${t('shopping.forDay')}: ${weekday} ${dayMonth}`}>
+              <CartIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         {owner && (
           <>
             <Tooltip title={t('calendar.configureDay')}>
@@ -209,15 +218,6 @@ function DayRow({ day, today, owner, layout, onConfigure, onClear, onReview, onS
               </Tooltip>
             )}
           </>
-        )}
-        {/* For every member: the lists are the team's. */}
-        {shoppable.length > 0 && (
-          <Tooltip title={t('shopping.forDay')}>
-            <IconButton size="small" className={DAY_ACTION} onClick={() => onShop(`${weekday} ${dayMonth}`)}
-              aria-label={`${t('shopping.forDay')}: ${weekday} ${dayMonth}`}>
-              <CartIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
         )}
         {day.note && (
           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', ml: 1, minWidth: 0 }}>
