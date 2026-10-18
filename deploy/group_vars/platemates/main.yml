@@ -6,8 +6,9 @@ platemates_url: "https://{{ platemates_domain }}"
 # Cloudflare in front of everything (deploy/roles/cloudflare, docs/operations.md), step by step:
 # enabled once the zone is active; hosts moved into the tunnel one at a time; the public ports
 # closed last. Each step is a deploy, and each can be undone by one.
-cloudflare_enabled: false
-cloudflare_tunnel_hosts: []
+cloudflare_enabled: true
+cloudflare_tunnel_hosts:
+  - "{{ platemates_admin_domain }}"
 platemates_public_ports_open: true
 
 # The admin plane (apps/core/planes.py), on the VM's 127.0.0.1:9443 only: through Cloudflare's

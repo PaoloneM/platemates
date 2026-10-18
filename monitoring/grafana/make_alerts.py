@@ -20,8 +20,8 @@ PG = "platemates-db"
 # Estimated AI spending in a day (USD) above which Telegram is told.
 AI_DAILY_COST_ALERT_USD = 5
 # Where an alert's link leads: the app's own pages on the admin host (Manage, Monitoring),
-# which open from a phone too. Through the SSH tunnel today; the port goes with Cloudflare.
-ADMIN_URL = "https://admin.platemates.cloud:9443"
+# which open from a phone too, through Cloudflare's tunnel behind Access.
+ADMIN_URL = "https://admin.platemates.cloud"
 MONITORING = f"{ADMIN_URL}/monitoring"
 
 
