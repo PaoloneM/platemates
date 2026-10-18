@@ -4,7 +4,7 @@
   {
    "orgId": 1,
    "name": "platemates",
-   "template": "{{ define \"platemates.telegram\" -}}\n{{ range .Alerts.Firing -}}\n{{ if eq .Labels.severity \"critical\" }}🚨{{ else if eq .Labels.severity \"info\" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname }}</b>\n{{ .Annotations.summary }}\n{{ if .Annotations.action }}👉 {{ .Annotations.action }}\n{{ end }}<a href=\"{{ or .Annotations.link .GeneratorURL }}\">Apri in PlateMates</a>\n\n{{ end -}}\n{{ range .Alerts.Resolved -}}\n✅ <b>Risolto: {{ .Labels.alertname }}</b>\n\n{{ end -}}\n{{- end }}"
+   "template": "{{ define \"platemates.telegram\" -}}\n{{ range .Alerts.Firing -}}\n{{ if .Annotations.Error -}}\n⚠️ <b>Dati non leggibili: {{ or .Labels.rulename .Labels.alertname | html }}</b>\nLa regola non riesce a interrogare i suoi dati (succede mentre il database si riavvia, per esempio durante un deploy).\n<i>{{ .Annotations.Error | html }}</i>\n{{ else -}}\n{{ if eq .Labels.severity \"critical\" }}🚨{{ else if eq .Labels.severity \"info\" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname | html }}</b>\n{{ .Annotations.summary | html }}\n{{ if .Annotations.action }}👉 {{ .Annotations.action | html }}\n{{ end }}{{ end -}}\n<a href=\"{{ or .Annotations.link .GeneratorURL | html }}\">Apri in PlateMates</a>\n\n{{ end -}}\n{{ range .Alerts.Resolved -}}\n✅ <b>Risolto: {{ or .Labels.rulename .Labels.alertname | html }}</b>\n\n{{ end -}}\n{{- end }}"
   }
  ],
  "policies": [

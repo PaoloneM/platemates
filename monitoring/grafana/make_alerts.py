@@ -63,19 +63,27 @@ COST = """(u.input_tokens * p.input_per_mtok + u.output_tokens * p.output_per_mt
 
 # What Telegram shows (Grafana's own message lists labels and query values): per alert an icon
 # by severity, the rule's title, its summary with the measured value, what to do, and a link.
-# Telegram's HTML: summaries and actions must not contain <, > or &. The texts are Italian:
-# they are read by the administrator, like the interface.
+# The texts are Italian: they are read by the administrator, like the interface.
+# Telegram reads the message as HTML and refuses it whole (400) on a stray "<": every value
+# that is not ours is escaped. An evaluation error (DatasourceError, e.g. the database restarting
+# during a deploy) carries the rule's summary unrendered ("<no value>"): it gets its own text.
 TELEGRAM_TEMPLATE = """\
 {{ define "platemates.telegram" -}}
 {{ range .Alerts.Firing -}}
-{{ if eq .Labels.severity "critical" }}🚨{{ else if eq .Labels.severity "info" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname }}</b>
-{{ .Annotations.summary }}
-{{ if .Annotations.action }}👉 {{ .Annotations.action }}
-{{ end }}<a href="{{ or .Annotations.link .GeneratorURL }}">Apri in PlateMates</a>
+{{ if .Annotations.Error -}}
+⚠️ <b>Dati non leggibili: {{ or .Labels.rulename .Labels.alertname | html }}</b>
+La regola non riesce a interrogare i suoi dati (succede mentre il database si riavvia, per esempio durante un deploy).
+<i>{{ .Annotations.Error | html }}</i>
+{{ else -}}
+{{ if eq .Labels.severity "critical" }}🚨{{ else if eq .Labels.severity "info" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname | html }}</b>
+{{ .Annotations.summary | html }}
+{{ if .Annotations.action }}👉 {{ .Annotations.action | html }}
+{{ end }}{{ end -}}
+<a href="{{ or .Annotations.link .GeneratorURL | html }}">Apri in PlateMates</a>
 
 {{ end -}}
 {{ range .Alerts.Resolved -}}
-✅ <b>Risolto: {{ .Labels.alertname }}</b>
+✅ <b>Risolto: {{ or .Labels.rulename .Labels.alertname | html }}</b>
 
 {{ end -}}
 {{- end }}"""
