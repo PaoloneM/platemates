@@ -4,7 +4,7 @@
   {
    "orgId": 1,
    "name": "platemates",
-   "template": "{{ define \"platemates.telegram\" -}}\n{{ range .Alerts.Firing -}}\n{{ if eq .Labels.severity \"critical\" }}🚨{{ else if eq .Labels.severity \"info\" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname }}</b>\n{{ .Annotations.summary }}\n{{ if .Annotations.action }}👉 {{ .Annotations.action }}\n{{ end }}<a href=\"{{ .GeneratorURL }}\">Apri in Grafana</a>\n\n{{ end -}}\n{{ range .Alerts.Resolved -}}\n✅ <b>Risolto: {{ .Labels.alertname }}</b>\n\n{{ end -}}\n{{- end }}"
+   "template": "{{ define \"platemates.telegram\" -}}\n{{ range .Alerts.Firing -}}\n{{ if eq .Labels.severity \"critical\" }}🚨{{ else if eq .Labels.severity \"info\" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname }}</b>\n{{ .Annotations.summary }}\n{{ if .Annotations.action }}👉 {{ .Annotations.action }}\n{{ end }}<a href=\"{{ or .Annotations.link .GeneratorURL }}\">Apri in PlateMates</a>\n\n{{ end -}}\n{{ range .Alerts.Resolved -}}\n✅ <b>Risolto: {{ .Labels.alertname }}</b>\n\n{{ end -}}\n{{- end }}"
   }
  ],
  "policies": [
@@ -79,6 +79,7 @@
      "for": "10m",
      "annotations": {
       "summary": "L'ultimo backup riuscito è di {{ humanizeDuration $values.B.Value }} fa.",
+      "link": "https://admin.platemates.cloud:9443/monitoring",
       "action": "Controlla sul server: journalctl -u platemates-backup"
      },
      "labels": {
@@ -139,6 +140,7 @@
      "for": "5m",
      "annotations": {
       "summary": "PostgreSQL non riesce a salvare il WAL in pgBackRest ({{ printf \"%.0f\" $values.B.Value }} errori in 15 minuti): il ripristino a un istante preciso è a rischio.",
+      "link": "https://admin.platemates.cloud:9443/monitoring",
       "action": "Controlla i log del servizio db sul server."
      },
      "labels": {
@@ -199,6 +201,7 @@
      "for": "2m",
      "annotations": {
       "summary": "PostgreSQL non risponde da 2 minuti.",
+      "link": "https://admin.platemates.cloud:9443/monitoring",
       "action": "Controlla il servizio db sul server."
      },
      "labels": {
@@ -259,6 +262,7 @@
      "for": "10m",
      "annotations": {
       "summary": "Disco del server al {{ printf \"%.0f\" $values.B.Value }}%.",
+      "link": "https://admin.platemates.cloud:9443/monitoring",
       "action": "Libera spazio (immagini Docker vecchie, log) o ingrandisci il disco."
      },
      "labels": {
@@ -319,6 +323,7 @@
      "for": "10m",
      "annotations": {
       "summary": "Memoria libera al {{ printf \"%.0f\" $values.B.Value }}% da 10 minuti.",
+      "link": "https://admin.platemates.cloud:9443/monitoring",
       "action": "Guarda la dashboard Containers per capire chi la usa."
      },
      "labels": {
@@ -379,6 +384,7 @@
      "for": "5m",
      "annotations": {
       "summary": "{{ $labels.job }} ({{ $labels.instance }}) non risponde da 5 minuti.",
+      "link": "https://admin.platemates.cloud:9443/monitoring",
       "action": "Controlla quel servizio sul server."
      },
      "labels": {
@@ -439,6 +445,7 @@
      "for": "5m",
      "annotations": {
       "summary": "Il sito risponde con errori del server (5xx): {{ printf \"%.2f\" $values.B.Value }} al secondo negli ultimi 5 minuti.",
+      "link": "https://admin.platemates.cloud:9443/monitoring",
       "action": "Guarda i log del backend e la dashboard Traffic."
      },
      "labels": {
@@ -501,7 +508,8 @@
      "for": "0s",
      "annotations": {
       "summary": "Richieste in attesa: {{ printf \"%.0f\" $values.B.Value }}.",
-      "action": "Vedi Gestione → Richieste d'invito, sul piano admin."
+      "link": "https://admin.platemates.cloud:9443/manage/invite-requests",
+      "action": "Vedi Gestione → Richieste d'invito."
      },
      "labels": {
       "severity": "info"
@@ -563,7 +571,8 @@
      "for": "0s",
      "annotations": {
       "summary": "Spesa AI stimata di oggi: {{ printf \"%.2f\" $values.B.Value }} USD.",
-      "action": "Vedi Gestione → Consumi, sul piano admin."
+      "link": "https://admin.platemates.cloud:9443/manage/usage",
+      "action": "Vedi Gestione → Consumi."
      },
      "labels": {
       "severity": "warning"

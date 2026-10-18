@@ -19,12 +19,17 @@ VM = "victoriametrics"
 PG = "platemates-db"
 # Estimated AI spending in a day (USD) above which Telegram is told.
 AI_DAILY_COST_ALERT_USD = 5
+# Where an alert's link leads: the app's own pages on the admin host (Manage, Monitoring),
+# which open from a phone too. Through the SSH tunnel today; the port goes with Cloudflare.
+ADMIN_URL = "https://admin.platemates.cloud:9443"
+MONITORING = f"{ADMIN_URL}/monitoring"
 
 
 def rule(uid, title, summary, query, op, threshold, *, datasource=VM, for_="5m",
-         no_data="OK", severity="warning", sql=False, action=""):
+         no_data="OK", severity="warning", sql=False, action="", link=MONITORING):
     """One alert: query (PromQL, or SQL returning a `value` column) compared to threshold.
-    `summary` says what is wrong (with the value), `action` what to do about it."""
+    `summary` says what is wrong (with the value), `action` what to do about it, `link` the
+    app's page to look at."""
     if sql:
         model = {"refId": "A", "rawSql": query, "format": "table", "rawQuery": True,
                  "editorMode": "code"}
@@ -46,7 +51,7 @@ def rule(uid, title, summary, query, op, threshold, *, datasource=VM, for_="5m",
         "noDataState": no_data,
         "execErrState": "Error",
         "for": for_,
-        "annotations": {"summary": summary, **({"action": action} if action else {})},
+        "annotations": {"summary": summary, "link": link, **({"action": action} if action else {})},
         "labels": {"severity": severity},
         "isPaused": False,
     }
@@ -66,7 +71,7 @@ TELEGRAM_TEMPLATE = """\
 {{ if eq .Labels.severity "critical" }}🚨{{ else if eq .Labels.severity "info" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname }}</b>
 {{ .Annotations.summary }}
 {{ if .Annotations.action }}👉 {{ .Annotations.action }}
-{{ end }}<a href="{{ .GeneratorURL }}">Apri in Grafana</a>
+{{ end }}<a href="{{ or .Annotations.link .GeneratorURL }}">Apri in PlateMates</a>
 
 {{ end -}}
 {{ range .Alerts.Resolved -}}
@@ -116,14 +121,14 @@ RULES = [
          f"Richieste in attesa: {{{{ printf \"%.0f\" {VALUE} }}}}.",
          "SELECT COUNT(*) AS value FROM accounts_inviterequest WHERE status = 'pending'",
          "gt", 0, datasource=PG, sql=True, for_="0s", severity="info",
-         action="Vedi Gestione → Richieste d'invito, sul piano admin."),
+         action="Vedi Gestione → Richieste d'invito.", link=f"{ADMIN_URL}/manage/invite-requests"),
     rule("pm-ai-cost", f"Spesa AI oltre {AI_DAILY_COST_ALERT_USD} USD oggi",
          f"Spesa AI stimata di oggi: {{{{ printf \"%.2f\" {VALUE} }}}} USD.",
          f"""SELECT COALESCE(SUM({COST}), 0) AS value
 FROM usage_aiusage u JOIN usage_modelprice p ON p.model = u.model
 WHERE u.created_at >= date_trunc('day', now())""",
          "gt", AI_DAILY_COST_ALERT_USD, datasource=PG, sql=True, for_="0s",
-         action="Vedi Gestione → Consumi, sul piano admin."),
+         action="Vedi Gestione → Consumi.", link=f"{ADMIN_URL}/manage/usage"),
 ]
 
 PROVISIONING = {

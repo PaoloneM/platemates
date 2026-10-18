@@ -187,7 +187,8 @@ Everything that is not the app is served only on the VM's loopback (decided with
   site, AI spending over a daily threshold, invite requests waiting. Each is sent when it fires
   and when it resolves, repeated every 12 h while it lasts, as a short Italian message (the
   template `platemates.telegram` in the same file: an icon by severity, the title, what is wrong
-  with the measured value, what to do, a link; "Risolto" when it ends). Test a template change
+  with the measured value, what to do, a link to the page of the app to look at (Manage or
+  Monitoring, `ADMIN_URL`); "Risolto" when it ends). Test a template change
   in a throwaway Grafana of the same version and its
   `/api/alertmanager/grafana/config/api/v1/templates/test` before deploying: a provisioning
   error stops every alert. They run on the VM itself: if the VM is down nothing is
