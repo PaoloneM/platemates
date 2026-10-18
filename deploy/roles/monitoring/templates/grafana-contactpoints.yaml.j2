@@ -10,4 +10,8 @@ contactPoints:
         settings:
           bottoken: {{ vault_telegram_bot_token | to_json }}
           chatid: {{ vault_telegram_chat_id | string | to_json }}
+          # The readable message (monitoring/grafana/make_alerts.py, TELEGRAM_TEMPLATE).
+          message: '{% raw %}{{ template "platemates.telegram" . }}{% endraw %}'
+          parse_mode: HTML
+          disable_web_page_preview: true
         disableResolveMessage: false

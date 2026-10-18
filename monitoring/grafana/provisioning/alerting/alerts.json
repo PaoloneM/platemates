@@ -1,5 +1,12 @@
 {
  "apiVersion": 1,
+ "templates": [
+  {
+   "orgId": 1,
+   "name": "platemates",
+   "template": "{{ define \"platemates.telegram\" -}}\n{{ range .Alerts.Firing -}}\n{{ if eq .Labels.severity \"critical\" }}🚨{{ else if eq .Labels.severity \"info\" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname }}</b>\n{{ .Annotations.summary }}\n{{ if .Annotations.action }}👉 {{ .Annotations.action }}\n{{ end }}<a href=\"{{ .GeneratorURL }}\">Apri in Grafana</a>\n\n{{ end -}}\n{{ range .Alerts.Resolved -}}\n✅ <b>Risolto: {{ .Labels.alertname }}</b>\n\n{{ end -}}\n{{- end }}"
+  }
+ ],
  "policies": [
   {
    "orgId": 1,
@@ -21,7 +28,7 @@
    "rules": [
     {
      "uid": "pm-backup-stale",
-     "title": "Backup older than 26 hours",
+     "title": "Backup fermo da più di 26 ore",
      "condition": "C",
      "data": [
       {
@@ -71,7 +78,8 @@
      "execErrState": "Error",
      "for": "10m",
      "annotations": {
-      "summary": "No successful backup for over 26 hours: check `journalctl -u platemates-backup`."
+      "summary": "L'ultimo backup riuscito è di {{ humanizeDuration $values.B.Value }} fa.",
+      "action": "Controlla sul server: journalctl -u platemates-backup"
      },
      "labels": {
       "severity": "critical"
@@ -80,7 +88,7 @@
     },
     {
      "uid": "pm-wal-archive",
-     "title": "WAL archiving failing",
+     "title": "Archiviazione del WAL in errore",
      "condition": "C",
      "data": [
       {
@@ -130,7 +138,8 @@
      "execErrState": "Error",
      "for": "5m",
      "annotations": {
-      "summary": "PostgreSQL cannot archive WAL into pgBackRest: restores to a moment are at risk."
+      "summary": "PostgreSQL non riesce a salvare il WAL in pgBackRest ({{ printf \"%.0f\" $values.B.Value }} errori in 15 minuti): il ripristino a un istante preciso è a rischio.",
+      "action": "Controlla i log del servizio db sul server."
      },
      "labels": {
       "severity": "critical"
@@ -139,7 +148,7 @@
     },
     {
      "uid": "pm-postgres-down",
-     "title": "PostgreSQL down",
+     "title": "Database non raggiungibile",
      "condition": "C",
      "data": [
       {
@@ -189,7 +198,8 @@
      "execErrState": "Error",
      "for": "2m",
      "annotations": {
-      "summary": "The database does not answer the exporter."
+      "summary": "PostgreSQL non risponde da 2 minuti.",
+      "action": "Controlla il servizio db sul server."
      },
      "labels": {
       "severity": "critical"
@@ -198,7 +208,7 @@
     },
     {
      "uid": "pm-disk",
-     "title": "Disk over 85%",
+     "title": "Disco quasi pieno",
      "condition": "C",
      "data": [
       {
@@ -248,7 +258,8 @@
      "execErrState": "Error",
      "for": "10m",
      "annotations": {
-      "summary": "The server's disk is filling up."
+      "summary": "Disco del server al {{ printf \"%.0f\" $values.B.Value }}%.",
+      "action": "Libera spazio (immagini Docker vecchie, log) o ingrandisci il disco."
      },
      "labels": {
       "severity": "warning"
@@ -257,7 +268,7 @@
     },
     {
      "uid": "pm-memory",
-     "title": "Memory under 10%",
+     "title": "Memoria quasi esaurita",
      "condition": "C",
      "data": [
       {
@@ -307,7 +318,8 @@
      "execErrState": "Error",
      "for": "10m",
      "annotations": {
-      "summary": "Less than 10% of memory available for 10 minutes."
+      "summary": "Memoria libera al {{ printf \"%.0f\" $values.B.Value }}% da 10 minuti.",
+      "action": "Guarda la dashboard Containers per capire chi la usa."
      },
      "labels": {
       "severity": "warning"
@@ -316,7 +328,7 @@
     },
     {
      "uid": "pm-target-down",
-     "title": "A monitored service is down",
+     "title": "Servizio non raggiungibile",
      "condition": "C",
      "data": [
       {
@@ -366,7 +378,8 @@
      "execErrState": "Error",
      "for": "5m",
      "annotations": {
-      "summary": "{{ $labels.job }} ({{ $labels.instance }}) has not answered for 5 minutes."
+      "summary": "{{ $labels.job }} ({{ $labels.instance }}) non risponde da 5 minuti.",
+      "action": "Controlla quel servizio sul server."
      },
      "labels": {
       "severity": "critical"
@@ -375,7 +388,7 @@
     },
     {
      "uid": "pm-public-5xx",
-     "title": "Errors on the public site",
+     "title": "Errori sul sito pubblico",
      "condition": "C",
      "data": [
       {
@@ -425,7 +438,8 @@
      "execErrState": "Error",
      "for": "5m",
      "annotations": {
-      "summary": "The public site has been answering with server errors (5xx) for 5 minutes."
+      "summary": "Il sito risponde con errori del server (5xx): {{ printf \"%.2f\" $values.B.Value }} al secondo negli ultimi 5 minuti.",
+      "action": "Guarda i log del backend e la dashboard Traffic."
      },
      "labels": {
       "severity": "warning"
@@ -434,7 +448,7 @@
     },
     {
      "uid": "pm-invite-requests",
-     "title": "Invite requests waiting",
+     "title": "Richieste d'invito in attesa",
      "condition": "C",
      "data": [
       {
@@ -486,7 +500,8 @@
      "execErrState": "Error",
      "for": "0s",
      "annotations": {
-      "summary": "Someone asked for an invitation: see Gestione > Richieste d'invito."
+      "summary": "Richieste in attesa: {{ printf \"%.0f\" $values.B.Value }}.",
+      "action": "Vedi Gestione → Richieste d'invito, sul piano admin."
      },
      "labels": {
       "severity": "info"
@@ -495,7 +510,7 @@
     },
     {
      "uid": "pm-ai-cost",
-     "title": "AI spending over 5 USD today",
+     "title": "Spesa AI oltre 5 USD oggi",
      "condition": "C",
      "data": [
       {
@@ -547,7 +562,8 @@
      "execErrState": "Error",
      "for": "0s",
      "annotations": {
-      "summary": "Today's estimated AI cost passed the threshold: see Gestione > Consumi."
+      "summary": "Spesa AI stimata di oggi: {{ printf \"%.2f\" $values.B.Value }} USD.",
+      "action": "Vedi Gestione → Consumi, sul piano admin."
      },
      "labels": {
       "severity": "warning"

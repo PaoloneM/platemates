@@ -178,13 +178,19 @@ Everything that is not the app is served only on the VM's loopback (decided with
   (`monitoring/scrape.yml`). Grafana, at `/grafana`, is embedded in the app's Monitoring page
   (user menu, administrators, admin host only); it signs in through Keycloak (client
   `platemates-grafana`, administrators only) and reads the AI usage from PostgreSQL as
-  `grafana_reader` (usage, prices and team names only; `monitoring/db-roles.sql`). Dashboards
+  `grafana_reader` (usage, prices, team names, and the invite requests' dates and status only;
+  `monitoring/db-roles.sql`). Dashboards
   are code: `python3 monitoring/grafana/make_dashboards.py`, never edited in Grafana.
   **Alerts** go to Telegram (bot token and chat id in the vault), defined as code in
   `monitoring/grafana/make_alerts.py`: backup older than 26 h, WAL archiving failing,
   PostgreSQL down, disk over 85%, memory under 10%, a monitored service down, 5xx on the public
-  site, AI spending over a daily threshold. Each is sent when it fires and when it resolves,
-  repeated every 12 h while it lasts. They run on the VM itself: if the VM is down nothing is
+  site, AI spending over a daily threshold, invite requests waiting. Each is sent when it fires
+  and when it resolves, repeated every 12 h while it lasts, as a short Italian message (the
+  template `platemates.telegram` in the same file: an icon by severity, the title, what is wrong
+  with the measured value, what to do, a link; "Risolto" when it ends). Test a template change
+  in a throwaway Grafana of the same version and its
+  `/api/alertmanager/grafana/config/api/v1/templates/test` before deploying: a provisioning
+  error stops every alert. They run on the VM itself: if the VM is down nothing is
   sent, which only an external check of `https://platemates.cloud/api/health/` (UptimeRobot,
   also able to write to Telegram) can catch.
 - **Social login on the admin host**: Keycloak builds each provider's redirect URI from the

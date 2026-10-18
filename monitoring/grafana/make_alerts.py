@@ -4,7 +4,7 @@ the notification policy and the alert rules.
 
 Alerts are code, like the dashboards: change this file and run it
 (`python3 monitoring/grafana/make_alerts.py`); provisioned rules cannot be edited in Grafana.
-The Telegram contact point the policy sends to is not here: Ansible writes it on the server
+The message template is here too; the Telegram contact point the policy sends to is not: Ansible writes it on the server
 (deploy/roles/monitoring), since Grafana turns a numeric chat id passed through an environment
 variable into a number its Telegram integration refuses. Standard library only.
 """
@@ -22,8 +22,9 @@ AI_DAILY_COST_ALERT_USD = 5
 
 
 def rule(uid, title, summary, query, op, threshold, *, datasource=VM, for_="5m",
-         no_data="OK", severity="warning", sql=False):
-    """One alert: query (PromQL, or SQL returning a `value` column) compared to threshold."""
+         no_data="OK", severity="warning", sql=False, action=""):
+    """One alert: query (PromQL, or SQL returning a `value` column) compared to threshold.
+    `summary` says what is wrong (with the value), `action` what to do about it."""
     if sql:
         model = {"refId": "A", "rawSql": query, "format": "table", "rawQuery": True,
                  "editorMode": "code"}
@@ -45,7 +46,7 @@ def rule(uid, title, summary, query, op, threshold, *, datasource=VM, for_="5m",
         "noDataState": no_data,
         "execErrState": "Error",
         "for": for_,
-        "annotations": {"summary": summary},
+        "annotations": {"summary": summary, **({"action": action} if action else {})},
         "labels": {"severity": severity},
         "isPaused": False,
     }
@@ -55,45 +56,80 @@ COST = """(u.input_tokens * p.input_per_mtok + u.output_tokens * p.output_per_mt
   + u.cache_read_tokens * p.cache_read_per_mtok + u.cache_write_tokens * p.cache_write_per_mtok)
   / 1000000 + u.web_searches * p.per_thousand_searches / 1000"""
 
+# What Telegram shows (Grafana's own message lists labels and query values): per alert an icon
+# by severity, the rule's title, its summary with the measured value, what to do, and a link.
+# Telegram's HTML: summaries and actions must not contain <, > or &. The texts are Italian:
+# they are read by the administrator, like the interface.
+TELEGRAM_TEMPLATE = """\
+{{ define "platemates.telegram" -}}
+{{ range .Alerts.Firing -}}
+{{ if eq .Labels.severity "critical" }}🚨{{ else if eq .Labels.severity "info" }}🔔{{ else }}⚠️{{ end }} <b>{{ .Labels.alertname }}</b>
+{{ .Annotations.summary }}
+{{ if .Annotations.action }}👉 {{ .Annotations.action }}
+{{ end }}<a href="{{ .GeneratorURL }}">Apri in Grafana</a>
+
+{{ end -}}
+{{ range .Alerts.Resolved -}}
+✅ <b>Risolto: {{ .Labels.alertname }}</b>
+
+{{ end -}}
+{{- end }}"""
+
+# Values in summaries: $values.B is the reduced query (the value compared to the threshold).
+VALUE = "$values.B.Value"
+
 RULES = [
-    rule("pm-backup-stale", "Backup older than 26 hours",
-         "No successful backup for over 26 hours: check `journalctl -u platemates-backup`.",
+    rule("pm-backup-stale", "Backup fermo da più di 26 ore",
+         f"L'ultimo backup riuscito è di {{{{ humanizeDuration {VALUE} }}}} fa.",
          "time() - platemates_backup_last_success_timestamp_seconds", "gt", 26 * 3600,
-         no_data="Alerting", severity="critical", for_="10m"),
-    rule("pm-wal-archive", "WAL archiving failing",
-         "PostgreSQL cannot archive WAL into pgBackRest: restores to a moment are at risk.",
-         "increase(pg_stat_archiver_failed_count[15m])", "gt", 0, severity="critical"),
-    rule("pm-postgres-down", "PostgreSQL down",
-         "The database does not answer the exporter.",
-         "pg_up", "lt", 1, no_data="Alerting", severity="critical", for_="2m"),
-    rule("pm-disk", "Disk over 85%",
-         "The server's disk is filling up.",
+         no_data="Alerting", severity="critical", for_="10m",
+         action="Controlla sul server: journalctl -u platemates-backup"),
+    rule("pm-wal-archive", "Archiviazione del WAL in errore",
+         f"PostgreSQL non riesce a salvare il WAL in pgBackRest ({{{{ printf \"%.0f\" {VALUE} }}}} "
+         "errori in 15 minuti): il ripristino a un istante preciso è a rischio.",
+         "increase(pg_stat_archiver_failed_count[15m])", "gt", 0, severity="critical",
+         action="Controlla i log del servizio db sul server."),
+    rule("pm-postgres-down", "Database non raggiungibile",
+         "PostgreSQL non risponde da 2 minuti.",
+         "pg_up", "lt", 1, no_data="Alerting", severity="critical", for_="2m",
+         action="Controlla il servizio db sul server."),
+    rule("pm-disk", "Disco quasi pieno",
+         f"Disco del server al {{{{ printf \"%.0f\" {VALUE} }}}}%.",
          '100 * (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})',
-         "gt", 85, for_="10m"),
-    rule("pm-memory", "Memory under 10%",
-         "Less than 10% of memory available for 10 minutes.",
-         "100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes", "lt", 10, for_="10m"),
-    rule("pm-target-down", "A monitored service is down",
+         "gt", 85, for_="10m",
+         action="Libera spazio (immagini Docker vecchie, log) o ingrandisci il disco."),
+    rule("pm-memory", "Memoria quasi esaurita",
+         f"Memoria libera al {{{{ printf \"%.0f\" {VALUE} }}}}% da 10 minuti.",
+         "100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes", "lt", 10, for_="10m",
+         action="Guarda la dashboard Containers per capire chi la usa."),
+    rule("pm-target-down", "Servizio non raggiungibile",
          # Annotations are not env-expanded by Grafana: $labels stays as it is, for templating.
-         "{{ $labels.job }} ({{ $labels.instance }}) has not answered for 5 minutes.",
-         "up", "lt", 1, severity="critical"),
-    rule("pm-public-5xx", "Errors on the public site",
-         "The public site has been answering with server errors (5xx) for 5 minutes.",
-         'sum(rate(traefik_service_requests_total{plane="public",code=~"5.."}[5m]))', "gt", 0.05),
-    rule("pm-invite-requests", "Invite requests waiting",
-         "Someone asked for an invitation: see Gestione > Richieste d'invito.",
+         "{{ $labels.job }} ({{ $labels.instance }}) non risponde da 5 minuti.",
+         "up", "lt", 1, severity="critical",
+         action="Controlla quel servizio sul server."),
+    rule("pm-public-5xx", "Errori sul sito pubblico",
+         f"Il sito risponde con errori del server (5xx): {{{{ printf \"%.2f\" {VALUE} }}}} al "
+         "secondo negli ultimi 5 minuti.",
+         'sum(rate(traefik_service_requests_total{plane="public",code=~"5.."}[5m]))', "gt", 0.05,
+         action="Guarda i log del backend e la dashboard Traffic."),
+    rule("pm-invite-requests", "Richieste d'invito in attesa",
+         f"Richieste in attesa: {{{{ printf \"%.0f\" {VALUE} }}}}.",
          "SELECT COUNT(*) AS value FROM accounts_inviterequest WHERE status = 'pending'",
-         "gt", 0, datasource=PG, sql=True, for_="0s", severity="info"),
-    rule("pm-ai-cost", f"AI spending over {AI_DAILY_COST_ALERT_USD} USD today",
-         "Today's estimated AI cost passed the threshold: see Gestione > Consumi.",
+         "gt", 0, datasource=PG, sql=True, for_="0s", severity="info",
+         action="Vedi Gestione → Richieste d'invito, sul piano admin."),
+    rule("pm-ai-cost", f"Spesa AI oltre {AI_DAILY_COST_ALERT_USD} USD oggi",
+         f"Spesa AI stimata di oggi: {{{{ printf \"%.2f\" {VALUE} }}}} USD.",
          f"""SELECT COALESCE(SUM({COST}), 0) AS value
 FROM usage_aiusage u JOIN usage_modelprice p ON p.model = u.model
 WHERE u.created_at >= date_trunc('day', now())""",
-         "gt", AI_DAILY_COST_ALERT_USD, datasource=PG, sql=True, for_="0s"),
+         "gt", AI_DAILY_COST_ALERT_USD, datasource=PG, sql=True, for_="0s",
+         action="Vedi Gestione → Consumi, sul piano admin."),
 ]
 
 PROVISIONING = {
     "apiVersion": 1,
+    # The contact point (written by Ansible) uses it: {{ template "platemates.telegram" . }}.
+    "templates": [{"orgId": 1, "name": "platemates", "template": TELEGRAM_TEMPLATE}],
     "policies": [
         {
             "orgId": 1,
@@ -114,7 +150,9 @@ PROVISIONING = {
 
 def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(PROVISIONING, indent=1) + "\n")
+    # Characters as they are: Grafana reads the file with a YAML parser, which refuses the
+    # surrogate-pair escapes json.dumps writes for emoji by default.
+    OUT.write_text(json.dumps(PROVISIONING, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"wrote {OUT.relative_to(OUT.parents[3])} ({len(RULES)} rules)")
 
 
