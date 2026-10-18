@@ -11,7 +11,7 @@ cloudflare_tunnel_hosts:
   - "{{ platemates_admin_domain }}"
   - "{{ platemates_domain }}"
   - "www.{{ platemates_domain }}"
-platemates_public_ports_open: true
+platemates_public_ports_open: false
 
 # The admin plane (apps/core/planes.py), on the VM's 127.0.0.1:9443 only: through Cloudflare's
 # tunnel behind Access once the admin host is in it, and always through an SSH tunnel (the way
