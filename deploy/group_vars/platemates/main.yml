@@ -42,11 +42,11 @@ platemates_acme_email: "{{ vault_acme_email }}"
 platemates_email_enabled: false
 platemates_smtp_host: smtp-relay.brevo.com
 platemates_smtp_from: "no-reply@{{ platemates_domain }}"
-# Records that let other mail servers trust what Brevo sends for the domain (written by
-# deploy/roles/cloudflare). SPF is one record for every sender: ImprovMX (incoming mail
-# forwarding) and Brevo together.
+# Mail: incoming through Cloudflare Email Routing (it keeps its own MX and DKIM records),
+# outgoing through Brevo. These records (written by deploy/roles/cloudflare) let other mail
+# servers trust both; SPF is one record for every sender.
 cloudflare_mail_records:
-  - { type: TXT, name: "{{ platemates_domain }}", content: "v=spf1 include:spf.improvmx.com include:spf.brevo.com ~all" }
+  - { type: TXT, name: "{{ platemates_domain }}", content: "v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all" }
   # Reports go to Brevo, which shows them in its dashboard.
   - { type: TXT, name: "_dmarc.{{ platemates_domain }}", content: "v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com" }
   # Brevo: proof that the domain is ours, and its two DKIM keys.

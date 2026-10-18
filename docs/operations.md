@@ -178,12 +178,13 @@ be open. Configured through its API only, by `deploy/roles/cloudflare`
   `cloudflare_enabled: true` once the zone is active; hosts added to `cloudflare_tunnel_hosts`
   one at a time (admin first; taking a host out gives it back its direct record); last,
   `platemates_public_ports_open: false` (Traefik's 80 and 443 only on 127.0.0.1, closed in ufw).
-- **Mail**: ImprovMX's MX records (incoming mail forwarding) are never touched. Outgoing mail
+- **Mail**: incoming through Cloudflare Email Routing (it replaced ImprovMX on 2026-10-18; its MX
+  and DKIM records are its own, never touched by the role). Outgoing mail
   (Keycloak's password reset and email verification) goes through Brevo's SMTP relay on port 587
   (Hetzner blocks 25 and 465): `vault_smtp_user` and `vault_smtp_password` (Brevo's SMTP key),
   switched on with `platemates_email_enabled` once Brevo has verified the domain. Its records
-  (`cloudflare_mail_records`): one SPF for ImprovMX and Brevo together, DMARC, and Brevo's DKIM
-  and verification code.
+  (`cloudflare_mail_records`): one SPF for Cloudflare and Brevo together, DMARC, and Brevo's
+  DKIM and verification code.
 
 ## The admin plane
 
