@@ -47,7 +47,12 @@ platemates_smtp_from: "no-reply@{{ platemates_domain }}"
 # forwarding) and Brevo together.
 cloudflare_mail_records:
   - { type: TXT, name: "{{ platemates_domain }}", content: "v=spf1 include:spf.improvmx.com include:spf.brevo.com ~all" }
-  - { type: TXT, name: "_dmarc.{{ platemates_domain }}", content: "v=DMARC1; p=none" }
+  # Reports go to Brevo, which shows them in its dashboard.
+  - { type: TXT, name: "_dmarc.{{ platemates_domain }}", content: "v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com" }
+  # Brevo: proof that the domain is ours, and its two DKIM keys.
+  - { type: TXT, name: "{{ platemates_domain }}", content: "brevo-code:26e157b3fd55497be0c8a1a549481065" }
+  - { type: CNAME, name: "brevo1._domainkey.{{ platemates_domain }}", content: b1.platemates-cloud.dkim.brevo.com }
+  - { type: CNAME, name: "brevo2._domainkey.{{ platemates_domain }}", content: b2.platemates-cloud.dkim.brevo.com }
 platemates_app_admins: "{{ vault_app_admins }}"
 
 # Written into the server's .env on every run (the rest of it, secrets included, is created
