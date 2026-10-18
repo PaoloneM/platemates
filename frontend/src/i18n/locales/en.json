@@ -179,7 +179,18 @@
     "addFirst": "Add the first recipe",
     "noMatch": "No recipes found",
     "loadMore": "Show more",
-    "add": "Add recipe"
+    "add": "Add recipe",
+    "highlight": {
+      "new": "New",
+      "changed": "Changed"
+    },
+    "ordering": {
+      "label": "Sort",
+      "title": "Alphabetical",
+      "recent": "Recent"
+    },
+    "inSeasonFilter": "In season",
+    "deletedNotice": "The recipe you were looking at was deleted."
   },
   "recipe": {
     "servings_one": "{{count}} serving",

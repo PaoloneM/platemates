@@ -1,10 +1,12 @@
 from django.db.models import Prefetch, Q
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.core.permissions import CatalogPermission
+from apps.menus.models import SlotDish
 from apps.teams.models import RecipeBookEntry
 from apps.teams.permissions import user_teams
 
@@ -13,6 +15,7 @@ from .serializers import (
     CuisineSerializer,
     RecipeCardSerializer,
     RecipeSerializer,
+    announce_recipe,
     author_of,
     user_team_ids,
 )
@@ -23,6 +26,21 @@ class CuisineViewSet(viewsets.ModelViewSet):
     serializer_class = CuisineSerializer
     permission_classes = [CatalogPermission]
     pagination_class = None
+
+
+# Three columns of cards: eight full rows.
+BOOK_PAGE_SIZE = 24
+
+
+def in_season_now() -> Q:
+    """What `Recipe.suitable_months` would say holds the current month, without being all
+    year: each of the two month sets either empty (all year) or holding the month, and not
+    both all year."""
+    month = timezone.localdate().month
+    all_year = {"season_months__len__in": (0, 12)}
+    season = Q(season_months__len=0) | Q(season_months__contains=[month])
+    climate = Q(climate_months__len=0) | Q(climate_months__contains=[month])
+    return season & climate & ~(Q(**all_year) & Q(climate_months__len__in=(0, 12)))
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -50,8 +68,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=False)
     def browse(self, request):
         """The recipe book screen: `?team=` and `mine=1` (the team's recipe book) and/or
-        `community=1` (recipes shared by the system and other teams), with `?search=` and
-        `?course=`. Each recipe says where it comes from and whether it is in the book."""
+        `community=1` (recipes shared by the system and other teams), with `?search=`,
+        `?course=`, `?in_season=1` (as the cards' "in season" chip: a season of its own that
+        holds the current month) and `?ordering=recent` (last added or changed first; by title
+        otherwise). Pages of BOOK_PAGE_SIZE. Each recipe says where it comes from and whether
+        it is in the book."""
         try:
             team = user_teams(request.user).get(pk=int(request.query_params.get("team", "")))
         except (ValueError, Exception):
@@ -92,6 +113,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipes = recipes.filter(title__icontains=search)
         if course := params.get("course"):
             recipes = recipes.filter(course=course)
+        if params.get("in_season") == "1":
+            recipes = recipes.filter(in_season_now())
+        if params.get("ordering") == "recent":
+            recipes = recipes.order_by("-updated_at", "-pk")
+        self.paginator.page_size = BOOK_PAGE_SIZE
         page = self.paginate_queryset(recipes)
         return self.get_paginated_response(
             RecipeCardSerializer(page, many=True, context=self.get_serializer_context()).data
@@ -135,5 +161,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 {"detail": "Other teams keep this recipe in their recipe book."},
                 status=status.HTTP_409_CONFLICT,
             )
+        if SlotDish.objects.filter(recipe=recipe).exists():
+            return Response(
+                {"detail": "A menu has this recipe.", "code": "in_menu"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        announce_recipe(recipe, "deleted")
         recipe.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

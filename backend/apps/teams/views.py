@@ -8,7 +8,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.planes import staff_powers
+from apps.menus.models import SlotDish
 from apps.recipes.models import Recipe, Visibility
+from apps.recipes.serializers import announce_book, announce_recipe
 
 from .calendar import calendar, set_day
 from .models import Member, Membership, Preference, RecipeBookEntry, Team
@@ -140,16 +142,22 @@ class RecipeBookEntryViewSet(TeamScopedMixin, viewsets.ModelViewSet):
         recipe = serializer.validated_data["recipe"]
         if not Recipe.objects.visible_to(self.request.user).filter(pk=recipe.pk).exists():
             raise ValidationError({"recipe": "Recipe not found."})
-        serializer.save()
+        entry = serializer.save()
+        announce_book(entry.team_id, recipe.pk, "book_added")
 
     @transaction.atomic
     def perform_destroy(self, instance):
         recipe = instance.recipe
+        announce_book(instance.team_id, recipe.pk, "book_removed")
         instance.delete()
+        # A private recipe nobody keeps any more goes too, unless a menu has it: those days
+        # still show it (it then stays, out of every book).
         if (
             recipe.visibility == Visibility.PRIVATE
             and not RecipeBookEntry.objects.filter(recipe=recipe).exists()
+            and not SlotDish.objects.filter(recipe=recipe).exists()
         ):
+            announce_recipe(recipe, "deleted")
             recipe.delete()
 
 

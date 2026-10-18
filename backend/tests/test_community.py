@@ -377,3 +377,77 @@ def test_only_staff_promote_what_they_can_see(api, user, team, neighbours, syste
     assert promote(api, system_recipe).status_code == 400  # already a system recipe
     to_a_team = new_recipe(team, visibility="shared", promote_from=shared.pk)
     assert api.post("/api/recipes/", to_a_team, format="json").status_code == 400
+
+
+# -- the recipe book screen: order, season, pages -----------------------------------------------
+
+
+def test_the_book_orders_by_title_or_by_last_change(api, team):
+    import time
+
+    for title in ("Zuppa", "Arrosto"):
+        Recipe.objects.create(title=title, owner_team=team, visibility=Visibility.PRIVATE)
+        RecipeBookEntry.objects.create(
+            team=team, recipe=Recipe.objects.get(title=title), status="approved"
+        )
+        time.sleep(0.01)
+    zuppa = Recipe.objects.get(title="Zuppa")
+    zuppa.description = "Calda"
+    zuppa.save()
+    by_title = list(browse(api, team, mine=1))
+    recent = [
+        r["title"]
+        for r in api.get(f"/api/recipes/browse/?team={team.pk}&mine=1&ordering=recent").json()[
+            "results"
+        ]
+    ]
+    assert by_title == ["Arrosto", "Zuppa"] and recent == ["Zuppa", "Arrosto"]
+
+
+def test_in_season_means_a_season_of_its_own_holding_this_month(api, team):
+    from django.utils import timezone
+
+    month = timezone.localdate().month
+    other = (month % 12) + 1
+    cases = {
+        "Ora": ([month], []),
+        "Fuori stagione": ([other], []),
+        "Tutto l'anno": ([], []),
+        "Clima no": ([month], [other]),
+    }
+    for title, (season, climate) in cases.items():
+        recipe = Recipe.objects.create(
+            title=title,
+            owner_team=team,
+            visibility=Visibility.PRIVATE,
+            season_months=season,
+            climate_months=climate,
+        )
+        RecipeBookEntry.objects.create(team=team, recipe=recipe, status="approved")
+    assert list(browse(api, team, mine=1, in_season=1)) == ["Ora"]
+
+
+def test_the_book_comes_in_pages_of_24(api, team):
+    for i in range(30):
+        recipe = Recipe.objects.create(
+            title=f"R{i:02}", owner_team=team, visibility=Visibility.PRIVATE
+        )
+        RecipeBookEntry.objects.create(team=team, recipe=recipe, status="approved")
+    first = api.get(f"/api/recipes/browse/?team={team.pk}&mine=1").json()
+    assert (first["count"], len(first["results"])) == (30, 24) and first["next"]
+
+
+def test_a_recipe_a_menu_has_leaves_the_book_but_stays(api, team):
+    import datetime as dt
+
+    from apps.menus.models import SlotDish, WeeklyMenu
+
+    recipe = Recipe.objects.create(title="Nel menu", owner_team=team, visibility=Visibility.PRIVATE)
+    entry = RecipeBookEntry.objects.create(team=team, recipe=recipe, status="approved")
+    menu = WeeklyMenu.objects.create(team=team, week_start=dt.date(2026, 10, 12))
+    menu.create_empty_slots()
+    SlotDish.objects.create(slot=menu.slots.first(), recipe=recipe)
+    assert api.delete(f"/api/recipe-book/{entry.pk}/").status_code == 204
+    assert Recipe.objects.filter(pk=recipe.pk).exists()  # the menu still shows it
+    deleted = api.delete(f"/api/recipes/{recipe.pk}/")
+    assert deleted.status_code == 409 and deleted.json()["code"] == "in_menu"

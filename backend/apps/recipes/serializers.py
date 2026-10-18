@@ -76,16 +76,29 @@ def _snapshot(recipe: Recipe) -> dict[str, object]:
     }
 
 
-def _announce_recipe(recipe: Recipe, fields: list[str]) -> None:
-    """Tell the browsers that may be showing the recipe which parts changed (`recipe` event):
-    the team that owns it and the teams that keep it in their book. Once saved."""
+def announce_recipe(recipe: Recipe, action: str, fields: list[str] | tuple = ()) -> None:
+    """Tell the browsers that may show the recipe what happened to it (`recipe` event, once
+    saved): `created`, `updated` (with the parts that changed) or `deleted`. They are the team
+    that owns it, the teams that keep it in their book, and every team when it is shared (their
+    community). Call it before deleting: the book entries go with the recipe."""
     from apps.realtime.events import publish_on_commit
 
     teams = set(RecipeBookEntry.objects.filter(recipe=recipe).values_list("team_id", flat=True))
     if recipe.owner_team_id:
         teams.add(recipe.owner_team_id)
-    data = {"recipe": recipe.pk, "fields": fields}
+    if recipe.visibility == Visibility.SHARED:
+        teams |= set(Team.objects.filter(is_system=False).values_list("pk", flat=True))
+    teams.discard(None)
+    data = {"recipe": recipe.pk, "action": action, "fields": list(fields)}
     publish_on_commit(teams, "recipe", data)
+
+
+def announce_book(team_id: int, recipe_id: int, action: str) -> None:
+    """A team's recipe book gained (`book_added`) or lost (`book_removed`) a recipe: only that
+    team's browsers care."""
+    from apps.realtime.events import publish_on_commit
+
+    publish_on_commit([team_id], "recipe", {"recipe": recipe_id, "action": action, "team": team_id})
 
 
 class CuisineSerializer(serializers.ModelSerializer):
@@ -348,6 +361,7 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
         RecipeBookEntry.objects.create(
             team=team, recipe=recipe, status=RecipeBookEntry.Status.APPROVED
         )
+        announce_recipe(recipe, "created")
         return recipe
 
     def _move_to_system(self, recipe: Recipe, validated_data) -> Recipe:
@@ -377,7 +391,7 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
         self._derive(recipe)
         after = _snapshot(recipe)
         if changed := sorted(k for k in after if after[k] != before.get(k)):
-            _announce_recipe(recipe, changed)
+            announce_recipe(recipe, "updated", changed)
         return recipe
 
     @staticmethod

@@ -726,7 +726,15 @@ export type CalendarEvent = {
   changes: { meal: Meal | null; what: 'people' | 'dishes' | 'note' }[]
   origin?: string
 }
-export type RecipeEvent = { recipe: number; fields: string[]; origin?: string }
+export type RecipeEvent = {
+  recipe: number
+  // created, updated (fields: the parts that changed), deleted; a team's own recipe book:
+  // book_added, book_removed (with `team`).
+  action: 'created' | 'updated' | 'deleted' | 'book_added' | 'book_removed'
+  fields: string[]
+  team?: number
+  origin?: string
+}
 
 // Someone asking for an invitation from the sign-in page (Manage > Invite requests).
 export type InviteRequest = {

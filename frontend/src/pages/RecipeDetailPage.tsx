@@ -169,6 +169,11 @@ export function RecipeDetailPage() {
   )
   useRealtimeEvent<RecipeEvent>('recipe', (event) => {
     if (!recipe || (event.recipe !== recipe.id && event.recipe !== recipe.origin?.id)) return
+    // Deleted while on screen (by someone else: the tab that did it navigates by itself).
+    if (event.action === 'deleted' && event.recipe === recipe.id) {
+      if (!fromThisTab(event.origin)) navigate('/recipes', { replace: true, state: { notice: 'recipeDeleted' } })
+      return
+    }
     void reload().then(() => {
       if (!fromThisTab(event.origin)) flash([...new Set(event.fields.map(recipePart))])
     }).catch(() => undefined)

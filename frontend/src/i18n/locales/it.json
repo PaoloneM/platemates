@@ -179,7 +179,18 @@
     "addFirst": "Aggiungi la prima ricetta",
     "noMatch": "Nessuna ricetta trovata",
     "loadMore": "Mostra altre",
-    "add": "Aggiungi ricetta"
+    "add": "Aggiungi ricetta",
+    "highlight": {
+      "new": "Nuova",
+      "changed": "Modificata"
+    },
+    "ordering": {
+      "label": "Ordina",
+      "title": "Alfabetico",
+      "recent": "Recenti"
+    },
+    "inSeasonFilter": "Di stagione",
+    "deletedNotice": "La ricetta che stavi guardando è stata eliminata."
   },
   "recipe": {
     "servings_one": "{{count}} porzione",

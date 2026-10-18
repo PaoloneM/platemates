@@ -91,3 +91,52 @@ def test_a_recipe_saved_unchanged_sends_nothing(
     with django_capture_on_commit_callbacks(execute=True):
         api.patch(f"/api/recipes/{recipe.pk}/", {"title": "Uguale"}, format="json")
     assert not [s for s in sent if s[0] == "recipe"]
+
+
+# -- the recipe book ----------------------------------------------------------------------------
+
+
+def rooms(sent, action):
+    return {room for event, data, room in sent if event == "recipe" and data["action"] == action}
+
+
+def test_a_new_private_recipe_reaches_its_team_only(
+    api, team, sent, django_capture_on_commit_callbacks
+):
+    Team.objects.create(name="Altri")
+    with django_capture_on_commit_callbacks(execute=True):
+        body = {"team": team.pk, "title": "Segreta", "servings": 2, "visibility": "private"}
+        assert api.post("/api/recipes/", body, format="json").status_code == 201
+    assert rooms(sent, "created") == {f"team-{team.pk}"}
+
+
+def test_a_shared_recipe_reaches_every_team_but_the_system(
+    api, team, sent, django_capture_on_commit_callbacks
+):
+    other = Team.objects.create(name="Altri")
+    with django_capture_on_commit_callbacks(execute=True):
+        body = {"team": team.pk, "title": "Per tutti", "servings": 2, "visibility": "shared"}
+        created = api.post("/api/recipes/", body, format="json").json()
+    assert rooms(sent, "created") == {f"team-{team.pk}", f"team-{other.pk}"}
+    with django_capture_on_commit_callbacks(execute=True):
+        api.delete(f"/api/recipes/{created['id']}/")
+    assert rooms(sent, "deleted") == {f"team-{team.pk}", f"team-{other.pk}"}
+
+
+def test_a_book_gaining_or_losing_a_recipe_is_the_teams_own_news(
+    api, team, sent, django_capture_on_commit_callbacks
+):
+    other = Team.objects.create(name="Altri")
+    shared = Recipe.objects.create(title="Della community", owner_team=other, visibility="shared")
+    with django_capture_on_commit_callbacks(execute=True):
+        entry = api.post(
+            "/api/recipe-book/",
+            {"team": team.pk, "recipe": shared.pk, "status": "approved"},
+            format="json",
+        ).json()
+    with django_capture_on_commit_callbacks(execute=True):
+        api.delete(f"/api/recipe-book/{entry['id']}/")
+    assert rooms(sent, "book_added") == {f"team-{team.pk}"}
+    assert rooms(sent, "book_removed") == {f"team-{team.pk}"}
+    book_events = [d for e, d, _ in sent if e == "recipe" and d["action"].startswith("book_")]
+    assert all(d["team"] == team.pk and d["recipe"] == shared.pk for d in book_events)

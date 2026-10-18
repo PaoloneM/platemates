@@ -486,7 +486,8 @@ Recipes become a community: the system's own, curated, plus those teams choose t
   the team's copy, linked to the original (`derived_from`), which takes the original's place
   in the book; later changes edit the copy. The original never changes, except by its author
   (or staff, labelled "edit the original").
-- **Recipe book screen**: two switches, "my recipe book" and "community", on together or
+- **Recipe book screen** (sorting, pages and the in-season filter added 2026-10-18: alphabetical
+  or recent, i.e. last added or changed; pages of 24; "in season" as the cards' own chip): two switches, "my recipe book" and "community", on together or
   apart, and one card per dish whatever they are: a community recipe in the book shows once,
   and the team's copy stands for its original. Chips say where it comes from (system, another
   team, community) and whether the team changed it. Chip style says what kind of fact it is:
@@ -655,12 +656,16 @@ threads.
 - Events: `generation` (a menu generation's phases), `shopping` (a list or its items),
   `calendar` (a date's meals changed: which meal, and whether people, dishes or the note, from
   `teams.calendar.day_changed`, called wherever a date is written: `set_day`, the review of a
-  proposal, the meal slot API) and `recipe` (which parts of a recipe changed, to the team that
-  owns it and the teams that keep it in their book).
+  proposal, the meal slot API) and `recipe` (`recipes.serializers.announce_recipe`: created,
+  updated with the parts that changed, or deleted, to the team that owns it, the teams that
+  keep it in their book, and every team when it is shared; `book_added` / `book_removed` to the
+  one team whose book changed).
 - **Live updates with a highlight** (decided with Paolo 2026-10-17): the menu screen, a meal's
   page and a recipe's page reload what changed and make it pulse three times in the accent
   colour (`frontend/src/flash.ts`): the meal's card or the day's line, the people or dishes
-  section, the recipe's header, ingredients, method or description. Not in the tab that made
+  section, the recipe's header, ingredients, method or description. The recipe book reloads its
+  page: a new card shows a "New" label over its edge and pulses, a changed one "Changed", a
+  deleted one (or one leaving the team's book, when only the book is shown) fades out. Not in the tab that made
   the change: every API call carries the tab's id (`X-PlateMates-Client`), events carry it back
   as `origin` (`publish_on_commit` reads it when the change is made, as the commit may come
   later), and that tab updates without the highlight. The same user's other tabs and devices
