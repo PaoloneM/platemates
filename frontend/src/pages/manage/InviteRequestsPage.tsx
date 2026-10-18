@@ -17,9 +17,9 @@ import { api, type InviteRequest, type Paginated } from '../../api'
 type Filter = 'pending' | 'all'
 
 /**
- * For administrators: who asked for an invitation from the sign-in page. Inviting happens
- * outside this page (a team's invitation link, or a new team): here a request is marked as
- * dealt with, or dismissed.
+ * For administrators: signed-in users asking for a team of their own. "Create the team" makes
+ * it, with the requester as owner, and emails them; dismissing emails them too. (Older
+ * requests, anonymous ones for an invitation, can only be marked as dealt with.)
  */
 export function InviteRequestsPage() {
   const { t, i18n } = useTranslation()
@@ -40,6 +40,18 @@ export function InviteRequestsPage() {
     void load()
   }
 
+  const [busy, setBusy] = useState<number | null>(null)
+  async function createTeam(request: InviteRequest) {
+    setBusy(request.id)
+    try {
+      await api(`/invite-requests/${request.id}/create-team/`, { method: 'POST', body: '{}' })
+    } catch {
+      setError(true)
+    }
+    setBusy(null)
+    void load()
+  }
+
   const when = (iso: string) =>
     new Intl.DateTimeFormat(i18n.resolvedLanguage, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 
@@ -57,6 +69,12 @@ export function InviteRequestsPage() {
         <Paper key={r.id} variant="outlined" sx={{ p: 2 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'flex-start' } }}>
             <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+              {r.team_name && (
+                <Typography variant="h3">
+                  {t('inviteRequests.teamName', { team: r.team_name })}
+                  {r.created_team_name && <Chip size="small" color="success" variant="outlined" sx={{ ml: 1 }} label={t('inviteRequests.created')} />}
+                </Typography>
+              )}
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                 <Link href={`mailto:${r.email}`} sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{r.email}</Link>
                 {r.name && <Typography>{r.name}</Typography>}
@@ -73,9 +91,13 @@ export function InviteRequestsPage() {
               {r.status === 'pending' ? (
                 <>
                   <Button size="small" color="inherit" onClick={() => void set(r, 'dismissed')}>{t('inviteRequests.dismiss')}</Button>
-                  <Button size="small" variant="contained" onClick={() => void set(r, 'handled')}>{t('inviteRequests.handle')}</Button>
+                  {r.team_name ? (
+                    <Button size="small" variant="contained" disabled={busy === r.id} onClick={() => void createTeam(r)}>{t('inviteRequests.createTeam')}</Button>
+                  ) : (
+                    <Button size="small" variant="contained" onClick={() => void set(r, 'handled')}>{t('inviteRequests.handle')}</Button>
+                  )}
                 </>
-              ) : (
+              ) : !r.created_team_name && (
                 <Button size="small" onClick={() => void set(r, 'pending')}>{t('inviteRequests.reopen')}</Button>
               )}
             </Stack>

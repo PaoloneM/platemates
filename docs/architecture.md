@@ -317,9 +317,12 @@ team's rules for planning menus.
 - **A team always keeps an owner**: the last owner can neither step down nor leave
   (`MembershipViewSet`); someone else must be made owner first.
 - **Teams are not deleted from the app**: it would take every member's recipe book and menus
-  with it. New teams are still created by staff (`create_team`), access being invitation-only.
+  with it. New teams are created by administrators, on a user's request (Manage > Team
+  requests) or with `create_team`.
 - **Invitations**: a single-use link valid 14 days, copied or shared through the phone's share
-  sheet (Web Share API), listed with who created it and who accepted it. No email yet (needs SMTP).
+  sheet (Web Share API), or sent by email and then bound to that verified address; listed with
+  who created it and who accepted it. Signed in without a team, a user asks an owner (by email)
+  or the administrators for a way in (`docs/authentication.md`).
 - Tastes (`Preference`) have no screen yet: they come with the menu engine that uses them.
 
 ### Menu screen layout (decided with Paolo 2026-10-11)
@@ -361,7 +364,8 @@ the generation actions and the way to the typical week: see "Generating a menu" 
 ### Multi-team access
 
 A user sees only teams they hold a `Membership` in, and gets one only by accepting an
-invitation (or by staff creating the team for them). Viewsets over team-owned data use
+invitation, by an owner accepting their request, or by an administrator creating the team for
+them. Viewsets over team-owned data use
 `TeamScopedMixin` (`apps/teams/permissions.py`), which filters querysets and rejects writes
 pointing at somebody else's team. Global catalogs (ingredients, tools, cuisines, recipes) are
 readable and writable by any authenticated user for now.
@@ -1093,4 +1097,4 @@ any recipe. A possible shape:
 ## Not built yet
 
 Vector similarity in menu retrieval, recipe discovery, embedding computation jobs,
-collaborative recommendation, a UI for creating invitations, streaming replies.
+collaborative recommendation, streaming replies.

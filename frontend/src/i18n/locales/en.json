@@ -40,13 +40,14 @@
     "or": "or",
     "signInWithEmail": "Sign in with email and password",
     "createAccount": "Create an account",
-    "invitationOnly": "Access is by invitation: once signed in, you can join the team that invited you.",
+    "invitationOnly": "Teams are joined by invitation. No invitation? Create an account: you can then ask to join someone's team, or ask for one of your own.",
     "invitedSignIn": "You have been invited to a team. Sign in or create an account to accept.",
     "failed": "Sign-in failed. Please try again.",
     "logout": "Sign out",
     "invitedBy": "{{name}} invited you to the team «{{team}}»",
     "invitedTo": "You were invited to the team «{{team}}»",
-    "invitedHint": "Sign in or create an account: right after, you can accept the invitation."
+    "invitedHint": "Sign in or create an account: right after, you can accept the invitation.",
+    "invitedHintEmail": "Sign in or create an account with the address {{hint}}: right after, you can accept the invitation."
   },
   "invite": {
     "title": "Invitation",
@@ -59,8 +60,11 @@
     },
     "error": {
       "notFound": "Invitation not found. Check the link.",
-      "generic": "Something went wrong. Please try again."
-    }
+      "generic": "Something went wrong. Please try again.",
+      "wrongAccount": "This invitation was sent to {{hint}}, but you are signed in as {{email}}. Sign out and sign in with that address's account, then open the email's link again."
+    },
+    "switchAccount": "Sign out and switch account",
+    "forAddress": "Invitation for the address {{hint}}."
   },
   "shell": {
     "account": "Account",
@@ -400,7 +404,7 @@
       "usage": "Usage",
       "searchProbe": "Search probe",
       "activity": "Team activity",
-      "inviteRequests": "Invite requests"
+      "inviteRequests": "Team requests"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -449,9 +453,44 @@
     }
   },
   "noTeam": {
-    "title": "Just the invitation missing",
-    "body": "You are signed in as {{email}}, but your account is not part of any team yet.",
-    "hint": "Ask whoever runs your team to send you an invitation link, then open it in this browser. If you have no team, ask the administrators for an invitation."
+    "title": "All you need is a team",
+    "body": "You are signed in as {{email}}. To use PlateMates, join the team of the people you eat with, or ask for one of your own.",
+    "message": "A few words about you (optional)",
+    "askOwner": {
+      "tab": "Join a team",
+      "hint": "Enter the email of whoever runs the team: they get your request, and once they accept it you are in.",
+      "email": "Team owner's email",
+      "send": "Ask to join",
+      "sent": "Request sent to {{email}}. If the address belongs to a team owner, they will get your request."
+    },
+    "askTeam": {
+      "tab": "Create a team",
+      "hint": "The administrators create the team for you: you will own it and can invite whoever you like.",
+      "name": "Team name",
+      "namePlaceholder": "E.g. The Smiths",
+      "send": "Ask for the team",
+      "waiting": "Your request for a team is waiting: you will get an email when it is ready."
+    },
+    "error": {
+      "tooMany": "You have made many requests today: try again tomorrow.",
+      "alreadyPending": "You already have a request waiting.",
+      "badEmail": "Check the email address."
+    },
+    "mine": {
+      "title": "Your requests",
+      "toOwner": "Join {{email}}'s team",
+      "team": "New team «{{team}}»",
+      "joined": "You are in «{{team}}»",
+      "created": "Created: «{{team}}»",
+      "withdraw": "Withdraw the request",
+      "status": {
+        "pending": "Waiting",
+        "accepted": "Accepted",
+        "declined": "Not accepted",
+        "handled": "Created",
+        "dismissed": "Not accepted"
+      }
+    }
   },
   "team": {
     "menu": "Your team",
@@ -503,7 +542,7 @@
     },
     "invites": {
       "title": "Invitations",
-      "hint": "Create a link and send it to whoever should join: it works once, for 14 days.",
+      "hint": "Send the invitation by email, or create a link to share: it works once, for 14 days. An emailed invitation is for that address only.",
       "memberHint": "Invitations are created by the team's owners.",
       "note": "Who it is for",
       "notePlaceholder": "E.g. Marta",
@@ -524,7 +563,23 @@
         "accepted": "Accepted",
         "expired": "Expired",
         "revoked": "Cancelled"
-      }
+      },
+      "email": "Email (optional)",
+      "emailPlaceholder": "marta@example.com",
+      "send": "Send invitation",
+      "emailSent": "Invitation sent to {{email}}",
+      "emailFailed": "Invitation created, but the email did not go out: try «Send the email again».",
+      "resend": "Send the email again",
+      "tooMany": "Too many invitations by email today: try tomorrow, or create a link.",
+      "badEmail": "Check the email address."
+    },
+    "requests": {
+      "title": "Access requests",
+      "hint": "People who asked you to let them in. Accepting adds them to «{{team}}» as members.",
+      "accept": "Accept",
+      "decline": "Decline",
+      "accepted": "{{name}} joined «{{team}}»",
+      "declined": "{{name}}'s request declined"
     }
   },
   "week": {
@@ -1115,20 +1170,8 @@
       "text": "From the week's menu, a day's or a recipe's, by aisle, to tick off together."
     }
   },
-  "requestInvite": {
-    "action": "Ask for an invitation",
-    "title": "Ask for an invitation",
-    "hint": "Leave your email address: an administrator will write to you with the invitation.",
-    "email": "Email",
-    "name": "Name (optional)",
-    "message": "A few words about you or your team (optional)",
-    "send": "Send request",
-    "sent": "Request sent. You will receive the invitation at the address you gave.",
-    "invalid": "Check the email address.",
-    "tooMany": "Too many requests from this device: try again later."
-  },
   "inviteRequests": {
-    "hint": "Who asked for an invitation from the sign-in page. Invite them from a team's Team page (invitation link) or create a team for them, then mark the request as handled.",
+    "hint": "Users asking for a team of their own. «Create the team» creates it with them as owner and emails them; dismissing emails them too.",
     "pending": "Waiting",
     "all": "All",
     "none": "No requests.",
@@ -1140,6 +1183,9 @@
       "handled": "Handled",
       "dismissed": "Dismissed",
       "pending": "Waiting"
-    }
+    },
+    "teamName": "Team «{{team}}»",
+    "created": "Created",
+    "createTeam": "Create the team"
   }
 }

@@ -81,8 +81,7 @@ cd backend && uv run python manage.py create_team "Famiglia Rossi" --owner you@e
 # In Docker:  docker compose exec backend python manage.py create_team ...
 ```
 
-Until there is a UI for it, invitations are created from the admin (`/admin/accounts/invitation/`)
-or the API; the invitation link is `<app URL>/invite/<token>`.
+Owners create invitations on the Team page; the invitation link is `<app URL>/invite/<token>`.
 
 ### The sign-in page, an invitation's own, and asking for one (2026-10-18)
 
@@ -93,16 +92,34 @@ or the API; the invitation link is `<app URL>/invite/<token>`.
   (`GET /api/invitations/by-token/<token>/`) answers without signing in, since holding the link
   is what it is for; it gives the team's name, the sender's name (never their email), the role
   and the state. Accepting still needs a signed-in user.
-- **Asking for an invitation**: "Ask for an invitation" sends an address, a name and a few words
-  (`POST /api/request-invite/`, `apps/accounts/invite_requests.py`). It is public, so it is
-  rate limited per client address (`invite_request`, 5 an hour; the address is the one Traefik
-  adds, `NUM_PROXIES`), a hidden field drops bots, an address already waiting is not stored
-  twice, the waiting queue has a ceiling (500), and the answer is always 204, saying nothing
-  about what happened. Administrators read the requests in Manage > Invite requests (admin
-  plane) and invite by hand, outside the app (a team's invitation link, or a new team with
-  `create_team`), then mark them handled or dismissed. Telegram is told while requests wait
-  (Grafana alert `pm-invite-requests`; its database role reads only the requests' id, status
-  and date, never who asked).
+- **Invitations by email**: an owner who gives an address gets PlateMates to send the
+  invitation (`apps/accounts/emails.py`, HTML in the site's colours with a plain-text twin, in
+  the owner's language): who invites (name and email), to which team, and the link. Such an
+  invitation is **bound to the address**: only an account whose email is that one and
+  verified (`UserProfile.email_verified`, from the ID token's `email_verified` claim at each
+  login) may accept it; any other gets 409 `wrong_account` and is told which address
+  (masked, "p***i@gmail.com", also in the preview as `email_hint`). A link without an address
+  stays free for whoever holds it. Owners can resend the email; a team sends at most 20
+  invitations by email a day. `GET /api/invitations/mine/` lists the pending ones sent to the
+  user's verified address, so someone who signed up from the landing page, or lost the email,
+  still finds them.
+- **No invitation**: there is no anonymous form any more (it was one, 2026-10-18, with its own
+  rate limits). The landing page says to create an account; signed in without a team, the user
+  can:
+  - **ask an owner** to be let in, by the owner's email (`/api/access-requests/`,
+    `apps/accounts/access_requests.py`). The request is stored and shown as waiting whether or
+    not the address belongs to a team owner (with a verified address), so it cannot be used to
+    find out who uses PlateMates; only a real owner gets it, by email and on the Team page
+    (`#requests`), and accepts it into the team on screen or declines it;
+  - **ask the administrators for a team** of their own, by name (`/api/team-requests/`, stored as
+    `InviteRequest`, `apps/accounts/team_requests.py`). In Manage > Team requests (admin plane),
+    "Create the team" creates it with the requester as owner; dismissing it is also possible.
+    Telegram is told while requests wait (Grafana alert `pm-invite-requests`; its database role
+    reads only the requests' id, status and date, never who asked).
+
+  The requester is emailed the outcome either way, and the page follows the answers (every 30
+  seconds) and moves on as soon as they are in a team. A user sends at most 5 requests a day
+  (both kinds together), and has one team request waiting at a time.
 
 ## Configuring Keycloak
 

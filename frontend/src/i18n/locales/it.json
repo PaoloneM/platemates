@@ -40,13 +40,14 @@
     "or": "oppure",
     "signInWithEmail": "Accedi con email e password",
     "createAccount": "Crea un account",
-    "invitationOnly": "L'accesso è su invito: dopo l'accesso potrai entrare nel team che ti ha invitato.",
+    "invitationOnly": "Si entra in un team su invito. Non hai un invito? Crea un account: potrai chiedere di entrare nel team di qualcuno, o chiederne uno tuo.",
     "invitedSignIn": "Sei stato invitato in un team. Accedi o crea un account per accettare l'invito.",
     "failed": "Accesso non riuscito. Riprova.",
     "logout": "Esci",
     "invitedBy": "{{name}} ti ha invitato nel team «{{team}}»",
     "invitedTo": "Sei stato invitato nel team «{{team}}»",
-    "invitedHint": "Accedi o crea un account: subito dopo potrai accettare l'invito."
+    "invitedHint": "Accedi o crea un account: subito dopo potrai accettare l'invito.",
+    "invitedHintEmail": "Accedi o crea un account con l'indirizzo {{hint}}: subito dopo potrai accettare l'invito."
   },
   "invite": {
     "title": "Invito",
@@ -59,8 +60,11 @@
     },
     "error": {
       "notFound": "Invito non trovato. Controlla il link.",
-      "generic": "Qualcosa è andato storto. Riprova."
-    }
+      "generic": "Qualcosa è andato storto. Riprova.",
+      "wrongAccount": "Questo invito è stato mandato a {{hint}}, ma hai effettuato l'accesso come {{email}}. Esci e accedi con l'account di quell'indirizzo, poi riapri il link dell'email."
+    },
+    "switchAccount": "Esci e cambia account",
+    "forAddress": "Invito per l'indirizzo {{hint}}."
   },
   "shell": {
     "account": "Account",
@@ -400,7 +404,7 @@
       "usage": "Consumi",
       "searchProbe": "Prova ricerca",
       "activity": "Attività dei team",
-      "inviteRequests": "Richieste d'invito"
+      "inviteRequests": "Richieste di team"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -449,9 +453,44 @@
     }
   },
   "noTeam": {
-    "title": "Manca solo l'invito",
-    "body": "Hai effettuato l'accesso come {{email}}, ma il tuo account non fa ancora parte di nessun team.",
-    "hint": "Chiedi a chi gestisce il tuo team di inviarti un link di invito, poi aprilo da questo browser. Se non hai un team, richiedi un invito agli amministratori."
+    "title": "Ti manca solo un team",
+    "body": "Hai effettuato l'accesso come {{email}}. Per usare PlateMates entra nel team di chi mangia con te, o chiedine uno tutto tuo.",
+    "message": "Due parole su di te (facoltativo)",
+    "askOwner": {
+      "tab": "Entra in un team",
+      "hint": "Scrivi l'email di chi gestisce il team: gli arriverà la tua richiesta, e quando la accetta sei dentro.",
+      "email": "Email del proprietario del team",
+      "send": "Chiedi di entrare",
+      "sent": "Richiesta inviata a {{email}}. Se l'indirizzo è di un proprietario di team, riceverà la tua richiesta."
+    },
+    "askTeam": {
+      "tab": "Crea un team",
+      "hint": "Gli amministratori creano il team per te: ne sarai il proprietario e potrai invitare chi vuoi.",
+      "name": "Nome del team",
+      "namePlaceholder": "Es. Casa Rossi",
+      "send": "Chiedi il team",
+      "waiting": "La tua richiesta di un team è in attesa: riceverai un'email quando sarà pronto."
+    },
+    "error": {
+      "tooMany": "Hai già fatto molte richieste oggi: riprova domani.",
+      "alreadyPending": "Hai già una richiesta in attesa.",
+      "badEmail": "Controlla l'indirizzo email."
+    },
+    "mine": {
+      "title": "Le tue richieste",
+      "toOwner": "Entrare nel team di {{email}}",
+      "team": "Nuovo team «{{team}}»",
+      "joined": "Sei nel team «{{team}}»",
+      "created": "Creato: «{{team}}»",
+      "withdraw": "Ritira la richiesta",
+      "status": {
+        "pending": "In attesa",
+        "accepted": "Accettata",
+        "declined": "Non accettata",
+        "handled": "Creato",
+        "dismissed": "Non accettata"
+      }
+    }
   },
   "team": {
     "menu": "Il tuo team",
@@ -503,7 +542,7 @@
     },
     "invites": {
       "title": "Inviti",
-      "hint": "Crea un link e mandalo a chi vuoi far entrare: vale una volta sola, per 14 giorni.",
+      "hint": "Manda l'invito per email, o crea un link da condividere: vale una volta sola, per 14 giorni. Un invito per email vale solo per quell'indirizzo.",
       "memberHint": "Gli inviti li creano i proprietari del team.",
       "note": "Per chi è",
       "notePlaceholder": "Es. Marta",
@@ -524,7 +563,23 @@
         "accepted": "Accettato",
         "expired": "Scaduto",
         "revoked": "Annullato"
-      }
+      },
+      "email": "Email (facoltativa)",
+      "emailPlaceholder": "marta@esempio.it",
+      "send": "Invia invito",
+      "emailSent": "Invito inviato a {{email}}",
+      "emailFailed": "Invito creato, ma l'email non è partita: riprova con «Rimanda l'email».",
+      "resend": "Rimanda l'email",
+      "tooMany": "Troppi inviti via email oggi: riprova domani, o crea un link.",
+      "badEmail": "Controlla l'indirizzo email."
+    },
+    "requests": {
+      "title": "Richieste di accesso",
+      "hint": "Persone che ti hanno chiesto di entrare. Accettando, entrano in «{{team}}» come membri.",
+      "accept": "Accetta",
+      "decline": "Rifiuta",
+      "accepted": "{{name}} è entrato in «{{team}}»",
+      "declined": "Richiesta di {{name}} rifiutata"
     }
   },
   "week": {
@@ -1115,20 +1170,8 @@
       "text": "Dal menu della settimana, di un giorno o di una ricetta, divisa per reparto e da spuntare insieme."
     }
   },
-  "requestInvite": {
-    "action": "Richiedi un invito",
-    "title": "Richiedi un invito",
-    "hint": "Lascia il tuo indirizzo email: un amministratore ti scriverà con l'invito.",
-    "email": "Email",
-    "name": "Nome (facoltativo)",
-    "message": "Due parole su di te o sul tuo team (facoltativo)",
-    "send": "Invia richiesta",
-    "sent": "Richiesta inviata. Riceverai l'invito all'indirizzo che hai indicato.",
-    "invalid": "Controlla l'indirizzo email.",
-    "tooMany": "Troppe richieste da questo dispositivo: riprova più tardi."
-  },
   "inviteRequests": {
-    "hint": "Chi ha chiesto un invito dalla pagina di accesso. Invitalo dalla pagina Team di un team (link d'invito) o creagli un team, poi segna la richiesta come gestita.",
+    "hint": "Utenti che hanno chiesto un team tutto loro. «Crea il team» lo crea con loro come proprietari e li avvisa per email; anche lo scarto li avvisa.",
     "pending": "In attesa",
     "all": "Tutte",
     "none": "Nessuna richiesta.",
@@ -1140,6 +1183,9 @@
       "handled": "Gestita",
       "dismissed": "Scartata",
       "pending": "In attesa"
-    }
+    },
+    "teamName": "Team «{{team}}»",
+    "created": "Creato",
+    "createTeam": "Crea il team"
   }
 }

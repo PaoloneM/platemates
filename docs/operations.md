@@ -168,8 +168,7 @@ be open. Configured through its API only, by `deploy/roles/cloudflare`
   email; allowed: `APP_ADMINS`; 24 h sessions. Created before any DNS change. mTLS was left
   out: on the Free plan it can only be a WAF rule that blocks every request without a
   certificate, which would shut out phones and Telegram's browser.
-- **Rate limit** on `/api/request-invite/` (the Free plan's one rule), on top of the app's own.
-- **The client's address**: Traefik sees cloudflared's; the app reads `CF-Connecting-IP`.
+- **The client's address**: Traefik sees cloudflared's; the visitor's is in `CF-Connecting-IP`.
 - **Credentials** (vault): `vault_cloudflare_api_token` (deploy: tunnel, Access, DNS, WAF,
   zone settings; used from the control node only), `vault_cloudflare_account_id`,
   `vault_cloudflare_google_client_id`/`_secret`, `vault_cloudflare_dns_token` (on the server,

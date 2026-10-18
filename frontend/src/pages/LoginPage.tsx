@@ -1,7 +1,6 @@
 import BookIcon from '@mui/icons-material/MenuBookOutlined'
 import MenuIcon from '@mui/icons-material/RestaurantMenuOutlined'
 import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
-import MailIcon from '@mui/icons-material/MailOutlined'
 import {
   Alert,
   Box,
@@ -20,7 +19,6 @@ import { api, type IdentityProvider, type InvitationPreview, type LoginOptions, 
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { Logo } from '../components/Logo'
 import { ProviderIcon } from '../components/ProviderIcon'
-import { RequestInviteDialog } from '../components/RequestInviteDialog'
 
 const PROVIDER_NAMES: Record<IdentityProvider, string> = {
   google: 'Google',
@@ -30,7 +28,8 @@ const PROVIDER_NAMES: Record<IdentityProvider, string> = {
 
 /**
  * The landing and sign-in screen: what the app does, the ways to sign in (every button a
- * full-page redirect through Django to Keycloak), and a way to ask for an invitation. Opened
+ * full-page redirect through Django to Keycloak); without an invitation, one creates an account
+ * and asks for a team from the next page. Opened
  * from an invitation link (`invitation`: its token), it says who invited the user and to which
  * team instead.
  */
@@ -39,7 +38,6 @@ export function LoginPage({ next = '/', invitation }: { next?: string; invitatio
   const [params] = useSearchParams()
   const [providers, setProviders] = useState<IdentityProvider[]>([])
   const [invite, setInvite] = useState<InvitationPreview | null>(null)
-  const [asking, setAsking] = useState(false)
 
   useEffect(() => {
     api<LoginOptions>('/login-options/')
@@ -96,17 +94,11 @@ export function LoginPage({ next = '/', invitation }: { next?: string; invitatio
         </Card>
 
         {!invitation && (
-          <Stack spacing={1} sx={{ alignItems: 'center', textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420 }}>
-              {t('auth.invitationOnly')}
-            </Typography>
-            <Button variant="outlined" startIcon={<MailIcon />} onClick={() => setAsking(true)}>
-              {t('requestInvite.action')}
-            </Button>
-          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420, textAlign: 'center' }}>
+            {t('auth.invitationOnly')}
+          </Typography>
         )}
       </Stack>
-      {asking && <RequestInviteDialog onClose={() => setAsking(false)} />}
     </Stack>
   )
 }
@@ -155,7 +147,9 @@ function InvitationNotice({ invite }: { invite: InvitationPreview | null }) {
             ? t('auth.invitedBy', { name: invite.invited_by_name, team: invite.team_name })
             : t('auth.invitedTo', { team: invite.team_name })}
         </Typography>
-        <Typography variant="body2" color="text.secondary">{t('auth.invitedHint')}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {invite.email_hint ? t('auth.invitedHintEmail', { hint: invite.email_hint }) : t('auth.invitedHint')}
+        </Typography>
       </CardContent>
     </Card>
   )

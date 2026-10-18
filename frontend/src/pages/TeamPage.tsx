@@ -4,6 +4,7 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import EditIcon from '@mui/icons-material/EditOutlined'
 import ShareIcon from '@mui/icons-material/IosShare'
 import LogoutIcon from '@mui/icons-material/Logout'
+import MailIcon from '@mui/icons-material/MailOutlined'
 import {
   Alert,
   Autocomplete,
@@ -40,6 +41,7 @@ import {
   type KitchenTool,
   type Paginated,
   type Person,
+  type ReceivedAccessRequest,
   type Role,
   type TeamMembership,
   type TeamProfile,
@@ -349,7 +351,9 @@ function InvitationsSection({ team, owner, onMessage }: {
   const [rows, setRows] = useState<Invitation[] | null>(null)
   const [role, setRole] = useState<Role>('member')
   const [note, setNote] = useState('')
+  const [email, setEmail] = useState('')
   const [created, setCreated] = useState<Invitation | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const dateFormat = new Intl.DateTimeFormat(i18n.resolvedLanguage, { day: 'numeric', month: 'short' })
 
   const load = useCallback(
@@ -358,14 +362,37 @@ function InvitationsSection({ team, owner, onMessage }: {
   )
   useEffect(() => void load(), [load])
 
+  // With an address, PlateMates emails the invitation; without, it is a link to hand out.
   async function create() {
-    const invitation = await api<Invitation>('/invitations/', {
-      method: 'POST',
-      body: JSON.stringify({ team: team.id, role, note: note.trim() }),
-    })
-    setCreated(invitation)
-    setNote('')
-    void load()
+    setError(null)
+    try {
+      const invitation = await api<Invitation>('/invitations/', {
+        method: 'POST',
+        body: JSON.stringify({ team: team.id, role, note: note.trim(), email: email.trim() }),
+      })
+      setCreated(invitation)
+      setNote('')
+      setEmail('')
+      void load()
+    } catch (e) {
+      setError(inviteError(e))
+    }
+  }
+
+  async function resend(invitation: Invitation) {
+    try {
+      const { email_sent } = await api<{ email_sent: boolean }>(`/invitations/${invitation.id}/resend/`, { method: 'POST' })
+      onMessage(email_sent ? t('team.invites.emailSent', { email: invitation.email }) : t('team.invites.emailFailed'))
+    } catch (e) {
+      onMessage(t(inviteError(e)))
+    }
+  }
+
+  function inviteError(e: unknown) {
+    const body = e instanceof ApiError ? (e.body as { code?: string; email?: string[] } | null) : null
+    if (body?.code === 'too_many') return 'team.invites.tooMany'
+    if (body?.email) return 'team.invites.badEmail'
+    return 'common.error'
   }
 
   async function copy(token: string) {
@@ -393,17 +420,27 @@ function InvitationsSection({ team, owner, onMessage }: {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
           <TextField size="small" label={t('team.invites.note')} placeholder={t('team.invites.notePlaceholder')}
             value={note} onChange={(e) => setNote(e.target.value)} />
+          <TextField size="small" type="email" label={t('team.invites.email')} placeholder={t('team.invites.emailPlaceholder')}
+            value={email} onChange={(e) => setEmail(e.target.value)} />
           <TextField size="small" select label={t('team.invites.role')} value={role} fullWidth={false}
             onChange={(e) => setRole(e.target.value as Role)} sx={{ minWidth: 160 }}>
             <MenuItem value="member">{t('team.role.member')}</MenuItem>
             <MenuItem value="owner">{t('team.role.owner')}</MenuItem>
           </TextField>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => void create()} sx={{ flex: 'none' }}>
-            {t('team.invites.create')}
+          <Button variant="contained" startIcon={email.trim() ? <MailIcon /> : <AddIcon />} onClick={() => void create()} sx={{ flex: 'none' }}>
+            {email.trim() ? t('team.invites.send') : t('team.invites.create')}
           </Button>
         </Stack>
       )}
-      {created?.token && (
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{t(error)}</Alert>}
+      {created?.email && (
+        <Alert severity={created.email_sent ? 'success' : 'warning'} sx={{ mb: 2 }} onClose={() => setCreated(null)}>
+          {created.email_sent
+            ? t('team.invites.emailSent', { email: created.email })
+            : t('team.invites.emailFailed')}
+        </Alert>
+      )}
+      {created?.token && !created.email && (
         <Alert severity="success" sx={{ mb: 2 }}
           action={
             <Stack direction="row">
@@ -425,6 +462,11 @@ function InvitationsSection({ team, owner, onMessage }: {
             <ListItem key={inv.id} divider disableGutters
               secondaryAction={owner && inv.state === 'pending' && inv.token && (
                 <>
+                  {inv.email && (
+                    <Tooltip title={t('team.invites.resend')}>
+                      <IconButton size="small" onClick={() => void resend(inv)}><MailIcon fontSize="small" /></IconButton>
+                    </Tooltip>
+                  )}
                   <Tooltip title={t('team.invites.copy')}>
                     <IconButton size="small" onClick={() => void copy(inv.token!)}><ContentCopyIcon fontSize="small" /></IconButton>
                   </Tooltip>
@@ -439,10 +481,11 @@ function InvitationsSection({ team, owner, onMessage }: {
                 </>
               )}>
               <ListItemText
-                sx={{ pr: owner ? 14 : 0 }}
+                sx={{ pr: owner ? (inv.email ? 18 : 14) : 0 }}
                 primary={
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span>{inv.note || t('team.invites.untitled')}</span>
+                    <span>{inv.note || inv.email || t('team.invites.untitled')}</span>
+                    {inv.note && inv.email && <Typography variant="body2" color="text.secondary" component="span">{inv.email}</Typography>}
                     <Chip size="small" color={stateColor[inv.state]} variant="outlined" label={t(`team.invites.state.${inv.state}`)} />
                     {inv.role === 'owner' && <Chip size="small" label={t('team.role.owner')} />}
                   </Stack>
@@ -461,6 +504,77 @@ function InvitationsSection({ team, owner, onMessage }: {
   )
 }
 
+// -- access requests --------------------------------------------------------------------------
+
+/** Requests from people who asked the signed-in owner, by email, to be let in: accepting one
+ * adds them to the team on screen. Shown only when there are some. */
+function AccessRequestsSection({ team, onMessage, onAccepted }: {
+  team: TeamProfile
+  onMessage: (message: string) => void
+  onAccepted: () => void
+}) {
+  const { t, i18n } = useTranslation()
+  const [rows, setRows] = useState<ReceivedAccessRequest[]>([])
+  const dateFormat = new Intl.DateTimeFormat(i18n.resolvedLanguage, { day: 'numeric', month: 'short' })
+
+  const location = useLocation()
+  const load = useCallback(() => api<ReceivedAccessRequest[]>('/access-requests/received/').then(setRows), [])
+  useEffect(() => void load().catch(() => undefined), [load])
+  // The email's link, /team#requests, lands here once the requests are on screen.
+  const shown = rows.length > 0
+  useEffect(() => {
+    if (shown && location.hash === '#requests') document.getElementById('requests')?.scrollIntoView()
+  }, [shown, location.hash])
+
+  async function answer(request: ReceivedAccessRequest, accept: boolean) {
+    try {
+      await api(`/access-requests/${request.id}/${accept ? 'accept' : 'decline'}/`, {
+        method: 'POST',
+        body: JSON.stringify(accept ? { team: team.id } : {}),
+      })
+      const name = request.requester_name ?? request.requester_email
+      onMessage(accept ? t('team.requests.accepted', { name, team: team.name }) : t('team.requests.declined', { name }))
+      if (accept) onAccepted()
+    } catch {
+      onMessage(t('common.error'))
+    }
+    void load()
+  }
+
+  if (rows.length === 0) return null
+  return (
+    <Section id="requests" title={t('team.requests.title')} hint={t('team.requests.hint', { team: team.name })}>
+      <List dense disablePadding>
+        {rows.map((r) => (
+          <ListItem key={r.id} divider disableGutters sx={{ flexWrap: 'wrap', gap: 1 }}>
+            <ListItemText
+              sx={{ flex: '1 1 240px' }}
+              primary={
+                <>
+                  {r.requester_name ?? r.requester_email}
+                  {r.requester_name && (
+                    <Typography component="span" variant="body2" color="text.secondary"> · {r.requester_email}</Typography>
+                  )}
+                </>
+              }
+              secondary={
+                <>
+                  {r.message && <Box component="span" sx={{ display: 'block', whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>«{r.message}»</Box>}
+                  {dateFormat.format(new Date(r.created_at))}
+                </>
+              }
+            />
+            <Stack direction="row" spacing={1}>
+              <Button size="small" color="inherit" onClick={() => void answer(r, false)}>{t('team.requests.decline')}</Button>
+              <Button size="small" variant="contained" onClick={() => void answer(r, true)}>{t('team.requests.accept')}</Button>
+            </Stack>
+          </ListItem>
+        ))}
+      </List>
+    </Section>
+  )
+}
+
 // -- page -------------------------------------------------------------------------------------
 
 /** The current team: profile, people at the table, users and roles, invitations. */
@@ -470,6 +584,8 @@ export function TeamPage() {
   const { team: current } = useTeam()
   const [team, setTeam] = useState<TeamProfile | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  // Bumped when someone joins through a request: the users' list reloads.
+  const [joined, setJoined] = useState(0)
 
   const location = useLocation()
 
@@ -494,7 +610,8 @@ export function TeamPage() {
       <ProfileSection key={team.id} team={team} owner={owner}
         onSaved={(saved) => { setTeam(saved); setMessage(t('team.profile.saved')); void refresh() }} />
       <PeopleSection team={team} owner={owner} onChanged={() => void load()} />
-      <UsersSection team={team} owner={owner} onMessage={setMessage} />
+      <UsersSection key={joined} team={team} owner={owner} onMessage={setMessage} />
+      {owner && <AccessRequestsSection team={team} onMessage={setMessage} onAccepted={() => setJoined((n) => n + 1)} />}
       <InvitationsSection team={team} owner={owner} onMessage={setMessage} />
       {owner && <TeamActivity team={team.id} />}
       <Snackbar open={!!message} autoHideDuration={4000} onClose={() => setMessage(null)} message={message} />

@@ -51,9 +51,48 @@ export type InvitationPreview = {
   team_name: string
   // Who sent it, by name; null when they gave none.
   invited_by_name: string | null
+  // Sent by email: the address, masked ("p***i@gmail.com"); only that account may accept it.
+  email_hint: string | null
   role: 'owner' | 'member'
   state: 'pending' | 'accepted' | 'expired' | 'revoked'
   expires_at: string
+}
+
+/** A pending invitation sent to the signed-in user's own verified address. */
+export type PendingInvitation = {
+  token: string
+  team_name: string
+  invited_by_name: string | null
+  expires_at: string
+}
+
+/** The user's request to a team owner, known by email. */
+export type AccessRequest = {
+  id: number
+  owner_email: string
+  message: string
+  status: 'pending' | 'accepted' | 'declined'
+  team_name: string | null
+  created_at: string
+}
+
+/** A request addressed to the signed-in user as a team owner. */
+export type ReceivedAccessRequest = {
+  id: number
+  requester_name: string | null
+  requester_email: string
+  message: string
+  created_at: string
+}
+
+/** The user's request to the administrators for a team of their own. */
+export type TeamRequest = {
+  id: number
+  team_name: string
+  message: string
+  status: 'pending' | 'handled' | 'dismissed'
+  created_team_name: string | null
+  created_at: string
 }
 
 export type Seasonality = { months: number[]; seasons: Season[]; by_season: boolean }
@@ -379,6 +418,9 @@ export type Invitation = {
   id: number
   team: number
   token?: string // owners only
+  email?: string // owners only; blank for a link to hand out
+  // Only in the answer to creating one: whether the email went out (null: none to send).
+  email_sent?: boolean | null
   role: Role
   note: string
   state: 'pending' | 'accepted' | 'expired' | 'revoked'
@@ -741,6 +783,9 @@ export type InviteRequest = {
   id: number
   email: string
   name: string
+  // The team asked for; blank on older anonymous requests for an invitation.
+  team_name: string
+  created_team_name: string | null
   message: string
   language: string
   status: 'pending' | 'handled' | 'dismissed'
