@@ -116,6 +116,17 @@ services:
       # router serves the certificate from Traefik's store, the domain being the same.
       - traefik.http.routers.frontend-tls.tls.certresolver=letsencrypt
       - traefik.http.routers.frontend-tls.tls.domains[0].main=${PLATEMATES_DOMAIN:?set PLATEMATES_DOMAIN in .env}
+      # www: its own certificate, and a permanent redirect to the domain itself.
+      - traefik.http.routers.www-tls.rule=Host(`www.${PLATEMATES_DOMAIN}`)
+      - traefik.http.routers.www-tls.entrypoints=websecure
+      - traefik.http.routers.www-tls.tls=true
+      - traefik.http.routers.www-tls.tls.certresolver=letsencrypt
+      - traefik.http.routers.www-tls.tls.domains[0].main=www.${PLATEMATES_DOMAIN}
+      - traefik.http.routers.www-tls.middlewares=www-to-domain
+      - traefik.http.routers.www-tls.service=noop@internal
+      - traefik.http.middlewares.www-to-domain.redirectregex.regex=^https?://www\.(.*)
+      - traefik.http.middlewares.www-to-domain.redirectregex.replacement=https://$${1}
+      - traefik.http.middlewares.www-to-domain.redirectregex.permanent=true
 
   # Embeddings come from OpenAI's API on the server (EMBEDDINGS_PROVIDER=openai): the local
   # model would take a gigabyte of the 4 GB. Started only with `--profile local-embeddings`

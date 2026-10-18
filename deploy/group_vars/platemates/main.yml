@@ -9,6 +9,8 @@ platemates_url: "https://{{ platemates_domain }}"
 cloudflare_enabled: true
 cloudflare_tunnel_hosts:
   - "{{ platemates_admin_domain }}"
+  - "{{ platemates_domain }}"
+  - "www.{{ platemates_domain }}"
 platemates_public_ports_open: true
 
 # The admin plane (apps/core/planes.py), on the VM's 127.0.0.1:9443 only: through Cloudflare's
