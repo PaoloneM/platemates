@@ -49,6 +49,8 @@ export type IdentityProvider = 'google' | 'microsoft' | 'apple'
 
 export type InvitationPreview = {
   team_name: string
+  // Who sent it, by name; null when they gave none.
+  invited_by_name: string | null
   role: 'owner' | 'member'
   state: 'pending' | 'accepted' | 'expired' | 'revoked'
   expires_at: string
@@ -725,3 +727,16 @@ export type CalendarEvent = {
   origin?: string
 }
 export type RecipeEvent = { recipe: number; fields: string[]; origin?: string }
+
+// Someone asking for an invitation from the sign-in page (Manage > Invite requests).
+export type InviteRequest = {
+  id: number
+  email: string
+  name: string
+  message: string
+  language: string
+  status: 'pending' | 'handled' | 'dismissed'
+  created_at: string
+  handled_at: string | null
+  handled_by_name: string | null
+}

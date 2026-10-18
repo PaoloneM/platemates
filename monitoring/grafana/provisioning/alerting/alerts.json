@@ -433,6 +433,67 @@
      "isPaused": false
     },
     {
+     "uid": "pm-invite-requests",
+     "title": "Invite requests waiting",
+     "condition": "C",
+     "data": [
+      {
+       "refId": "A",
+       "relativeTimeRange": {
+        "from": 900,
+        "to": 0
+       },
+       "datasourceUid": "platemates-db",
+       "model": {
+        "refId": "A",
+        "rawSql": "SELECT COUNT(*) AS value FROM accounts_inviterequest WHERE status = 'pending'",
+        "format": "table",
+        "rawQuery": true,
+        "editorMode": "code"
+       }
+      },
+      {
+       "refId": "B",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "B",
+        "type": "reduce",
+        "expression": "A",
+        "reducer": "last"
+       }
+      },
+      {
+       "refId": "C",
+       "datasourceUid": "__expr__",
+       "model": {
+        "refId": "C",
+        "type": "threshold",
+        "expression": "B",
+        "conditions": [
+         {
+          "evaluator": {
+           "type": "gt",
+           "params": [
+            0
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "noDataState": "OK",
+     "execErrState": "Error",
+     "for": "0s",
+     "annotations": {
+      "summary": "Someone asked for an invitation: see Gestione > Richieste d'invito."
+     },
+     "labels": {
+      "severity": "info"
+     },
+     "isPaused": false
+    },
+    {
      "uid": "pm-ai-cost",
      "title": "AI spending over 5 USD today",
      "condition": "C",

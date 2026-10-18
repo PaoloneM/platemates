@@ -80,6 +80,10 @@ RULES = [
     rule("pm-public-5xx", "Errors on the public site",
          "The public site has been answering with server errors (5xx) for 5 minutes.",
          'sum(rate(traefik_service_requests_total{plane="public",code=~"5.."}[5m]))', "gt", 0.05),
+    rule("pm-invite-requests", "Invite requests waiting",
+         "Someone asked for an invitation: see Gestione > Richieste d'invito.",
+         "SELECT COUNT(*) AS value FROM accounts_inviterequest WHERE status = 'pending'",
+         "gt", 0, datasource=PG, sql=True, for_="0s", severity="info"),
     rule("pm-ai-cost", f"AI spending over {AI_DAILY_COST_ALERT_USD} USD today",
          "Today's estimated AI cost passed the threshold: see Gestione > Consumi.",
          f"""SELECT COALESCE(SUM({COST}), 0) AS value

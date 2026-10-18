@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.core.planes import admin_powers, staff_powers
@@ -143,13 +143,19 @@ class InvitationViewSet(
             instance.save(update_fields=["revoked_at"])
 
     def _by_token(self, token):
-        return Invitation.objects.select_related("team").filter(token=token or "").first()
+        return (
+            Invitation.objects.select_related("team", "invited_by")
+            .filter(token=token or "")
+            .first()
+        )
 
     @action(
         detail=False,
         methods=["get"],
         url_path=r"by-token/(?P<token>[\w-]+)",
-        permission_classes=[IsAuthenticated],
+        # Before signing in too: the sign-in page says who invited them, and to which team.
+        # Accepting needs a signed-in user (checked in `accept`).
+        permission_classes=[AllowAny],
     )
     def preview(self, request, token=None):
         invitation = self._by_token(token)
@@ -159,6 +165,8 @@ class InvitationViewSet(
 
     @preview.mapping.post
     def accept(self, request, token=None):
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_403_FORBIDDEN)
         invitation = self._by_token(token)
         if invitation is None:
             return Response(status=status.HTTP_404_NOT_FOUND)

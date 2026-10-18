@@ -153,3 +153,32 @@ class Invitation(models.Model):
         self.accepted_by = user
         self.save(update_fields=["accepted_at", "accepted_by"])
         return membership
+
+
+class InviteRequest(models.Model):
+    """Someone without an invitation asking for one, from the sign-in page. Administrators
+    read the requests (Manage > Invite requests) and invite by hand, outside the app; the
+    request only records that it was dealt with."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        HANDLED = "handled", _("Handled")
+        DISMISSED = "dismissed", _("Dismissed")
+
+    email = models.EmailField()
+    name = models.CharField(max_length=120, blank=True)
+    message = models.CharField(max_length=500, blank=True)
+    # The interface language it was asked in: the language to write the invitation in.
+    language = models.CharField(max_length=8, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    handled_at = models.DateTimeField(null=True, blank=True)
+    handled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.email} ({self.status})"

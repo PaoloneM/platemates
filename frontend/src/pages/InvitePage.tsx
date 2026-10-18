@@ -12,7 +12,7 @@ export function InvitePage() {
   const { token = '' } = useParams()
   const { me } = useAuth()
   if (!me) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 8 }} />
-  if (!me.authenticated) return <LoginPage next={`/invite/${token}`} invited />
+  if (!me.authenticated) return <LoginPage next={`/invite/${token}`} invitation={token} />
   return <AcceptInvitation token={token} />
 }
 
@@ -50,7 +50,11 @@ function AcceptInvitation({ token }: { token: string }) {
   else
     body = (
       <>
-        <Typography>{t('invite.body', { team: invitation.team_name })}</Typography>
+        <Typography>
+          {invitation.invited_by_name
+            ? t('auth.invitedBy', { name: invitation.invited_by_name, team: invitation.team_name })
+            : t('invite.body', { team: invitation.team_name })}
+        </Typography>
         <Button variant="contained" size="large" fullWidth onClick={accept} disabled={busy}>
           {t('invite.accept')}
         </Button>

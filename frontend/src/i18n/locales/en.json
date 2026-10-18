@@ -43,7 +43,10 @@
     "invitationOnly": "Access is by invitation: once signed in, you can join the team that invited you.",
     "invitedSignIn": "You have been invited to a team. Sign in or create an account to accept.",
     "failed": "Sign-in failed. Please try again.",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "invitedBy": "{{name}} invited you to the team «{{team}}»",
+    "invitedTo": "You were invited to the team «{{team}}»",
+    "invitedHint": "Sign in or create an account: right after, you can accept the invitation."
   },
   "invite": {
     "title": "Invitation",
@@ -385,7 +388,8 @@
       "transfer": "Export / import",
       "usage": "Usage",
       "searchProbe": "Search probe",
-      "activity": "Team activity"
+      "activity": "Team activity",
+      "inviteRequests": "Invite requests"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -1085,5 +1089,46 @@
     "teamStorage": "Estimated space",
     "none": "No activity recorded.",
     "storageNote": "A team's space is the sum of its rows; the total also counts the indexes and space PostgreSQL has not reclaimed yet."
+  },
+  "landing": {
+    "recipes": {
+      "claim": "Organize and discover new recipes",
+      "text": "The team's recipe book, the community's recipes and those you find on the web, with seasons and amounts for whoever is at the table."
+    },
+    "menu": {
+      "claim": "Plan your menu",
+      "text": "The week meal by meal, with who is at home; and a proposal generated following your rules."
+    },
+    "shopping": {
+      "claim": "Make your shopping list",
+      "text": "From the week's menu, a day's or a recipe's, by aisle, to tick off together."
+    }
+  },
+  "requestInvite": {
+    "action": "Ask for an invitation",
+    "title": "Ask for an invitation",
+    "hint": "Leave your email address: an administrator will write to you with the invitation.",
+    "email": "Email",
+    "name": "Name (optional)",
+    "message": "A few words about you or your team (optional)",
+    "send": "Send request",
+    "sent": "Request sent. You will receive the invitation at the address you gave.",
+    "invalid": "Check the email address.",
+    "tooMany": "Too many requests from this device: try again later."
+  },
+  "inviteRequests": {
+    "hint": "Who asked for an invitation from the sign-in page. Invite them from a team's Team page (invitation link) or create a team for them, then mark the request as handled.",
+    "pending": "Waiting",
+    "all": "All",
+    "none": "No requests.",
+    "handle": "Handled",
+    "dismiss": "Dismiss",
+    "reopen": "Back to waiting",
+    "handledBy": "{{who}}, {{when}}",
+    "status": {
+      "handled": "Handled",
+      "dismissed": "Dismissed",
+      "pending": "Waiting"
+    }
   }
 }

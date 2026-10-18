@@ -54,7 +54,13 @@ class InvitationPreviewSerializer(serializers.ModelSerializer):
 
     state = serializers.CharField(read_only=True)
     team_name = serializers.CharField(source="team.name", read_only=True)
+    # Who sent it, by name only (never their email): it is shown before signing in.
+    invited_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Invitation
-        fields = ["team_name", "role", "state", "expires_at"]
+        fields = ["team_name", "invited_by_name", "role", "state", "expires_at"]
+
+    def get_invited_by_name(self, invitation) -> str | None:
+        user = invitation.invited_by
+        return (user.get_full_name() or user.first_name or None) if user else None

@@ -84,6 +84,26 @@ cd backend && uv run python manage.py create_team "Famiglia Rossi" --owner you@e
 Until there is a UI for it, invitations are created from the admin (`/admin/accounts/invitation/`)
 or the API; the invitation link is `<app URL>/invite/<token>`.
 
+### The sign-in page, an invitation's own, and asking for one (2026-10-18)
+
+- **The sign-in page is the landing page**: the three things the app does (recipes, menu,
+  shopping list) above the sign-in buttons.
+- **Opened from an invitation link** (`/invite/<token>`), it says who sent it and to which team
+  ("Paola Rossi invited you to the team «…»"), or why the link no longer works. The preview
+  (`GET /api/invitations/by-token/<token>/`) answers without signing in, since holding the link
+  is what it is for; it gives the team's name, the sender's name (never their email), the role
+  and the state. Accepting still needs a signed-in user.
+- **Asking for an invitation**: "Ask for an invitation" sends an address, a name and a few words
+  (`POST /api/request-invite/`, `apps/accounts/invite_requests.py`). It is public, so it is
+  rate limited per client address (`invite_request`, 5 an hour; the address is the one Traefik
+  adds, `NUM_PROXIES`), a hidden field drops bots, an address already waiting is not stored
+  twice, the waiting queue has a ceiling (500), and the answer is always 204, saying nothing
+  about what happened. Administrators read the requests in Manage > Invite requests (admin
+  plane) and invite by hand, outside the app (a team's invitation link, or a new team with
+  `create_team`), then mark them handled or dismissed. Telegram is told while requests wait
+  (Grafana alert `pm-invite-requests`; its database role reads only the requests' id, status
+  and date, never who asked).
+
 ## Configuring Keycloak
 
 Everything is driven by `.env` and applied by `manage.py setup_keycloak`, which is idempotent and

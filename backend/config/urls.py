@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from apps.accounts.invite_requests import InviteRequestViewSet, request_invite
 from apps.accounts.views import InvitationViewSet, login_options, me
 from apps.assistant.probe import probe_view
 from apps.assistant.views import AssistantSessionViewSet
@@ -51,6 +52,7 @@ router.register("invitations", InvitationViewSet)
 router.register("shopping-lists", ShoppingListViewSet, basename="shopping-list")
 router.register("shopping-items", ShoppingItemViewSet, basename="shopping-item")
 router.register("audit-events", AuditEventViewSet, basename="audit-event")
+router.register("invite-requests", InviteRequestViewSet, basename="invite-request")
 router.register("usage/prices", ModelPriceViewSet)
 router.register("assistant/sessions", AssistantSessionViewSet, basename="assistant-session")
 
@@ -67,6 +69,7 @@ urlpatterns = [
     path("api/usage/", usage_view),
     path("api/search-probe/", probe_view),
     path("api/audit-stats/", stats_view),
+    path("api/request-invite/", request_invite),
     path("api/transfer/export/", export_view),
     path("api/transfer/import/", import_view),
     path("api/transfer/choices/", choices_view),

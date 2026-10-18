@@ -129,6 +129,7 @@ def test_owner_invites_and_invitee_joins(api, team, invitee):
     preview = client.get(f"/api/invitations/by-token/{token}/").json()
     assert preview == {
         "team_name": team.name,
+        "invited_by_name": None,  # the test user has no name
         "role": "member",
         "state": "pending",
         "expires_at": preview["expires_at"],

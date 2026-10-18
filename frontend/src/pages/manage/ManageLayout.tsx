@@ -4,6 +4,7 @@ import EggIcon from '@mui/icons-material/EggOutlined'
 import RuleIcon from '@mui/icons-material/RuleOutlined'
 import ProbeIcon from '@mui/icons-material/ManageSearch'
 import ActivityIcon from '@mui/icons-material/HistoryOutlined'
+import InviteIcon from '@mui/icons-material/MarkEmailUnreadOutlined'
 import TuneIcon from '@mui/icons-material/Tune'
 import TransferIcon from '@mui/icons-material/SwapVert'
 import UsageIcon from '@mui/icons-material/InsightsOutlined'
@@ -39,6 +40,7 @@ const SECTIONS = [
   { key: 'usage', path: '/manage/usage', icon: <UsageIcon />, who: 'admin' },
   { key: 'searchProbe', path: '/manage/search-probe', icon: <ProbeIcon />, who: 'admin' },
   { key: 'activity', path: '/manage/activity', icon: <ActivityIcon />, who: 'admin' },
+  { key: 'inviteRequests', path: '/manage/invite-requests', icon: <InviteIcon />, who: 'admin' },
   { key: 'cache', path: '/manage/cache', icon: <CachedIcon />, who: 'admin' },
   { key: 'transfer', path: '/manage/transfer', icon: <TransferIcon />, who: 'admin' },
 ] as const

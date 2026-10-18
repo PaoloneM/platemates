@@ -35,6 +35,7 @@ ADMIN_ONLY_PATHS = (
     "/api/usage/",
     "/api/search-probe/",
     "/api/audit-stats/",
+    "/api/invite-requests/",
     "/api/transfer/",
     "/api/system-drafts/",
 )

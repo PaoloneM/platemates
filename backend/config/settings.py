@@ -170,6 +170,10 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
+    # Rates for the endpoints that throttle (anonymous ones): per client address, the one Traefik
+    # appends to X-Forwarded-For (NUM_PROXIES: one proxy in front).
+    "DEFAULT_THROTTLE_RATES": {"invite_request": "5/hour"},
+    "NUM_PROXIES": 1,
 }
 
 # -- Authentication: Keycloak via OIDC ------------------------------------------------------------

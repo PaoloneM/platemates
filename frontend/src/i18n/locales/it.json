@@ -43,7 +43,10 @@
     "invitationOnly": "L'accesso è su invito: dopo l'accesso potrai entrare nel team che ti ha invitato.",
     "invitedSignIn": "Sei stato invitato in un team. Accedi o crea un account per accettare l'invito.",
     "failed": "Accesso non riuscito. Riprova.",
-    "logout": "Esci"
+    "logout": "Esci",
+    "invitedBy": "{{name}} ti ha invitato nel team «{{team}}»",
+    "invitedTo": "Sei stato invitato nel team «{{team}}»",
+    "invitedHint": "Accedi o crea un account: subito dopo potrai accettare l'invito."
   },
   "invite": {
     "title": "Invito",
@@ -385,7 +388,8 @@
       "transfer": "Esporta / importa",
       "usage": "Consumi",
       "searchProbe": "Prova ricerca",
-      "activity": "Attività dei team"
+      "activity": "Attività dei team",
+      "inviteRequests": "Richieste d'invito"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -1085,5 +1089,46 @@
     "teamStorage": "Spazio stimato",
     "none": "Nessuna attività registrata.",
     "storageNote": "Lo spazio di un team è la somma delle sue righe; il totale comprende anche gli indici e lo spazio non ancora recuperato da PostgreSQL."
+  },
+  "landing": {
+    "recipes": {
+      "claim": "Organizza e scopri nuove ricette",
+      "text": "Il ricettario del team, le ricette della community e quelle che trovi sul web, con stagionalità e dosi per chi c’è a tavola."
+    },
+    "menu": {
+      "claim": "Programma il tuo menu",
+      "text": "La settimana pasto per pasto, con le persone a casa; e una proposta generata seguendo le vostre regole."
+    },
+    "shopping": {
+      "claim": "Genera la tua lista della spesa",
+      "text": "Dal menu della settimana, di un giorno o di una ricetta, divisa per reparto e da spuntare insieme."
+    }
+  },
+  "requestInvite": {
+    "action": "Richiedi un invito",
+    "title": "Richiedi un invito",
+    "hint": "Lascia il tuo indirizzo email: un amministratore ti scriverà con l'invito.",
+    "email": "Email",
+    "name": "Nome (facoltativo)",
+    "message": "Due parole su di te o sul tuo team (facoltativo)",
+    "send": "Invia richiesta",
+    "sent": "Richiesta inviata. Riceverai l'invito all'indirizzo che hai indicato.",
+    "invalid": "Controlla l'indirizzo email.",
+    "tooMany": "Troppe richieste da questo dispositivo: riprova più tardi."
+  },
+  "inviteRequests": {
+    "hint": "Chi ha chiesto un invito dalla pagina di accesso. Invitalo dalla pagina Team di un team (link d'invito) o creagli un team, poi segna la richiesta come gestita.",
+    "pending": "In attesa",
+    "all": "Tutte",
+    "none": "Nessuna richiesta.",
+    "handle": "Gestita",
+    "dismiss": "Scarta",
+    "reopen": "Rimetti in attesa",
+    "handledBy": "{{who}}, {{when}}",
+    "status": {
+      "handled": "Gestita",
+      "dismissed": "Scartata",
+      "pending": "In attesa"
+    }
   }
 }
