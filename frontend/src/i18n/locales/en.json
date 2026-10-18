@@ -440,7 +440,7 @@
   "noTeam": {
     "title": "Just the invitation missing",
     "body": "You are signed in as {{email}}, but your account is not part of any team yet.",
-    "hint": "Ask whoever manages your team to send you an invitation link, then open it in this browser."
+    "hint": "Ask whoever runs your team to send you an invitation link, then open it in this browser. If you have no team, ask the administrators for an invitation."
   },
   "team": {
     "menu": "Your team",

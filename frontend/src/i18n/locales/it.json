@@ -440,7 +440,7 @@
   "noTeam": {
     "title": "Manca solo l'invito",
     "body": "Hai effettuato l'accesso come {{email}}, ma il tuo account non fa ancora parte di nessun team.",
-    "hint": "Chiedi a chi gestisce il tuo team di inviarti un link di invito, poi aprilo da questo browser."
+    "hint": "Chiedi a chi gestisce il tuo team di inviarti un link di invito, poi aprilo da questo browser. Se non hai un team, richiedi un invito agli amministratori."
   },
   "team": {
     "menu": "Il tuo team",
