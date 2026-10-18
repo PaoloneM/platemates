@@ -35,6 +35,19 @@ platemates_llm_provider: anthropic
 platemates_embeddings_provider: openai
 
 platemates_acme_email: "{{ vault_acme_email }}"
+
+# Outgoing email (password reset, email verification): Brevo's SMTP relay on port 587 (Hetzner
+# blocks 25 and 465). Switched on once Brevo has verified the domain (its DNS records below);
+# setup_keycloak then turns reset and verification on in the realm.
+platemates_email_enabled: false
+platemates_smtp_host: smtp-relay.brevo.com
+platemates_smtp_from: "no-reply@{{ platemates_domain }}"
+# Records that let other mail servers trust what Brevo sends for the domain (written by
+# deploy/roles/cloudflare). SPF is one record for every sender: ImprovMX (incoming mail
+# forwarding) and Brevo together.
+cloudflare_mail_records:
+  - { type: TXT, name: "{{ platemates_domain }}", content: "v=spf1 include:spf.improvmx.com include:spf.brevo.com ~all" }
+  - { type: TXT, name: "_dmarc.{{ platemates_domain }}", content: "v=DMARC1; p=none" }
 platemates_app_admins: "{{ vault_app_admins }}"
 
 # Written into the server's .env on every run (the rest of it, secrets included, is created
@@ -74,6 +87,13 @@ platemates_env:
   # (keycloak-setup applies them on every deploy). docs/authentication.md has the steps.
   GOOGLE_CLIENT_ID: "{{ vault_google_client_id | default('') }}"
   GOOGLE_CLIENT_SECRET: "{{ vault_google_client_secret | default('') }}"
+  # Outgoing email (setup_keycloak): empty host while it is off.
+  SMTP_HOST: "{{ platemates_smtp_host if platemates_email_enabled | bool else '' }}"
+  SMTP_PORT: "587"
+  SMTP_STARTTLS: "true"
+  SMTP_FROM: "{{ platemates_smtp_from }}"
+  SMTP_USER: "{{ vault_smtp_user | default('') }}"
+  SMTP_PASSWORD: "{{ vault_smtp_password | default('') }}"
   # The backups' encryption passphrase (pgBackRest repository, the .env copy).
   PGBACKREST_CIPHER_PASS: "{{ vault_pgbackrest_cipher_pass }}"
 

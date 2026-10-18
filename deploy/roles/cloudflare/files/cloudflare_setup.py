@@ -14,6 +14,9 @@ environment; prints one JSON object (the tunnel's token among it: Ansible never 
   back) its direct record: the apex on the server's address, www on the apex, admin on
   127.0.0.1 (the SSH tunnel). Mail records are never touched.
 - Rate limit on the public "ask for an invitation" endpoint (the Free plan's one rule).
+- Mail records (CF_MAIL_RECORDS: SPF, DMARC, the sending service's DKIM and verification):
+  each kept as given. A TXT starting with "v=spf1" or "v=DMARC1" replaces the one of its kind
+  at that name (a domain may have only one); other records are added beside what is there.
 
 Standard library only.
 """
@@ -36,6 +39,7 @@ TUNNEL_HOSTS = [h for h in os.environ.get("CF_TUNNEL_HOSTS", "").split(",") if h
 ACCESS_EMAILS = [e.strip() for e in os.environ.get("CF_ACCESS_EMAILS", "").split(",") if e.strip()]
 GOOGLE_ID = os.environ.get("CF_GOOGLE_CLIENT_ID", "")
 GOOGLE_SECRET = os.environ.get("CF_GOOGLE_CLIENT_SECRET", "")
+MAIL_RECORDS = json.loads(os.environ.get("CF_MAIL_RECORDS") or "[]")
 TUNNEL_NAME = "platemates"
 ACCESS_APP_NAME = "PlateMates admin"
 WWW = f"www.{ZONE_NAME}"
@@ -174,6 +178,24 @@ def dns(zone: str, tunnel_id: str) -> None:
         changes.append(f"dns {host}: {kind} {content}{' (proxied)' if proxied else ''}")
 
 
+def mail_records(zone: str) -> None:
+    for wanted in MAIL_RECORDS:
+        kind, name, content = wanted["type"], wanted["name"], wanted["content"]
+        same = result("GET", f"/zones/{zone}/dns_records?type={kind}&name={name}") or []
+        # TXT content comes back quoted.
+        def text(record):
+            return record["content"].strip('"')
+        if any(text(r) == content for r in same):
+            continue
+        unique = next((p for p in ("v=spf1", "v=DMARC1") if content.startswith(p)), None)
+        for record in same:
+            if kind != "TXT" or (unique and text(record).startswith(unique)):
+                result("DELETE", f"/zones/{zone}/dns_records/{record['id']}")
+        result("POST", f"/zones/{zone}/dns_records",
+               {"type": kind, "name": name, "content": content, "ttl": 1, "proxied": False})
+        changes.append(f"dns {name}: {kind} {content[:40]}")
+
+
 def rate_limit(zone: str) -> None:
     rule = {
         "description": "PlateMates: ask for an invitation",
@@ -199,6 +221,7 @@ def main() -> None:
     aud = access_app(identity_providers())  # before any DNS change
     tunnel_id, token = tunnel()
     dns(zone, tunnel_id)
+    mail_records(zone)
     rate_limit(zone)
     print(json.dumps({"changed": bool(changes), "changes": changes, "tunnel_id": tunnel_id,
                       "tunnel_token": token, "access_aud": aud}))

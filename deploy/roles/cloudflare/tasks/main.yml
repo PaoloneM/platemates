@@ -17,6 +17,7 @@
     CF_ACCESS_EMAILS: "{{ platemates_app_admins }}"
     CF_GOOGLE_CLIENT_ID: "{{ vault_cloudflare_google_client_id | default('') }}"
     CF_GOOGLE_CLIENT_SECRET: "{{ vault_cloudflare_google_client_secret | default('') }}"
+    CF_MAIL_RECORDS: "{{ cloudflare_mail_records | default([]) | to_json }}"
   register: cloudflare_run
   changed_when: (cloudflare_run.stdout | from_json).changed
   # Its output holds the tunnel's token.
