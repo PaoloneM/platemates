@@ -251,18 +251,12 @@ def email_routing(zone: str) -> None:
 
 
 def rate_limit(zone: str) -> None:
-    rule = {
-        "description": "PlateMates: ask for an invitation",
-        "expression": '(http.request.uri.path eq "/api/request-invite/")',
-        "action": "block",
-        "ratelimit": {"characteristics": ["cf.colo.id", "ip.src"], "period": 10,
-                      "requests_per_period": 3, "mitigation_timeout": 10},
-    }
+    """No rate-limiting rules: the one public form they guarded (asking for an invitation
+    anonymously) is gone; requests now need an account and are limited by the app."""
     current = call("GET", f"/zones/{zone}/rulesets/phases/http_ratelimit/entrypoint").get("result") or {}
-    rules = [{k: r.get(k) for k in rule} for r in current.get("rules", [])]
-    if rules != [rule]:
-        result("PUT", f"/zones/{zone}/rulesets/phases/http_ratelimit/entrypoint", {"rules": [rule]})
-        changes.append("rate limit on /api/request-invite/")
+    if current.get("rules"):
+        result("PUT", f"/zones/{zone}/rulesets/phases/http_ratelimit/entrypoint", {"rules": []})
+        changes.append("rate limits removed")
 
 
 def main() -> None:

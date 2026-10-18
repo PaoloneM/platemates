@@ -117,11 +117,11 @@ RULES = [
          "secondo negli ultimi 5 minuti.",
          'sum(rate(traefik_service_requests_total{plane="public",code=~"5.."}[5m]))', "gt", 0.05,
          action="Guarda i log del backend e la dashboard Traffic."),
-    rule("pm-invite-requests", "Richieste d'invito in attesa",
+    rule("pm-invite-requests", "Richieste di nuovi team in attesa",
          f"Richieste in attesa: {{{{ printf \"%.0f\" {VALUE} }}}}.",
          "SELECT COUNT(*) AS value FROM accounts_inviterequest WHERE status = 'pending'",
          "gt", 0, datasource=PG, sql=True, for_="0s", severity="info",
-         action="Vedi Gestione → Richieste d'invito.", link=f"{ADMIN_URL}/manage/invite-requests"),
+         action="Vedi Gestione → Richieste di team.", link=f"{ADMIN_URL}/manage/invite-requests"),
     rule("pm-ai-cost", f"Spesa AI oltre {AI_DAILY_COST_ALERT_USD} USD oggi",
          f"Spesa AI stimata di oggi: {{{{ printf \"%.2f\" {VALUE} }}}} USD.",
          f"""SELECT COALESCE(SUM({COST}), 0) AS value

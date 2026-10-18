@@ -455,7 +455,7 @@
     },
     {
      "uid": "pm-invite-requests",
-     "title": "Richieste d'invito in attesa",
+     "title": "Richieste di nuovi team in attesa",
      "condition": "C",
      "data": [
       {
@@ -509,7 +509,7 @@
      "annotations": {
       "summary": "Richieste in attesa: {{ printf \"%.0f\" $values.B.Value }}.",
       "link": "https://admin.platemates.cloud/manage/invite-requests",
-      "action": "Vedi Gestione → Richieste d'invito."
+      "action": "Vedi Gestione → Richieste di team."
      },
      "labels": {
       "severity": "info"

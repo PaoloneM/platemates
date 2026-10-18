@@ -162,19 +162,33 @@ class Invitation(models.Model):
 
 
 class InviteRequest(models.Model):
-    """Someone without an invitation asking for one, from the sign-in page. Administrators
-    read the requests (Manage > Invite requests) and invite by hand, outside the app; the
-    request only records that it was dealt with."""
+    """A signed-in user without a team asking the administrators for one of their own, named
+    `team_name`. Administrators read the requests (Manage > Team requests) and create the team,
+    with the requester as owner, or dismiss the request; either way the requester gets an email.
+    (Rows without a requester are older anonymous requests for an invitation.)"""
 
     class Status(models.TextChoices):
         PENDING = "pending", _("Pending")
         HANDLED = "handled", _("Handled")
         DISMISSED = "dismissed", _("Dismissed")
 
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="team_requests",
+    )
+    team_name = models.CharField(max_length=100, blank=True)
+    # The team created for it.
+    team = models.ForeignKey(
+        Team, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    # The requester's address and name when they asked.
     email = models.EmailField()
     name = models.CharField(max_length=120, blank=True)
     message = models.CharField(max_length=500, blank=True)
-    # The interface language it was asked in: the language to write the invitation in.
+    # The interface language it was asked in: the language to answer in.
     language = models.CharField(max_length=8, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -188,3 +202,42 @@ class InviteRequest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.email} ({self.status})"
+
+
+class AccessRequest(models.Model):
+    """A signed-in user asking a team owner, known by email, to let them in. Whether that
+    address belongs to an owner is never revealed to the requester: `owner` is null when it
+    does not, and the request simply stays unanswered. The owner accepts it into one of their
+    teams, or declines it; the requester gets an email either way."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        ACCEPTED = "accepted", _("Accepted")
+        DECLINED = "declined", _("Declined")
+
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="access_requests"
+    )
+    # As the requester typed it, normalised.
+    owner_email = models.EmailField()
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="received_access_requests",
+    )
+    message = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    # The team the owner accepted them into.
+    team = models.ForeignKey(
+        Team, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.requester} -> {self.owner_email} ({self.status})"
