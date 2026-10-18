@@ -289,3 +289,21 @@ AI = {
         "TIMEOUT_SECONDS": float(os.getenv("EMBEDDINGS_TIMEOUT_SECONDS", "60")),
     },
 }
+
+# -- Outgoing email -----------------------------------------------------------------------------
+# The same relay Keycloak uses (SMTP_*, Brevo on the server): invitations and access requests
+# (apps/accounts/emails.py). Without SMTP_HOST mail is printed to the console instead (a
+# developer's machine); tests collect it in memory.
+if os.getenv("SMTP_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.getenv("SMTP_HOST")
+    EMAIL_PORT = int(os.getenv("SMTP_PORT", "587"))
+    EMAIL_HOST_USER = os.getenv("SMTP_USER", "")
+    EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+    EMAIL_USE_TLS = env_bool("SMTP_STARTTLS", True)
+    EMAIL_TIMEOUT = 20
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = f"PlateMates <{os.getenv('SMTP_FROM') or 'no-reply@localhost'}>"
+# Where links in emails lead: the public site (the first of APP_PUBLIC_URLS).
+APP_URL = (env_list("APP_PUBLIC_URLS") or ["http://localhost:8080"])[0].rstrip("/")

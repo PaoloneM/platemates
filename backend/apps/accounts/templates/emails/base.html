@@ -1,0 +1,29 @@
+{% autoescape on %}<!doctype html>
+<html lang="{{ language }}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>{{ subject }}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ec;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2421;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ec;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fbfaf7;border-radius:16px;border:1px solid #e3e0d6;">
+      <tr><td align="center" style="padding:28px 28px 8px;">
+        <img src="{{ app_url }}/email-logo.png" width="56" height="56" alt="" style="display:block;border:0;">
+        <div style="font-size:22px;font-weight:700;color:#2e7d4f;margin-top:10px;">PlateMates</div>
+      </td></tr>
+      <tr><td style="padding:12px 28px 4px;font-size:16px;line-height:1.55;">
+        <h1 style="font-size:20px;line-height:1.3;margin:8px 0 14px;color:#1f2421;">{{ title }}</h1>
+        {% for paragraph in paragraphs %}<p style="margin:0 0 12px;">{{ paragraph }}</p>{% endfor %}
+        {% if quote %}<p style="margin:0 0 12px;padding:10px 14px;border-left:3px solid #2e7d4f;background:#eef4ef;color:#3c4640;font-style:italic;">{{ quote }}</p>{% endif %}
+      </td></tr>
+      {% if button_url %}<tr><td align="center" style="padding:12px 28px 8px;">
+        <a href="{{ button_url }}" style="display:inline-block;background:#2e7d4f;color:#fbfaf7;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:10px;">{{ button }}</a>
+      </td></tr>{% endif %}
+      <tr><td style="padding:12px 28px 28px;font-size:13px;line-height:1.5;color:#66706a;">
+        {% for line in footer %}<p style="margin:0 0 6px;">{{ line }}</p>{% endfor %}
+        {% if button_url %}<p style="margin:0;word-break:break-all;">{{ button_url }}</p>{% endif %}
+      </td></tr>
+    </table>
+    <p style="font-size:12px;color:#8a938d;margin:14px 0 0;">PlateMates · {{ app_url }}</p>
+  </td></tr>
+</table>
+</body>
+</html>{% endautoescape %}
