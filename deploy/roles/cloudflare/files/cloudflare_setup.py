@@ -76,6 +76,15 @@ def zone_settings(zone: str) -> None:
             changes.append(f"zone {key} = {value}")
 
 
+def organization() -> None:
+    """The name Access's login page shows (the team's default is a random one)."""
+    org = result("GET", f"/accounts/{ACCOUNT}/access/organizations")
+    if org.get("name") != "PlateMates":
+        result("PUT", f"/accounts/{ACCOUNT}/access/organizations",
+               {"name": "PlateMates", "auth_domain": org["auth_domain"]})
+        changes.append("access: organization named PlateMates")
+
+
 def identity_providers() -> list[str]:
     existing = result("GET", f"/accounts/{ACCOUNT}/access/identity_providers") or []
     by_type = {p["type"]: p for p in existing}
@@ -186,6 +195,7 @@ def main() -> None:
         sys.exit(f"Zone {ZONE_NAME} is not active on Cloudflare yet (nameservers).")
     zone = zones[0]["id"]
     zone_settings(zone)
+    organization()
     aud = access_app(identity_providers())  # before any DNS change
     tunnel_id, token = tunnel()
     dns(zone, tunnel_id)
