@@ -29,6 +29,8 @@ application.
 | **Tastes**: likes, dislikes and never-propose, per team or per person | Planned (data model ready) |
 | **Feedback and learning**: what was actually eaten, optional ratings, fed back as context (RAG) | Planned |
 | **Collaborative recommendation**: similar teams' favourites inform suggestions | Planned |
+| **Recipe trash**: recipes removed or deleted go to the team's trash, restorable, purged only once nothing (a menu) refers to them; today a private recipe a menu still uses is kept out of every book, out of sight | Planned |
+| **History cleanup**: past weeks' planning (menus, generations, old shopping lists) and the trash, removed after a retention period, keeping what feedback and learning need | Planned |
 
 ## Architecture
 
