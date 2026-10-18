@@ -41,6 +41,35 @@ def find_owner(email: str):
     )
 
 
+def notify_owner(request: AccessRequest) -> None:
+    emails.send(
+        "access_request",
+        request.owner.email,
+        language_of(request.owner),
+        requester=_display_name(request.requester),
+        requester_email=request.requester.email,
+        message=request.message,
+    )
+
+
+def claim_waiting(user) -> int:
+    """Hand an owner the waiting requests to their address that found no owner when sent
+    (their address was not known to be verified yet, or they owned no team then), and email
+    them about each. Run at login and when they look at their requests."""
+    if find_owner(user.email) != user:
+        return 0
+    waiting = AccessRequest.objects.filter(
+        owner__isnull=True, owner_email__iexact=user.email, status=AccessRequest.Status.PENDING
+    ).exclude(requester=user)
+    claimed = 0
+    for request in waiting.select_related("requester"):
+        request.owner = user
+        request.save(update_fields=["owner"])
+        notify_owner(request)
+        claimed += 1
+    return claimed
+
+
 class MyAccessRequestSerializer(serializers.ModelSerializer):
     team_name = serializers.CharField(source="team.name", read_only=True, default=None)
 
@@ -99,14 +128,7 @@ class AccessRequestViewSet(
             owner = None
         request = serializer.save(requester=user, owner=owner)
         if owner:
-            emails.send(
-                "access_request",
-                owner.email,
-                language_of(owner),
-                requester=_display_name(user),
-                requester_email=user.email,
-                message=request.message,
-            )
+            notify_owner(request)
 
     def perform_destroy(self, request):
         if request.status != AccessRequest.Status.PENDING:
@@ -120,6 +142,7 @@ class AccessRequestViewSet(
 
     @action(detail=False, methods=["get"])
     def received(self, request):
+        claim_waiting(request.user)
         return Response(ReceivedAccessRequestSerializer(self._received(), many=True).data)
 
     def _answer(self, pk):

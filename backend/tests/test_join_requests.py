@@ -223,3 +223,24 @@ def test_old_anonymous_requests_still_list(api, admin):
     InviteRequest.objects.create(email="old@example.com")
     [row] = api.get("/api/invite-requests/").json()["results"]
     assert (row["email"], row["team_name"]) == ("old@example.com", "")
+
+
+def test_a_request_sent_before_the_owner_was_verified_reaches_them_later(
+    api, team, user, newcomer, mailoutbox
+):
+    user.email = "alice@example.com"
+    user.save()
+    UserProfile.objects.update_or_create(user=user, defaults={"email_verified": False})
+    _, client = newcomer
+    ask_owner(client, "alice@example.com")
+    assert mailoutbox == []
+    # Signing in again: the claim says the address is verified.
+    from apps.accounts.oidc import KeycloakBackend
+
+    KeycloakBackend().update_user(
+        user, {"email": "alice@example.com", "email_verified": True, "given_name": "Alice"}
+    )
+    assert [m.to for m in mailoutbox] == [["alice@example.com"]]
+    [received] = api.get("/api/access-requests/received/").json()
+    assert received["requester_email"] == "dora@example.com"
+    assert len(mailoutbox) == 1  # claimed once, emailed once

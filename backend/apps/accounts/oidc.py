@@ -64,6 +64,10 @@ class KeycloakBackend(OIDCAuthenticationBackend):
                 "email_verified": bool(claims.get("email_verified")),
             },
         )
+        # Requests sent to this address before it was known to be an owner's reach them now.
+        from .access_requests import claim_waiting
+
+        claim_waiting(user)
         return user
 
 
