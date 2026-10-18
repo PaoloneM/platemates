@@ -8,6 +8,8 @@
     # Before the app: the database archives into the backup folder from its first start.
     - { role: backup, tags: [backup, app] }
     - { role: monitoring, tags: [monitoring, app] }
+    # Before the app: the tunnel's token goes into its .env.
+    - { role: cloudflare, tags: [cloudflare, app], when: cloudflare_enabled | bool }
     - { role: platemates, tags: [app] }
   post_tasks:
     - name: Set up pgBackRest once the database runs

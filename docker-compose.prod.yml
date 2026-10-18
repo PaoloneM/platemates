@@ -152,45 +152,46 @@ services:
       - --entrypoints.websecure.address=:443
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      # A DNS challenge on Cloudflare: it needs no open port (the traffic may all come through
+      # the tunnel).
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare
       - --ping=true
       - --log.level=WARN
       # Metrics for VictoriaMetrics, on an entry point that is not published.
       - --entrypoints.metrics.address=:8082
       - --metrics.prometheus=true
       - --metrics.prometheus.entrypoint=metrics
+    environment:
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:?set CF_DNS_API_TOKEN in .env}
+    # On every address while the public ports are open; on the VM's own once Cloudflare's
+    # tunnel brings the traffic (PLATEMATES_PUBLIC_BIND, deploy/group_vars).
     ports: !override
-      - "80:80"
-      - "443:443"
+      - "${PLATEMATES_PUBLIC_BIND:-0.0.0.0}:80:80"
+      - "${PLATEMATES_PUBLIC_BIND:-0.0.0.0}:443:443"
     volumes: !override
       - letsencrypt:/letsencrypt
     depends_on:
       - socket-proxy
     restart: unless-stopped
 
-  # The admin plane: only on the VM's loopback, reached through an SSH tunnel
-  # (`ssh platemates01` forwards 9443). Routes from a file, no Docker access; its certificate
-  # comes from Let's Encrypt through a DNS challenge on Hostinger's API, since the name resolves
-  # to 127.0.0.1 and no HTTP challenge can reach it.
+  # The admin plane: only on the VM's loopback, reached through Cloudflare's tunnel (behind
+  # Access) or an SSH tunnel (`ssh platemates01` forwards 9443). Routes from a file, no Docker
+  # access; its certificate from Let's Encrypt through a DNS challenge on Cloudflare.
   traefik-admin:
     image: traefik:v3.7
     command:
       - --providers.file.filename=/etc/traefik/dynamic.yml
       - --entrypoints.admin.address=:443
-      - --certificatesresolvers.hostinger.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
-      - --certificatesresolvers.hostinger.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.hostinger.acme.dnschallenge.provider=hostinger
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare
       - --ping=true
       - --log.level=WARN
       - --entrypoints.metrics.address=:8082
       - --metrics.prometheus=true
       - --metrics.prometheus.entrypoint=metrics
     environment:
-      HOSTINGER_API_TOKEN: ${HOSTINGER_API_TOKEN:?set HOSTINGER_API_TOKEN in .env}
-      # Hostinger's nameservers take minutes to publish a record (60 s, the default, failed
-      # with NXDOMAIN on 2026-10-11).
-      HOSTINGER_PROPAGATION_TIMEOUT: "900"
-      HOSTINGER_POLLING_INTERVAL: "15"
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:?set CF_DNS_API_TOKEN in .env}
       PLATEMATES_ADMIN_DOMAIN: ${PLATEMATES_ADMIN_DOMAIN:?set PLATEMATES_ADMIN_DOMAIN in .env}
     ports:
       - "127.0.0.1:9443:443"
@@ -202,6 +203,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # Cloudflare's tunnel (deploy/roles/cloudflare): an outbound connection that brings the
+  # traffic of the hosts routed through it to the two Traefiks, so the server needs no open
+  # port. Started only with the `cloudflare` profile, once the deploy gave it its token.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.1
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:-}
+    profiles: [cloudflare]
+    depends_on:
+      - traefik
+      - traefik-admin
     restart: unless-stopped
 
   # -- Monitoring (admin plane only): docs/operations.md -------------------------------------

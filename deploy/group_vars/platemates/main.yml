@@ -3,10 +3,21 @@
 
 platemates_domain: platemates.cloud
 platemates_url: "https://{{ platemates_domain }}"
-# The admin plane (apps/core/planes.py): only on the VM's 127.0.0.1:9443, reached through an SSH
-# tunnel; the name resolves publicly to 127.0.0.1, so it works only with the tunnel open.
+# Cloudflare in front of everything (deploy/roles/cloudflare, docs/operations.md), step by step:
+# enabled once the zone is active; hosts moved into the tunnel one at a time; the public ports
+# closed last. Each step is a deploy, and each can be undone by one.
+cloudflare_enabled: false
+cloudflare_tunnel_hosts: []
+platemates_public_ports_open: true
+
+# The admin plane (apps/core/planes.py), on the VM's 127.0.0.1:9443 only: through Cloudflare's
+# tunnel behind Access once the admin host is in it, and always through an SSH tunnel (the way
+# in when Cloudflare is not).
 platemates_admin_domain: "admin.{{ platemates_domain }}"
-platemates_admin_url: "https://{{ platemates_admin_domain }}:9443"
+platemates_admin_tunnel_url: "https://{{ platemates_admin_domain }}:9443"
+platemates_admin_url: >-
+  {{ 'https://' ~ platemates_admin_domain if platemates_admin_domain in cloudflare_tunnel_hosts
+     else platemates_admin_tunnel_url }}
 platemates_dir: /opt/platemates
 platemates_repo: https://github.com/PaoloneM/platemates.git
 # Git ref checked out for the compose files and scripts.
@@ -34,8 +45,8 @@ platemates_env:
   DJANGO_DEBUG: "false"
   DJANGO_SECURE_COOKIES: "true"
   DJANGO_ALLOWED_HOSTS: "{{ platemates_domain }},{{ platemates_admin_domain }}"
-  DJANGO_CSRF_TRUSTED_ORIGINS: "{{ platemates_url }},{{ platemates_admin_url }}"
-  APP_PUBLIC_URLS: "{{ platemates_url }},{{ platemates_admin_url }}"
+  DJANGO_CSRF_TRUSTED_ORIGINS: "{{ platemates_url }},https://{{ platemates_admin_domain }},{{ platemates_admin_tunnel_url }}"
+  APP_PUBLIC_URLS: "{{ platemates_url }},https://{{ platemates_admin_domain }},{{ platemates_admin_tunnel_url }}"
   # A request without the plane header (one that did not come through Traefik) gets no powers.
   DEFAULT_PLANE: public
   PLATEMATES_ADMIN_DOMAIN: "{{ platemates_admin_domain }}"
@@ -43,8 +54,14 @@ platemates_env:
   # Grafana, on the admin plane (its Keycloak client's redirect target).
   GRAFANA_URLS: "{{ platemates_admin_url }}/grafana"
 
-  # The admin plane's certificate: a DNS challenge through Hostinger's API.
-  HOSTINGER_API_TOKEN: "{{ vault_hostinger_api_token }}"
+  # Certificates: Let's Encrypt through a DNS challenge on Cloudflare (a token that edits this
+  # zone's DNS only), for both Traefiks; the public ports need not be open for it.
+  CF_DNS_API_TOKEN: "{{ vault_cloudflare_dns_token | default('') }}"
+  # cloudflared runs with the `cloudflare` profile, once the role gave it its token.
+  COMPOSE_PROFILES: "{{ 'cloudflare' if cloudflare_enabled | bool else '' }}"
+  # Where Traefik's public ports listen: everywhere, or only on the VM itself once the traffic
+  # comes through the tunnel.
+  PLATEMATES_PUBLIC_BIND: "{{ '0.0.0.0' if platemates_public_ports_open | bool else '127.0.0.1' }}"
   APP_ADMINS: "{{ platemates_app_admins }}"
   LLM_PROVIDER: "{{ platemates_llm_provider }}"
   EMBEDDINGS_PROVIDER: "{{ platemates_embeddings_provider }}"

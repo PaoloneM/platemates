@@ -58,6 +58,20 @@ def test_requests_are_rate_limited(anonymous):
     assert anonymous.post(URL, {"email": "u9@example.com"}, format="json").status_code == 429
 
 
+def test_through_cloudflare_each_visitor_has_their_own_limit(anonymous):
+    for i in range(5):
+        anonymous.post(
+            URL, {"email": f"a{i}@example.com"}, format="json", HTTP_CF_CONNECTING_IP="203.0.113.1"
+        )
+    blocked = anonymous.post(
+        URL, {"email": "a9@example.com"}, format="json", HTTP_CF_CONNECTING_IP="203.0.113.1"
+    )
+    other = anonymous.post(
+        URL, {"email": "b9@example.com"}, format="json", HTTP_CF_CONNECTING_IP="203.0.113.2"
+    )
+    assert (blocked.status_code, other.status_code) == (429, 204)
+
+
 def test_a_bad_address_is_refused(anonymous):
     assert anonymous.post(URL, {"email": "not-an-email"}, format="json").status_code == 400
 

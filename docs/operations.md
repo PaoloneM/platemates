@@ -151,19 +151,53 @@ A Hetzner Cloud VM (`platemates01`, CX23, Ubuntu 26.04) runs the stack from publ
   set `tls=true` themselves, which makes Traefik ignore a resolver set on the entry point. After
   fixing either, `docker compose restart traefik` on the server asks again at once.
 
+## Cloudflare (decided with Paolo 2026-10-18)
+
+Cloudflare is in front of everything: its DNS (the domain stays registered at Hostinger), its
+proxy, and a tunnel through which the traffic reaches the server, so that no web port needs to
+be open. Configured through its API only, by `deploy/roles/cloudflare`
+(`files/cloudflare_setup.py`, idempotent and convergent, like `setup_keycloak`):
+
+- **Zone**: SSL Full (strict), HTTPS only, TLS 1.2 at least, WebSockets (Socket.IO).
+- **Tunnel** `platemates`: `cloudflared` (compose profile `cloudflare`, its token written into
+  `.env` by the deploy) opens an outbound connection; each host goes to its Traefik over TLS
+  inside the compose network (`platemates.cloud` and `www` to `traefik`, `admin` to
+  `traefik-admin`).
+- **Access** on the admin host: Google (an OAuth client of its own, redirect
+  `https://platemates.cloudflareaccess.com/cdn-cgi/access/callback`) or a one-time code by
+  email; allowed: `APP_ADMINS`; 24 h sessions. Created before any DNS change. mTLS was left
+  out: on the Free plan it can only be a WAF rule that blocks every request without a
+  certificate, which would shut out phones and Telegram's browser.
+- **Rate limit** on `/api/request-invite/` (the Free plan's one rule), on top of the app's own.
+- **The client's address**: Traefik sees cloudflared's; the app reads `CF-Connecting-IP`.
+- **Credentials** (vault): `vault_cloudflare_api_token` (deploy: tunnel, Access, DNS, WAF,
+  zone settings; used from the control node only), `vault_cloudflare_account_id`,
+  `vault_cloudflare_google_client_id`/`_secret`, `vault_cloudflare_dns_token` (on the server,
+  for the certificates: DNS of this zone only).
+- **Steps** (`deploy/group_vars/platemates/main.yml`), each a deploy, each undone by one:
+  `cloudflare_enabled: true` once the zone is active; hosts added to `cloudflare_tunnel_hosts`
+  one at a time (admin first; taking a host out gives it back its direct record); last,
+  `platemates_public_ports_open: false` (Traefik's 80 and 443 only on 127.0.0.1, closed in ufw).
+- Mail (ImprovMX's MX and SPF records) is never touched.
+
 ## The admin plane
 
 Everything that is not the app is served only on the VM's loopback (decided with Paolo
 2026-10-11): Gestione, Django admin, Keycloak's admin console, and the monitoring.
 
-- **How to get there**: `ssh -N platemates-admin` (in `~/.ssh/config.d/platemates`, it forwards
-  local 9443 to the VM's 127.0.0.1:9443), then `https://admin.platemates.cloud:9443`. The name is a
-  public DNS record pointing to 127.0.0.1: without the tunnel it reaches nothing. Sign in as
-  usual (a separate session from the public site's: cookies are per host).
+- **How to get there**: `https://admin.platemates.cloud`, from anywhere, phone included, once
+  the admin host is in Cloudflare's tunnel (below): Cloudflare Access asks for a Google login or
+  a one-time code sent by email, and lets in only the app's administrators (`APP_ADMINS`);
+  then the app's own sign-in as usual (a separate session from the public site's: cookies are
+  per host). **The way in when Cloudflare is not**: `ssh -N platemates-admin` (in
+  `~/.ssh/config.d/platemates`, it forwards local 9443 to the VM's 127.0.0.1:9443), with
+  `127.0.0.1 admin.platemates.cloud` in the Mac's `/etc/hosts` once the public name points to
+  Cloudflare, then `https://admin.platemates.cloud:9443`.
 - **How it works**: a second Traefik, `traefik-admin` (`docker-compose.prod.yml`), publishes only
   `127.0.0.1:9443`; its routes are a file (`traefik-admin/dynamic.yml`), it has no Docker access.
-  Its certificate is Let's Encrypt's, through a DNS challenge on Hostinger's API
-  (`vault_hostinger_api_token`), since no HTTP challenge can reach a name resolving to 127.0.0.1.
+  Cloudflare's tunnel reaches it from inside the compose network. Its certificate, like the
+  public Traefik's, is Let's Encrypt's through a DNS challenge on Cloudflare
+  (`vault_cloudflare_dns_token`: a token that edits this zone's DNS only).
 - **Planes in the backend** (`apps/core/planes.py`): each Traefik sets `X-PlateMates-Plane`
   (`public` or `admin`), overwriting what the client sent; staff and admin powers exist only
   with `admin`. On the public plane a staff account is an ordinary user, Gestione does not

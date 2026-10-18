@@ -37,13 +37,21 @@
     enabled: true
 
 # Docker publishes its ports around ufw: only Traefik's 80 and 443 are published
-# (docker-compose.prod.yml), so this covers what the host itself listens on.
-- name: Allow SSH, HTTP and HTTPS
+# (docker-compose.prod.yml, and only on 127.0.0.1 once the traffic comes through Cloudflare's
+# tunnel), so this covers what the host itself listens on.
+- name: Allow SSH
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Allow HTTP and HTTPS while the public ports are open
   community.general.ufw:
     rule: allow
     port: "{{ item }}"
     proto: tcp
-  loop: ["22", "80", "443"]
+    delete: "{{ not (platemates_public_ports_open | bool) }}"
+  loop: ["80", "443"]
 
 - name: Deny everything else coming in
   community.general.ufw:

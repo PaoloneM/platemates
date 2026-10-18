@@ -1,0 +1,33 @@
+# Cloudflare in front of the server (docs/operations.md): configured through its API from the
+# control node by files/cloudflare_setup.py, idempotent and convergent. Runs once the zone is
+# active (`cloudflare_enabled`); `cloudflare_tunnel_hosts` says which hosts go through the
+# tunnel (taking one out gives it back its direct record).
+- name: Configure Cloudflare (zone, Access, tunnel, DNS, rate limit)
+  ansible.builtin.command: python3 {{ role_path }}/files/cloudflare_setup.py
+  delegate_to: localhost
+  become: false
+  environment:
+    CF_API_TOKEN: "{{ vault_cloudflare_api_token }}"
+    CF_ACCOUNT_ID: "{{ vault_cloudflare_account_id }}"
+    CF_ZONE: "{{ platemates_domain }}"
+    CF_ADMIN_HOST: "{{ platemates_admin_domain }}"
+    CF_ORIGIN_IP: "{{ ansible_host }}"
+    CF_TUNNEL_HOSTS: "{{ cloudflare_tunnel_hosts | join(',') }}"
+    # The admin host is the administrators' door: the same people as the app's admin role.
+    CF_ACCESS_EMAILS: "{{ platemates_app_admins }}"
+    CF_GOOGLE_CLIENT_ID: "{{ vault_cloudflare_google_client_id | default('') }}"
+    CF_GOOGLE_CLIENT_SECRET: "{{ vault_cloudflare_google_client_secret | default('') }}"
+  register: cloudflare_run
+  changed_when: (cloudflare_run.stdout | from_json).changed
+  # Its output holds the tunnel's token.
+  no_log: true
+
+- name: Keep the tunnel's token for the server's .env
+  ansible.builtin.set_fact:
+    platemates_extra_env:
+      CLOUDFLARED_TOKEN: "{{ (cloudflare_run.stdout | from_json).tunnel_token }}"
+  no_log: true
+
+- name: Say what changed on Cloudflare
+  ansible.builtin.debug:
+    msg: "{{ (cloudflare_run.stdout | from_json).changes or ['nothing'] }}"

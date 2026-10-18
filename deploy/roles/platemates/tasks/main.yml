@@ -51,7 +51,8 @@
     regexp: "^{{ item.key }}="
     line: "{{ item.key }}={{ item.value }}"
     mode: "0600"
-  loop: "{{ platemates_env | dict2items }}"
+  # Plus what other roles found (the tunnel's token, deploy/roles/cloudflare).
+  loop: "{{ platemates_env | combine(platemates_extra_env | default({})) | dict2items }}"
   loop_control:
     label: "{{ item.key }}"
   # Some values are API keys: never print them, not even with --diff.

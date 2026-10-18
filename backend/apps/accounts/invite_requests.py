@@ -33,9 +33,14 @@ class RequestSerializer(serializers.Serializer):
 
 
 class InviteRequestThrottle(SimpleRateThrottle):
-    """Per client address (`NUM_PROXIES`), signed in or not."""
+    """Per client address, signed in or not. Through Cloudflare the address is the one its edge
+    puts in CF-Connecting-IP (Traefik sees cloudflared's); otherwise the one Traefik appends to
+    X-Forwarded-For (`NUM_PROXIES`)."""
 
     scope = "invite_request"
+
+    def get_ident(self, request):
+        return request.META.get("HTTP_CF_CONNECTING_IP") or super().get_ident(request)
 
     def get_cache_key(self, request, view):
         return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}

@@ -19,31 +19,31 @@ http:
       entryPoints: [admin]
       service: backend
       middlewares: [plane-admin]
-      tls: { certResolver: hostinger }
+      tls: { certResolver: letsencrypt }
     admin-realtime:
       rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`) && PathPrefix(`/websocket`)
       entryPoints: [admin]
       service: realtime
       middlewares: [plane-admin]
-      tls: { certResolver: hostinger }
+      tls: { certResolver: letsencrypt }
     # Keycloak whole, its admin console included (denied on the public plane).
     admin-keycloak:
       rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`) && PathPrefix(`/auth`)
       entryPoints: [admin]
       service: keycloak
-      tls: { certResolver: hostinger }
+      tls: { certResolver: letsencrypt }
     # Monitoring, embedded in the app's Monitoring page (same origin, so no framing issue).
     admin-grafana:
       rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`) && PathPrefix(`/grafana`)
       entryPoints: [admin]
       service: grafana
-      tls: { certResolver: hostinger }
+      tls: { certResolver: letsencrypt }
     admin-frontend:
       rule: Host(`{{ env "PLATEMATES_ADMIN_DOMAIN" }}`)
       entryPoints: [admin]
       service: frontend
       tls:
-        certResolver: hostinger
+        certResolver: letsencrypt
         domains:
           - main: '{{ env "PLATEMATES_ADMIN_DOMAIN" }}'
 
