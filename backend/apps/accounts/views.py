@@ -1,3 +1,6 @@
+import datetime as dt
+
+from django.conf import settings
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import mixins, serializers, status, viewsets
@@ -11,9 +14,15 @@ from apps.siteconfig.registry import MENU_LAYOUTS, public_values
 from apps.teams.models import Membership, Team
 from apps.teams.permissions import TeamScopedMixin
 
+from . import emails
 from .models import SHOPPING_APPS, THEMES, Invitation, UserProfile, supported_language
 from .oidc import enabled_identity_providers
-from .serializers import InvitationPreviewSerializer, InvitationSerializer
+from .serializers import (
+    InvitationPreviewSerializer,
+    InvitationSerializer,
+    _display_name,
+    mask_email,
+)
 
 
 @ensure_csrf_cookie
@@ -106,6 +115,10 @@ def login_options(request):
     return Response({"identity_providers": enabled_identity_providers()})
 
 
+# Emailed invitations a team may send in 24 hours.
+INVITATION_EMAILS_PER_DAY = 20
+
+
 class InvitationViewSet(
     TeamScopedMixin,
     mixins.ListModelMixin,
@@ -133,14 +146,91 @@ class InvitationViewSet(
             raise serializers.ValidationError({"team": "Only owners can invite."})
 
     def perform_create(self, serializer):
-        self.check_team(serializer.validated_data["team"])
-        serializer.save(invited_by=self.request.user)
+        team = serializer.validated_data["team"]
+        self.check_team(team)
+        if serializer.validated_data.get("email"):
+            self._check_daily_emails(team)
+        invitation = serializer.save(invited_by=self.request.user)
+        self.email_sent = self._send(invitation) if invitation.email else None
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        response.data["email_sent"] = self.email_sent
+        return response
+
+    def _check_daily_emails(self, team) -> None:
+        """Invitations go out under PlateMates' name: a ceiling per team keeps it from being a
+        way to send mail to anyone."""
+        since = timezone.now() - dt.timedelta(days=1)
+        sent = Invitation.objects.filter(team=team, created_at__gte=since).exclude(email="")
+        if sent.count() >= INVITATION_EMAILS_PER_DAY:
+            raise serializers.ValidationError(
+                {"email": "Too many invitations by email today.", "code": "too_many"}
+            )
+
+    def _send(self, invitation, message: str = "") -> bool:
+        inviter = self.request.user
+        language = getattr(getattr(inviter, "profile", None), "language", "") or (
+            self.request.LANGUAGE_CODE
+        )
+        return emails.send(
+            "invitation",
+            invitation.email,
+            language,
+            url=f"{settings.APP_URL}/invite/{invitation.token}",
+            inviter=_display_name(inviter),
+            inviter_email=inviter.email,
+            team=invitation.team.name,
+            email=invitation.email,
+            expires=invitation.expires_at.strftime("%d/%m/%Y"),
+            message=message or self.request.data.get("message", "")[:500],
+        )
+
+    @action(detail=True, methods=["post"])
+    def resend(self, request, pk=None):
+        """Send an invitation's email again (owners; pending invitations sent by email)."""
+        invitation = self.get_object()
+        self.check_team(invitation.team)
+        if not invitation.email or invitation.state != Invitation.State.PENDING:
+            raise serializers.ValidationError({"detail": "Only a pending emailed invitation."})
+        self._check_daily_emails(invitation.team)
+        return Response({"email_sent": self._send(invitation)})
+
+    @action(detail=False, methods=["get"])
+    def mine(self, request):
+        """Pending invitations sent to the user's own verified address: a way in for someone
+        who signed up from the landing page, or lost the email."""
+        profile = UserProfile.of(request.user)
+        if not (profile.email_verified and request.user.email):
+            return Response([])
+        pending = [
+            i
+            for i in Invitation.objects.select_related("team", "invited_by").filter(
+                email__iexact=request.user.email, accepted_at__isnull=True, revoked_at__isnull=True
+            )
+            if i.state == Invitation.State.PENDING
+        ]
+        return Response(
+            [
+                {
+                    "token": i.token,
+                    "team_name": i.team.name,
+                    "invited_by_name": _display_name(i.invited_by),
+                    "expires_at": i.expires_at,
+                }
+                for i in pending
+            ]
+        )
 
     def perform_destroy(self, instance):
         self.check_team(instance.team)
         if instance.state == Invitation.State.PENDING:
             instance.revoked_at = timezone.now()
             instance.save(update_fields=["revoked_at"])
+
+    @staticmethod
+    def _is_addressee(user, email: str) -> bool:
+        return UserProfile.of(user).email_verified and user.email.lower() == email.lower()
 
     def _by_token(self, token):
         return (
@@ -170,6 +260,11 @@ class InvitationViewSet(
         invitation = self._by_token(token)
         if invitation is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        if invitation.email and not self._is_addressee(request.user, invitation.email):
+            return Response(
+                {"code": "wrong_account", "email_hint": mask_email(invitation.email)},
+                status=status.HTTP_409_CONFLICT,
+            )
         try:
             membership = invitation.accept(request.user)
         except ValueError as exc:

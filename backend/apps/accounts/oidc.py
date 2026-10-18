@@ -58,7 +58,11 @@ class KeycloakBackend(OIDCAuthenticationBackend):
         OIDCIdentity.objects.filter(user=user).update(last_login_at=timezone.now())
         # Roles are Keycloak's: granted or taken away there, they apply from the next login.
         UserProfile.objects.update_or_create(
-            user=user, defaults={"is_admin": ADMIN_ROLE in (claims.get("roles") or [])}
+            user=user,
+            defaults={
+                "is_admin": ADMIN_ROLE in (claims.get("roles") or []),
+                "email_verified": bool(claims.get("email_verified")),
+            },
         )
         return user
 

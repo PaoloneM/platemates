@@ -5,6 +5,14 @@ from apps.teams.permissions import is_owner
 from .models import Invitation
 
 
+def mask_email(email: str) -> str:
+    """ "paola.rossi@gmail.com" -> "p***i@gmail.com": enough to recognise one's own address."""
+    if "@" not in email:
+        return ""
+    name, domain = email.split("@", 1)
+    return f"{name[0]}***{name[-1] if len(name) > 1 else ''}@{domain}"
+
+
 def _display_name(user) -> str | None:
     if user is None:
         return None
@@ -25,10 +33,15 @@ class InvitationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, invitation):
         data = super().to_representation(invitation)
-        # The token is the invitation: only owners, who hand it out, ever see it.
+        # The token is the invitation, and the address someone's: only owners, who hand them
+        # out, ever see them.
         if not is_owner(self.context["request"].user, invitation.team):
             data.pop("token")
+            data.pop("email")
         return data
+
+    def validate_email(self, email: str) -> str:
+        return email.strip().lower()
 
     class Meta:
         model = Invitation
@@ -39,6 +52,7 @@ class InvitationSerializer(serializers.ModelSerializer):
             "token",
             "role",
             "note",
+            "email",
             "state",
             "created_at",
             "expires_at",
@@ -56,10 +70,15 @@ class InvitationPreviewSerializer(serializers.ModelSerializer):
     team_name = serializers.CharField(source="team.name", read_only=True)
     # Who sent it, by name only (never their email): it is shown before signing in.
     invited_by_name = serializers.SerializerMethodField()
+    # Sent to an address: which one, masked ("p***i@gmail.com"), so the right account is used.
+    email_hint = serializers.SerializerMethodField()
 
     class Meta:
         model = Invitation
-        fields = ["team_name", "invited_by_name", "role", "state", "expires_at"]
+        fields = ["team_name", "invited_by_name", "email_hint", "role", "state", "expires_at"]
+
+    def get_email_hint(self, invitation) -> str | None:
+        return mask_email(invitation.email) if invitation.email else None
 
     def get_invited_by_name(self, invitation) -> str | None:
         user = invitation.invited_by

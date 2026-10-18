@@ -43,6 +43,9 @@ class UserProfile(models.Model):
         default="",
         choices=[("", "Team's"), ("vertical", "Vertical"), ("horizontal", "Horizontal")],
     )
+    # Whether Keycloak vouches for the account's email (Google, or a verified address), as of
+    # the last login: an invitation sent to an address is accepted only by its owner.
+    email_verified = models.BooleanField(default=False)
     # The shopping list app the user sends items to, chosen by the user (opt-in).
     shopping_app = models.CharField(max_length=16, choices=SHOPPING_APPS, blank=True, default="")
     # Holds Keycloak's realm role `admin` (assigned from APP_ADMINS by setup_keycloak), copied
@@ -111,6 +114,9 @@ class Invitation(models.Model):
     )
     # Who the link is meant for. Informational only: the token is what grants access.
     note = models.CharField(max_length=200, blank=True)
+    # Sent by email to this address: then only an account with this verified address may
+    # accept it (a forwarded email is no use to anyone else). Blank: a link to hand out.
+    email = models.EmailField(blank=True)
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
     )

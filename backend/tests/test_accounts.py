@@ -130,6 +130,7 @@ def test_owner_invites_and_invitee_joins(api, team, invitee):
     assert preview == {
         "team_name": team.name,
         "invited_by_name": None,  # the test user has no name
+        "email_hint": None,  # a link to hand out, not sent to an address
         "role": "member",
         "state": "pending",
         "expires_at": preview["expires_at"],

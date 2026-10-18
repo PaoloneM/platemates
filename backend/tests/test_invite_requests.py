@@ -104,5 +104,12 @@ def test_an_invitation_says_who_and_which_team_before_signing_in(user, team, ano
     assert preview["invited_by_name"] == "Paola Rossi"
     assert preview["state"] == "pending"
     # By name only: nothing else about who sent it.
-    assert set(preview) == {"team_name", "invited_by_name", "role", "state", "expires_at"}
+    assert set(preview) == {
+        "team_name",
+        "invited_by_name",
+        "email_hint",
+        "role",
+        "state",
+        "expires_at",
+    }
     assert anonymous.post(url).status_code == 403  # accepting needs signing in
