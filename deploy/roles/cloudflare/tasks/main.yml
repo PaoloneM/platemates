@@ -18,6 +18,8 @@
     CF_GOOGLE_CLIENT_ID: "{{ vault_cloudflare_google_client_id | default('') }}"
     CF_GOOGLE_CLIENT_SECRET: "{{ vault_cloudflare_google_client_secret | default('') }}"
     CF_MAIL_RECORDS: "{{ cloudflare_mail_records | default([]) | to_json }}"
+    CF_MAIL_FORWARDS: "{{ cloudflare_mail_forwards | default([]) | to_json }}"
+    CF_MAIL_CATCH_ALL: "{{ cloudflare_mail_catch_all | default('') }}"
   register: cloudflare_run
   changed_when: (cloudflare_run.stdout | from_json).changed
   # Its output holds the tunnel's token.

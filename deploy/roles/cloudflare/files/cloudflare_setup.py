@@ -14,6 +14,10 @@ environment; prints one JSON object (the tunnel's token among it: Ansible never 
   back) its direct record: the apex on the server's address, www on the apex, admin on
   127.0.0.1 (the SSH tunnel). Mail records are never touched.
 - Rate limit on the public "ask for an invitation" endpoint (the Free plan's one rule).
+- Email Routing (incoming mail): on; each address in CF_MAIL_FORWARDS forwarded to its
+  destinations (added to the account if new: Cloudflare then asks them to confirm by email);
+  rules for other single addresses removed; the catch-all as CF_MAIL_CATCH_ALL says (off:
+  dropped). Its own MX and DKIM records are Cloudflare's, never touched here.
 - Mail records (CF_MAIL_RECORDS: SPF, DMARC, the sending service's DKIM and verification):
   each kept as given. A TXT starting with "v=spf1" or "v=DMARC1" replaces the one of its kind
   at that name (a domain may have only one); other records are added beside what is there.
@@ -40,6 +44,12 @@ ACCESS_EMAILS = [e.strip() for e in os.environ.get("CF_ACCESS_EMAILS", "").split
 GOOGLE_ID = os.environ.get("CF_GOOGLE_CLIENT_ID", "")
 GOOGLE_SECRET = os.environ.get("CF_GOOGLE_CLIENT_SECRET", "")
 MAIL_RECORDS = json.loads(os.environ.get("CF_MAIL_RECORDS") or "[]")
+# [{"from": "chef@…", "to": "a@…,b@…"}]: destinations as one comma-separated text.
+MAIL_FORWARDS = [
+    {"from": f["from"], "to": [t.strip() for t in str(f["to"]).split(",") if t.strip()]}
+    for f in json.loads(os.environ.get("CF_MAIL_FORWARDS") or "[]")
+]
+MAIL_CATCH_ALL = os.environ.get("CF_MAIL_CATCH_ALL", "")
 TUNNEL_NAME = "platemates"
 ACCESS_APP_NAME = "PlateMates admin"
 WWW = f"www.{ZONE_NAME}"
@@ -196,6 +206,50 @@ def mail_records(zone: str) -> None:
         changes.append(f"dns {name}: {kind} {content[:40]}")
 
 
+def email_routing(zone: str) -> None:
+    if not result("GET", f"/zones/{zone}/email/routing").get("enabled"):
+        result("POST", f"/zones/{zone}/email/routing/enable", {})
+        changes.append("email routing on")
+    known = {a["email"].lower() for a in result("GET", f"/accounts/{ACCOUNT}/email/routing/addresses") or []}
+    for target in sorted({t.lower() for f in MAIL_FORWARDS for t in f["to"]} - known):
+        result("POST", f"/accounts/{ACCOUNT}/email/routing/addresses", {"email": target})
+        changes.append("email routing: new destination (to confirm by email)")
+    rules = result("GET", f"/zones/{zone}/email/routing/rules") or []
+    by_address = {
+        m["value"].lower(): r for r in rules for m in r["matchers"] if m["type"] == "literal"
+    }
+    wanted = {f["from"].lower(): sorted(t.lower() for t in f["to"]) for f in MAIL_FORWARDS}
+    for address, targets in wanted.items():
+        body = {
+            "name": f"PlateMates: {address}", "enabled": True,
+            "matchers": [{"type": "literal", "field": "to", "value": address}],
+            "actions": [{"type": "forward", "value": targets}],
+        }
+        rule = by_address.get(address)
+        current = rule and rule["enabled"] and sorted(
+            v.lower() for a in rule["actions"] if a["type"] == "forward" for v in a["value"]
+        ) == targets
+        if current:
+            continue
+        if rule:
+            result("PUT", f"/zones/{zone}/email/routing/rules/{rule['tag']}", body)
+        else:
+            result("POST", f"/zones/{zone}/email/routing/rules", body)
+        changes.append(f"email routing: {address} forwarded")
+    for address, rule in by_address.items():
+        if address not in wanted:
+            result("DELETE", f"/zones/{zone}/email/routing/rules/{rule['tag']}")
+            changes.append(f"email routing: rule for {address} removed")
+    catch_all = result("GET", f"/zones/{zone}/email/routing/rules/catch_all")
+    targets = sorted(t.strip().lower() for t in MAIL_CATCH_ALL.split(",") if t.strip())
+    action = {"type": "forward", "value": targets} if targets else {"type": "drop", "value": []}
+    current_actions = [{"type": a["type"], "value": sorted(a.get("value") or [])} for a in catch_all["actions"]]
+    if catch_all["enabled"] != bool(targets) or (targets and current_actions != [action]):
+        result("PUT", f"/zones/{zone}/email/routing/rules/catch_all", {
+            "enabled": bool(targets), "matchers": [{"type": "all"}], "actions": [action]})
+        changes.append(f"email routing: catch-all {'to ' + str(len(targets)) + ' address(es)' if targets else 'off'}")
+
+
 def rate_limit(zone: str) -> None:
     rule = {
         "description": "PlateMates: ask for an invitation",
@@ -221,6 +275,7 @@ def main() -> None:
     aud = access_app(identity_providers())  # before any DNS change
     tunnel_id, token = tunnel()
     dns(zone, tunnel_id)
+    email_routing(zone)
     mail_records(zone)
     rate_limit(zone)
     print(json.dumps({"changed": bool(changes), "changes": changes, "tunnel_id": tunnel_id,

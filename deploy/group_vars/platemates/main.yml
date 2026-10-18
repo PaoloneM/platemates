@@ -39,12 +39,17 @@ platemates_acme_email: "{{ vault_acme_email }}"
 # Outgoing email (password reset, email verification): Brevo's SMTP relay on port 587 (Hetzner
 # blocks 25 and 465). Switched on once Brevo has verified the domain (its DNS records below);
 # setup_keycloak then turns reset and verification on in the realm.
-platemates_email_enabled: false
+platemates_email_enabled: true
 platemates_smtp_host: smtp-relay.brevo.com
 platemates_smtp_from: "no-reply@{{ platemates_domain }}"
 # Mail: incoming through Cloudflare Email Routing (it keeps its own MX and DKIM records),
 # outgoing through Brevo. These records (written by deploy/roles/cloudflare) let other mail
 # servers trust both; SPF is one record for every sender.
+# Incoming addresses (Email Routing) and where they go: to the app's administrators (personal
+# addresses: in the vault). Anything else is dropped (catch-all off, empty).
+cloudflare_mail_forwards:
+  - { from: "chef@{{ platemates_domain }}", to: "{{ platemates_app_admins }}" }
+cloudflare_mail_catch_all: ""
 cloudflare_mail_records:
   - { type: TXT, name: "{{ platemates_domain }}", content: "v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all" }
   # Reports go to Brevo, which shows them in its dashboard.
