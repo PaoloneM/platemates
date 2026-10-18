@@ -6,6 +6,8 @@
 #   scripts/deploy.sh --tags app                        # the app only
 #   scripts/deploy.sh -e platemates_version=sha-abc1234 # a given build
 #   scripts/deploy.sh --check --diff                    # what would change
+#   scripts/deploy.sh --tags app -e platemates_restart=grafana  # also restart a service that
+#                                                       # reads mounted configuration
 #   scripts/deploy.sh vault edit                        # change the encrypted personal values
 #
 # The image's entrypoint passes arguments on unquoted: an extra variable with spaces in it goes

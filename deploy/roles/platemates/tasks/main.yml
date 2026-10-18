@@ -66,15 +66,32 @@
     state: present
   register: compose
 
-# Services that read mounted configuration files only when they start: restarted when the
-# checkout changed those files (compose does not notice a mounted file's content changing).
-- name: Find what the checkout changed
+# Services that read mounted configuration files only when they start: restarted when their
+# files changed since the revision they last started with (compose does not notice a mounted
+# file's content changing). That revision is kept on the server, so a deploy interrupted after
+# the checkout and before the restart is made up for by the next one. `platemates_restart`
+# (`-e platemates_restart=grafana,victoriametrics`) restarts services regardless.
+- name: Have a place for the server's own state
+  ansible.builtin.file:
+    path: /etc/platemates
+    state: directory
+    mode: "0755"
+
+- name: Read the revision the services last started with
+  ansible.builtin.command: cat /etc/platemates/config-revision
+  register: config_revision
+  changed_when: false
+  failed_when: false
+
+- name: Find what changed since then
+  vars:
+    since: "{{ config_revision.stdout | default('', true) or checkout.before | default('', true) }}"
   ansible.builtin.command:
-    cmd: git diff --name-only {{ checkout.before }} {{ checkout.after }}
+    cmd: git diff --name-only {{ since }} {{ checkout.after }}
     chdir: "{{ platemates_dir }}"
   register: changed_files
   changed_when: false
-  when: checkout.changed and checkout.before is truthy
+  when: since and since != checkout.after
 
 - name: Restart services whose configuration files changed
   ansible.builtin.command:
@@ -86,7 +103,15 @@
     - { path: traefik-admin/, service: traefik-admin }
   loop_control:
     label: "{{ item.service }}"
-  when: changed_files.stdout is defined and item.path in changed_files.stdout
+  when: >-
+    (changed_files.stdout is defined and item.path in changed_files.stdout)
+    or item.service in (platemates_restart | default('')).split(',')
+
+- name: Remember the revision the services now run with
+  ansible.builtin.copy:
+    dest: /etc/platemates/config-revision
+    content: "{{ checkout.after }}"
+    mode: "0644"
 
 - name: Wait for the backend behind Traefik
   ansible.builtin.uri:
