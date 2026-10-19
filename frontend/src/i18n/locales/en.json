@@ -921,7 +921,8 @@
       "blocked": "blocked site",
       "same_site": "another page of a site already used",
       "not_checked": "not needed (sources already found)"
-    }
+    },
+    "saveAndNext": "Save and go to the next"
   },
   "transfer": {
     "hint": "Move data between PlateMates installations (from the Mac to the server, say) as a JSON file. Users do not travel: an imported team belongs to whoever imports it, or goes into a team that already exists.",

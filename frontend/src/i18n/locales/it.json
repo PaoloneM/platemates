@@ -921,7 +921,8 @@
       "blocked": "sito escluso",
       "same_site": "altra pagina di un sito già usato",
       "not_checked": "non serviva (fonti già trovate)"
-    }
+    },
+    "saveAndNext": "Salva e vai alla prossima"
   },
   "transfer": {
     "hint": "Sposta dati tra installazioni di PlateMates (per esempio dal Mac al server) con un file JSON. Gli utenti non viaggiano: un team importato appartiene a chi lo importa, o va in un team che esiste già.",

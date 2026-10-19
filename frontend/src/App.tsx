@@ -31,7 +31,7 @@ import { MealPage } from './pages/MealPage'
 import { NoTeamPage } from './pages/NoTeamPage'
 import { RecipeBookPage } from './pages/RecipeBookPage'
 import { RecipeDetailPage } from './pages/RecipeDetailPage'
-import { RecipeEditorPage } from './pages/RecipeEditorPage'
+import { NewRecipeEditor, RecipeEditorPage } from './pages/RecipeEditorPage'
 import { TeamPage } from './pages/TeamPage'
 import { WeekPage } from './pages/WeekPage'
 
@@ -53,7 +53,7 @@ function Protected() {
             <Route path="/" element={<CalendarPage />} />
             <Route path="/calendar/:date/:meal" element={<MealPage />} />
             <Route path="/recipes" element={<RecipeBookPage />} />
-            <Route path="/recipes/new" element={<RecipeEditorPage />} />
+            <Route path="/recipes/new" element={<NewRecipeEditor />} />
             <Route path="/recipes/:id" element={<RecipeDetailPage />} />
             <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />
             <Route path="/assistant/:id" element={<AssistantPage />} />

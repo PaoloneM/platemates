@@ -46,6 +46,7 @@ import {
   type DraftLine,
   type KitchenTool,
   type Recipe,
+  type Paginated,
   type SystemDraft,
   type Unit,
   type Visibility,
@@ -259,6 +260,12 @@ function Section({ title, action, children }: { title: string; action?: ReactNod
  * Create or edit a recipe. Also the place where drafts proposed by the assistant will be
  * reviewed: everything stays editable until the user saves.
  */
+/** `/recipes/new`: a fresh form for each draft reviewed in a row ("save and go to the next"). */
+export function NewRecipeEditor() {
+  const [params] = useSearchParams()
+  return <RecipeEditorPage key={params.get('draft') ?? 'new'} />
+}
+
 export function RecipeEditorPage() {
   const { t } = useTranslation()
   const labels = useLabels()
@@ -399,7 +406,28 @@ export function RecipeEditorPage() {
     })
   }
 
-  async function save() {
+  /** Reviewing drafts: the next one waiting for review, or back to the list when none is left. */
+  async function nextDraft() {
+    const ready = await api<Paginated<SystemDraft>>('/system-drafts/?status=ready').catch(() => null)
+    const next = ready?.results.find((d) => String(d.id) !== draftId)
+    navigate(next ? `/recipes/new?draft=${next.id}` : '/manage/drafts', { replace: true })
+  }
+
+  async function discardDraft() {
+    setSaving(true)
+    try {
+      await api(`/system-drafts/${draftId}/discard/`, { method: 'POST' })
+      await nextDraft()
+    } catch {
+      setErrors({ save: t('common.error') })
+      setSaving(false)
+    }
+  }
+
+  // Where closing the form goes: a draft under review back to the drafts.
+  const close = () => (draftId && !editing ? navigate('/manage/drafts') : navigate(-1))
+
+  async function save(then: 'recipe' | 'nextDraft' = 'recipe') {
     const problems: Record<string, string> = {}
     // In the order they appear on the page: the first one is shown.
     const where: [string, string][] = []
@@ -477,7 +505,8 @@ export function RecipeEditorPage() {
           body: JSON.stringify({ recipe: saved.id }),
         }).catch(() => undefined)
       }
-      navigate(`/recipes/${saved.id}`, { replace: editing || !!sessionId })
+      if (then === 'nextDraft') await nextDraft()
+      else navigate(`/recipes/${saved.id}`, { replace: editing || !!sessionId })
     } catch (e) {
       // The backend's messages are for developers (English): say it in the user's words, by field.
       const body = e instanceof ApiError ? (e.body as Record<string, unknown> | null) : null
@@ -491,18 +520,33 @@ export function RecipeEditorPage() {
 
   const seasonShown = form.seasonAuto ? derived : form.seasonMonths
 
+  // A system draft under review: publish it and go on to the next one, or discard it.
+  const reviewing = !!draftId && !editing && !!systemDraft
+  const reviewActions = (large: boolean) => (
+    <>
+      <Button color="inherit" size={large ? 'large' : 'medium'} onClick={() => void discardDraft()} disabled={saving}>
+        {t('drafts.discard')}
+      </Button>
+      <Button variant="contained" size={large ? 'large' : 'medium'} onClick={() => void save('nextDraft')} disabled={saving}>
+        {t('drafts.saveAndNext')}
+      </Button>
+    </>
+  )
+
   return (
     <Stack spacing={3}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <IconButton onClick={() => navigate(-1)} aria-label={t('common.cancel')}>
+        <IconButton onClick={close} aria-label={t('common.cancel')}>
           <CloseIcon />
         </IconButton>
         <Typography variant="h1" sx={{ flex: 1 }}>
           {editing ? t('editor.editTitle') : promoting ? t('community.promote') : t('editor.newTitle')}
         </Typography>
-        <Button variant="contained" onClick={() => void save()} disabled={saving}>
-          {t('common.save')}
-        </Button>
+        {reviewing ? reviewActions(false) : (
+          <Button variant="contained" onClick={() => void save()} disabled={saving}>
+            {t('common.save')}
+          </Button>
+        )}
       </Stack>
       {promoting && source && !editing && (
         <Alert severity="info">
@@ -872,10 +916,12 @@ export function RecipeEditorPage() {
       </Section>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-        <Button onClick={() => navigate(-1)}>{t('common.cancel')}</Button>
-        <Button variant="contained" size="large" onClick={() => void save()} disabled={saving}>
-          {t('common.save')}
-        </Button>
+        <Button onClick={close}>{t('common.cancel')}</Button>
+        {reviewing ? reviewActions(true) : (
+          <Button variant="contained" size="large" onClick={() => void save()} disabled={saving}>
+            {t('common.save')}
+          </Button>
+        )}
       </Box>
 
       {creatingTool != null && (
