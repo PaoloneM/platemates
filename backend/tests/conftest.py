@@ -43,6 +43,28 @@ def isolated_caches(settings):
 
 
 @pytest.fixture(autouse=True)
+def no_real_models(settings):
+    """Tests never reach a real model (Unsloth Studio may be running on the machine): a provider
+    a test did not replace points at a closed port and fails at once."""
+    from ai import factory
+
+    nowhere = "http://127.0.0.1:9"
+    settings.AI = {
+        **settings.AI,
+        "CHAT": {**settings.AI["CHAT"], "BASE_URL": nowhere},
+        "EMBEDDINGS": {**settings.AI["EMBEDDINGS"], "BASE_URL": nowhere},
+    }
+    cached = [getattr(factory, name) for name in dir(factory) if name.startswith("get_")]
+    for function in cached:
+        if hasattr(function, "cache_clear"):
+            function.cache_clear()
+    yield
+    for function in cached:
+        if hasattr(function, "cache_clear"):
+            function.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def realtime_events(monkeypatch):
     """Real-time events are recorded instead of sent: tests never reach Redis."""
     sent = []

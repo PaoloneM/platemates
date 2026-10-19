@@ -18,11 +18,13 @@ from django.db.models import Count, Q
 from ai import AIError, ChatProvider
 
 from .drafting import MAX_BATCH, dishes_for_theme
-from .jobs import announce, notify_worker
+from .jobs import announce, cooling_down, notify_worker
 from .models import Campaign, SystemDraft
 
 log = logging.getLogger(__name__)
 
+# Answers without a new dish after which a target stops.
+EMPTY_ROUNDS = 3
 # Drafts that no longer count towards a target: they will be replaced.
 LOST = (SystemDraft.Status.FAILED, SystemDraft.Status.DISCARDED)
 
@@ -56,6 +58,9 @@ def _waiting(campaign: Campaign) -> bool:
 def next_to_plan() -> Campaign | None:
     """The oldest running campaign that needs dishes planned; campaigns with nothing left to
     plan or draft are marked done on the way."""
+    if cooling_down():
+        # Its drafts wait for the search engine: planning more would only lengthen the queue.
+        return None
     for campaign in Campaign.objects.filter(status=Campaign.Status.RUNNING).order_by("created_at"):
         if needs(campaign):
             return campaign
@@ -83,16 +88,32 @@ def plan(campaign: Campaign, chat: ChatProvider) -> int:
         if d and d.get("title")
     ]
     try:
+        # Warmer after an answer without a new dish, for the model to look further afield.
+        empty = int(campaign.notes.get(f"{key}:empty", 0))
         dishes = dishes_for_theme(
-            _theme(campaign, target), min(need, MAX_BATCH), campaign.language, chat, planned
+            _theme(campaign, target),
+            min(need, MAX_BATCH),
+            campaign.language,
+            chat,
+            planned,
+            temperature=min(0.5 + 0.25 * empty, 1.0),
         )
     except (AIError, ValueError) as exc:
         log.warning("planning campaign %s failed: %s", campaign.pk, exc)
         return 0
     if not dishes:
-        campaign.notes = {**campaign.notes, key: "exhausted"}
+        # The model sometimes answers with dishes already done: a target stops only after
+        # EMPTY_ROUNDS such answers in a row.
+        empty = int(campaign.notes.get(f"{key}:empty", 0)) + 1
+        notes = {**campaign.notes, f"{key}:empty": empty}
+        if empty >= EMPTY_ROUNDS:
+            notes[key] = "exhausted"
+        campaign.notes = notes
         campaign.save(update_fields=["notes"])
         return 0
+    if campaign.notes.get(f"{key}:empty"):
+        campaign.notes = {k: v for k, v in campaign.notes.items() if k != f"{key}:empty"}
+        campaign.save(update_fields=["notes"])
     with transaction.atomic():
         drafts = SystemDraft.objects.bulk_create(
             SystemDraft(

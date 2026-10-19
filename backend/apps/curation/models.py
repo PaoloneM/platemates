@@ -114,6 +114,9 @@ class SystemDraft(models.Model):
     target = models.CharField(max_length=40, blank=True)
     # Published without staff opening it, having met the bar (`publishing.auto_publish`).
     published_automatically = models.BooleanField(default=False)
+    # Searches that found no source for it (a campaign's draft is tried again a few times,
+    # never written from the model's memory).
+    search_attempts = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)

@@ -100,6 +100,11 @@ SETTINGS: dict[str, Setting] = {
         ),
         Setting("curation.min_rating", "int", 40, "curation", minimum=0, maximum=50),
         Setting("curation.min_votes", "int", 5, "curation", minimum=0, maximum=100000),
+        # The web search behind Studio stops answering when asked too often: a campaign
+        # leaves at least this long between two searches, and when one finds nothing it
+        # pauses its searches for this many minutes (other drafts carry on).
+        Setting("curation.search_interval_seconds", "int", 45, "curation", minimum=0, maximum=600),
+        Setting("curation.search_cooldown_minutes", "int", 15, "curation", minimum=1, maximum=240),
         # Compact recipe pages: actions as icons beside the tabs instead of labelled buttons,
         # never, on phones only, or everywhere.
         Setting(

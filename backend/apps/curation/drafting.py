@@ -234,7 +234,9 @@ def verify_source(url: str) -> Source | None:
 
 SEARCH_PROMPT = (
     "Do one web search for: ricetta {dish}. Then list the pages from the results that contain "
-    "one recipe each: title and exact URL, one per line, up to eight.{hint}"
+    "one recipe each: title and exact URL, one per line, up to eight. Only URLs that appear in "
+    "the search results, never one you make up; if the search fails or finds nothing, answer "
+    "exactly: NO RESULTS"
 )
 
 
@@ -259,20 +261,15 @@ def search_sources(
     """
     if search_chat is None:
         return [], []
+    # Trusted sites are not named to the model: asked for them, it makes URLs up on them when
+    # the search fails. Their pages simply go first.
     trusted = [s for s in sites if s.trusted]
     blocked = [s for s in sites if not s.trusted]
-    hint = (
-        " Prefer pages from these sites when the results have them: "
-        + ", ".join(s.domain for s in trusted)
-        + "."
-        if trusted
-        else ""
-    )
     urls: list[str] = []
     for _attempt in range(2):
         try:
             answer = search_chat.chat(
-                [{"role": "user", "content": SEARCH_PROMPT.format(dish=dish, hint=hint)}],
+                [{"role": "user", "content": SEARCH_PROMPT.format(dish=dish)}],
                 temperature=0.2,
             ).content
         except AIError as exc:
@@ -414,7 +411,12 @@ def draft_recipe(
 
 
 def dishes_for_theme(
-    theme: str, count: int, language: str, chat: ChatProvider, exclude: list[str] = ()
+    theme: str,
+    count: int,
+    language: str,
+    chat: ChatProvider,
+    exclude: list[str] = (),
+    temperature: float = 0.5,
 ) -> list[str]:
     """Dish names for a theme ("10 autumn first courses"), leaving out existing system recipes
     and the dishes in `exclude` (already drafted or queued)."""
@@ -434,7 +436,7 @@ def dishes_for_theme(
                 ),
             }
         ],
-        temperature=0.5,
+        temperature=temperature,
         response_format={
             "type": "json_schema",
             "json_schema": {"name": "dishes", "schema": THEME_SCHEMA},

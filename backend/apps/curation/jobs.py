@@ -4,14 +4,17 @@ their phases announced to staff in real time (searching, reading the pages, draf
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
+from django.core.cache import cache
 from django.db import connection, transaction
 from django.utils import timezone
 
 from ai import AIError, ChatProvider, get_chat_provider, get_web_search_provider
 from apps.catalog.models import Ingredient
 from apps.realtime.events import STAFF_ROOM, publish_to
+from apps.siteconfig import registry
 from apps.siteconfig.registry import prompt_budget_chars
 
 from .drafting import (
@@ -32,8 +35,42 @@ log = logging.getLogger(__name__)
 CHANNEL = "system_drafts"
 
 
+# Searches a campaign's draft gets before it fails for want of a source.
+MAX_SEARCH_ATTEMPTS = 3
+# Shared by the worker's processes, in the cache: when the last search started, and until when
+# searches for campaigns are paused.
+LAST_SEARCH_KEY = "curation:last_search"
+COOLDOWN_KEY = "curation:search_cooldown"
+
+
 class DraftInterrupted(Exception):
     """The worker is stopping: the draft is abandoned."""
+
+
+class NoSource(Exception):
+    """A campaign's draft found no recipe page: tried again later, never written from memory."""
+
+
+def cooling_down() -> bool:
+    """Whether campaigns' searches are paused (the search engine stopped answering)."""
+    return (cache.get(COOLDOWN_KEY) or 0) > time.time()
+
+
+def start_cooldown() -> None:
+    minutes = registry.get("curation.search_cooldown_minutes")
+    cache.set(COOLDOWN_KEY, time.time() + minutes * 60, minutes * 60)
+    log.warning("web search found nothing: campaigns' searches paused for %s min", minutes)
+
+
+def wait_to_search(should_stop) -> None:
+    """Leave `curation.search_interval_seconds` between two searches: asked too often, the
+    search engine stops answering."""
+    interval = registry.get("curation.search_interval_seconds")
+    while (left := (cache.get(LAST_SEARCH_KEY) or 0) + interval - time.time()) > 0:
+        if should_stop():
+            raise DraftInterrupted
+        time.sleep(min(1.0, left))
+    cache.set(LAST_SEARCH_KEY, time.time(), max(interval, 1) * 2)
 
 
 def notify_worker() -> None:
@@ -69,11 +106,15 @@ def run_draft(
         checkpoint("searching")
         if search_chat is None:
             search_chat = get_web_search_provider()
+        if search_chat is not None and draft.campaign_id is not None:
+            wait_to_search(should_stop)
         sources, links = search_sources(
             draft.dish, search_chat, verify, list(SourceSite.objects.all())
         )
         draft.links.all().delete()
         CandidateLink.objects.bulk_create(CandidateLink(draft=draft, **link) for link in links)
+        if draft.campaign_id is not None and search_chat is not None and not sources:
+            raise NoSource
         checkpoint("drafting", sources=len(sources))
         chat = chat or get_chat_provider()
         recipe = draft_recipe(
@@ -92,6 +133,16 @@ def run_draft(
     except DraftInterrupted:
         draft.status = SystemDraft.Status.FAILED
         draft.error = "Interrupted: the worker was stopped. Try again."
+    except NoSource:
+        # Most often the search engine has stopped answering: pause the searches, try later.
+        start_cooldown()
+        draft.search_attempts += 1
+        if draft.search_attempts < MAX_SEARCH_ATTEMPTS:
+            draft.status = SystemDraft.Status.QUEUED
+            draft.error = "No recipe page found yet: tried again later."
+        else:
+            draft.status = SystemDraft.Status.FAILED
+            draft.error = "No recipe page found for this dish."
     except (AIError, ValueError) as exc:
         log.warning("system draft %s failed: %s", draft.pk, exc)
         draft.status = SystemDraft.Status.FAILED
@@ -100,7 +151,7 @@ def run_draft(
         log.exception("system draft %s crashed", draft.pk)
         draft.status = SystemDraft.Status.FAILED
         draft.error = f"Unexpected error: {exc}"[:2000]
-    draft.finished_at = timezone.now()
+    draft.finished_at = None if draft.status == SystemDraft.Status.QUEUED else timezone.now()
     draft.save()
     if draft.status == SystemDraft.Status.READY:
         after_ready(draft, chat)
@@ -131,14 +182,15 @@ def after_ready(draft: SystemDraft, chat: ChatProvider) -> None:
 
 
 def claim_next() -> SystemDraft | None:
+    queued = (
+        SystemDraft.objects.select_for_update(skip_locked=True, of=("self",))
+        .filter(status=SystemDraft.Status.QUEUED)
+        .exclude(campaign__status=Campaign.Status.PAUSED)
+    )
+    if cooling_down():
+        queued = queued.filter(campaign__isnull=True)
     with transaction.atomic():
-        draft = (
-            SystemDraft.objects.select_for_update(skip_locked=True, of=("self",))
-            .filter(status=SystemDraft.Status.QUEUED)
-            .exclude(campaign__status=Campaign.Status.PAUSED)
-            .order_by("created_at")
-            .first()
-        )
+        draft = queued.order_by("created_at").first()
         if draft is None:
             return None
         draft.status = SystemDraft.Status.RUNNING

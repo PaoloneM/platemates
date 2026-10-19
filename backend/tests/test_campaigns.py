@@ -4,6 +4,7 @@ the drafts that meet the bar without staff."""
 from decimal import Decimal
 
 import pytest
+from django.core.cache import cache
 from django.core.management import call_command
 
 from ai import AIError
@@ -73,7 +74,8 @@ def test_trusted_sites_go_first_and_blocked_ones_are_never_used(db):
     }
     found, links = drafting.search_sources("ribollita", chat, pages.get, sites)
     assert [s.site for s in found] == ["ricette.giallozafferano.it", "blog.it"]
-    assert "giallozafferano.it" in chat.calls[0][0]["content"]
+    # Named to the model, trusted sites got URLs made up on them when the search failed.
+    assert "giallozafferano" not in chat.calls[0][0]["content"]
     assert [(link["site"], link["outcome"]) for link in links] == [
         ("ricette.giallozafferano.it", "used"),
         ("pinterest.it", "blocked"),
@@ -295,8 +297,12 @@ def test_failed_drafts_are_replaced_up_to_twice_the_count(campaign):
 
 
 def test_a_target_without_new_dishes_stops_and_a_campaign_ends(campaign):
-    campaigns.plan(campaign, FakeChat({"dishes": []}))
-    assert campaign.notes == {"primi": "exhausted"}
+    for _round in range(campaigns.EMPTY_ROUNDS - 1):
+        campaigns.plan(campaign, FakeChat({"dishes": []}))
+        assert campaign.notes.get("primi") is None
+    warmer = FakeChat({"dishes": []})
+    campaigns.plan(campaign, warmer)
+    assert campaign.notes["primi"] == "exhausted"
     campaigns.plan(campaign, FakeChat({"dishes": ["Minestrone"]}))
     assert campaigns.needs(campaign) == {}
     assert campaigns.next_to_plan() is None
@@ -306,6 +312,44 @@ def test_a_target_without_new_dishes_stops_and_a_campaign_ends(campaign):
     assert campaigns.next_to_plan() is None
     campaign.refresh_from_db()
     assert campaign.status == "done"
+
+
+@pytest.fixture
+def no_wait(db):
+    ConfigVar.objects.create(key="curation.search_interval_seconds", value=0)
+    yield
+    cache.delete(jobs.COOLDOWN_KEY)
+
+
+def test_a_campaign_draft_without_a_source_is_tried_again_never_from_memory(campaign, no_wait):
+    draft = SystemDraft.objects.create(
+        dish="ribollita", status=SystemDraft.Status.RUNNING, campaign=campaign, target="zuppe"
+    )
+    for attempt in range(1, jobs.MAX_SEARCH_ATTEMPTS + 1):
+        cache.delete(jobs.COOLDOWN_KEY)
+        drafting_chat = FakeChat(DRAFT)
+        jobs.run_draft(draft, chat=drafting_chat, search_chat=FakeChat("NO RESULTS", "NO RESULTS"))
+        draft.refresh_from_db()
+        assert draft.search_attempts == attempt and draft.draft is None
+        assert drafting_chat.calls == []  # never written from memory
+    assert (draft.status, draft.error) == ("failed", "No recipe page found for this dish.")
+
+
+def test_a_search_finding_nothing_pauses_the_campaigns_searches(campaign, no_wait):
+    queued = SystemDraft.objects.create(dish="minestrone", campaign=campaign, target="zuppe")
+    manual = SystemDraft.objects.create(dish="ribollita")
+    draft = SystemDraft.objects.create(
+        dish="pappa", status=SystemDraft.Status.RUNNING, campaign=campaign, target="zuppe"
+    )
+    jobs.run_draft(draft, chat=FakeChat(), search_chat=FakeChat("NO RESULTS", "NO RESULTS"))
+    draft.refresh_from_db()
+    assert draft.status == "queued" and jobs.cooling_down()
+    # Drafts asked for by hand go on; the campaign's wait, and no more are planned.
+    assert jobs.claim_next() == manual
+    assert jobs.claim_next() is None
+    assert campaigns.next_to_plan() is None
+    cache.delete(jobs.COOLDOWN_KEY)
+    assert jobs.claim_next() in (queued, draft)
 
 
 def test_a_paused_campaigns_drafts_wait(campaign):
