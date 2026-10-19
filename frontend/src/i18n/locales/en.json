@@ -571,7 +571,8 @@
       "emailFailed": "Invitation created, but the email did not go out: try «Send the email again».",
       "resend": "Send the email again",
       "tooMany": "Too many invitations by email today: try tomorrow, or create a link.",
-      "badEmail": "Check the email address."
+      "badEmail": "Check the email address.",
+      "requested": "On request"
     },
     "requests": {
       "title": "Access requests",

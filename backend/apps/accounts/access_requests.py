@@ -21,7 +21,7 @@ from rest_framework.response import Response
 from apps.teams.models import Membership, Team
 
 from . import emails
-from .models import AccessRequest
+from .models import AccessRequest, Invitation
 from .serializers import _display_name
 from .team_requests import check_daily_requests, language_of
 
@@ -163,9 +163,14 @@ class AccessRequestViewSet(
         if team is None:
             raise serializers.ValidationError({"team": "One of your teams."})
         with transaction.atomic():
-            Membership.objects.get_or_create(
-                user=access.requester, team=team, defaults={"role": Membership.Role.MEMBER}
+            invitation = Invitation.objects.create(
+                team=team,
+                invited_by=request.user,
+                email=access.requester.email,
+                role=Membership.Role.MEMBER,
             )
+            invitation.accept(access.requester)
+            access.invitation = invitation
             access.status = AccessRequest.Status.ACCEPTED
             access.team = team
             access.decided_at = timezone.now()

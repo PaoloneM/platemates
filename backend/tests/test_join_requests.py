@@ -68,6 +68,15 @@ def test_an_owner_receives_the_request_and_accepts_it(api, team, owner, newcomer
     [mine] = client.get("/api/access-requests/").json()
     assert (mine["status"], mine["team_name"]) == ("accepted", "Test team")
     assert api.get("/api/access-requests/received/").json() == []
+    # The way in is on record as an invitation from the owner, accepted by the requester.
+    [invitation] = api.get(f"/api/invitations/?team={team.pk}").json()["results"]
+    assert (
+        invitation["state"],
+        invitation["email"],
+        invitation["invited_by_name"],
+        invitation["accepted_by_name"],
+        invitation["requested"],
+    ) == ("accepted", "dora@example.com", "alice@example.com", "Dora", True)
 
 
 def test_an_unknown_address_looks_the_same_to_the_requester(owner, newcomer, mailoutbox):

@@ -128,7 +128,9 @@ class InvitationViewSet(
 ):
     """Owners invite people to their team. Deleting an invitation revokes it."""
 
-    queryset = Invitation.objects.select_related("team", "invited_by", "accepted_by")
+    queryset = Invitation.objects.select_related(
+        "team", "invited_by", "accepted_by", "access_request"
+    )
 
     def get_queryset(self):
         queryset = super().get_queryset()

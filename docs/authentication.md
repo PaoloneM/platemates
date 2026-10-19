@@ -110,7 +110,9 @@ Owners create invitations on the Team page; the invitation link is `<app URL>/in
     `apps/accounts/access_requests.py`). The request is stored and shown as waiting whether or
     not the address belongs to a team owner (with a verified address), so it cannot be used to
     find out who uses PlateMates; only a real owner gets it, by email and on the Team page
-    (`#requests`), and accepts it into the team on screen or declines it;
+    (`#requests`), and accepts it into the team on screen or declines it. Accepting makes an
+    invitation from the owner to the requester's address, accepted by the requester at once
+    (`AccessRequest.invitation`): the team's invitations record every way in, marked "on request";
   - **ask the administrators for a team** of their own, by name (`/api/team-requests/`, stored as
     `InviteRequest`, `apps/accounts/team_requests.py`). In Manage > Team requests (admin plane),
     "Create the team" creates it with the requester as owner; dismissing it is also possible.

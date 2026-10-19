@@ -571,7 +571,8 @@
       "emailFailed": "Invito creato, ma l'email non è partita: riprova con «Rimanda l'email».",
       "resend": "Rimanda l'email",
       "tooMany": "Troppi inviti via email oggi: riprova domani, o crea un link.",
-      "badEmail": "Controlla l'indirizzo email."
+      "badEmail": "Controlla l'indirizzo email.",
+      "requested": "Su richiesta"
     },
     "requests": {
       "title": "Richieste di accesso",

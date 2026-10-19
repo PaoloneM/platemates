@@ -429,6 +429,8 @@ export type Invitation = {
   accepted_at: string | null
   invited_by_name: string | null
   accepted_by_name: string | null
+  // Made by an owner accepting the person's request to join.
+  requested: boolean
 }
 
 export type AssistantMode = 'tell' | 'search' | 'link' | 'photo'

@@ -488,6 +488,7 @@ function InvitationsSection({ team, owner, onMessage }: {
                     {inv.note && inv.email && <Typography variant="body2" color="text.secondary" component="span">{inv.email}</Typography>}
                     <Chip size="small" color={stateColor[inv.state]} variant="outlined" label={t(`team.invites.state.${inv.state}`)} />
                     {inv.role === 'owner' && <Chip size="small" label={t('team.role.owner')} />}
+                    {inv.requested && <Chip size="small" variant="outlined" label={t('team.invites.requested')} />}
                   </Stack>
                 }
                 secondary={

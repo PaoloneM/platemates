@@ -229,6 +229,15 @@ class AccessRequest(models.Model):
     )
     message = models.CharField(max_length=500, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    # Accepting goes through an invitation from the owner, accepted by the requester at once:
+    # the team's invitations then record every way in, who let whom in and when.
+    invitation = models.OneToOneField(
+        Invitation,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="access_request",
+    )
     # The team the owner accepted them into.
     team = models.ForeignKey(
         Team, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"

@@ -24,6 +24,11 @@ class InvitationSerializer(serializers.ModelSerializer):
     team_name = serializers.CharField(source="team.name", read_only=True)
     invited_by_name = serializers.SerializerMethodField()
     accepted_by_name = serializers.SerializerMethodField()
+    # Made by an owner accepting someone's request to join, rather than sent by them.
+    requested = serializers.SerializerMethodField()
+
+    def get_requested(self, invitation) -> bool:
+        return hasattr(invitation, "access_request")
 
     def get_invited_by_name(self, invitation) -> str | None:
         return _display_name(invitation.invited_by)
@@ -59,6 +64,7 @@ class InvitationSerializer(serializers.ModelSerializer):
             "accepted_at",
             "invited_by_name",
             "accepted_by_name",
+            "requested",
         ]
         read_only_fields = ["token", "created_at", "expires_at", "accepted_at"]
 
