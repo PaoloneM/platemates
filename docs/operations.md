@@ -117,10 +117,14 @@ puts a socket proxy in between (`tecnativa/docker-socket-proxy`, listing contain
 A Hetzner Cloud VM (`platemates01`, CX23, Ubuntu 26.04) runs the stack from published images:
 
 - **Images**: GitHub Actions (`.github/workflows/images.yml`) runs the backend tests and the
-  frontend checks on every push, then builds the backend, frontend, Keycloak and embeddings
-  images and publishes them to `ghcr.io/paolonem/platemates-*`, tagged `sha-<commit>`, `main`
-  and `latest`. The packages must be public (GitHub → Packages → each one → Package settings →
-  visibility) for the server to pull them without a token.
+  frontend checks on every push, then builds the backend, frontend, Keycloak, embeddings and
+  database images and publishes them to `ghcr.io/paolonem/platemates-*`, tagged `sha-<commit>`,
+  `main` and `latest`. The packages must be public (GitHub → Packages → each one → Package
+  settings → visibility) for the server to pull them without a token. An image depends only on
+  its directory: dated by the last commit that changed it (`SOURCE_DATE_EPOCH`), without the
+  build's time or commit, it comes out of the cache identical, so a deploy recreates only the
+  containers whose image really changed (PostgreSQL and Keycloak no longer restart on every
+  deploy).
 - **Compose**: `docker-compose.prod.yml` on top of the base file (the server's `.env` sets
   `COMPOSE_FILE`, so plain `docker compose` uses both): registry images at
   `PLATEMATES_VERSION`, ports 80 and 443 only, HTTP redirected to HTTPS, a Let's Encrypt

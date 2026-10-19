@@ -83,6 +83,17 @@ jobs:
           - { name: db, context: db }
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The history, to date each image by the last commit that changed its context.
+          fetch-depth: 0
+      # An image depends only on its context: unchanged, it is rebuilt from the cache with the
+      # same creation date and labels, hence the same image id, and a deploy does not recreate
+      # its containers (before, every commit restarted PostgreSQL and Keycloak). No build time
+      # or workflow commit goes into the image.
+      - id: context
+        run: |
+          echo "epoch=$(git log -1 --format=%ct -- '${{ matrix.context }}')" >> "$GITHUB_OUTPUT"
+          echo "revision=$(git log -1 --format=%H -- '${{ matrix.context }}')" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -106,6 +117,10 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.context.outputs.revision }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.context.outputs.epoch }}
