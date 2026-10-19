@@ -10,6 +10,7 @@ from django.db import connection, transaction
 from django.utils import timezone
 
 from ai import AIError, ChatProvider, get_chat_provider, get_web_search_provider
+from apps.catalog.models import Ingredient
 from apps.realtime.events import STAFF_ROOM, publish_to
 from apps.siteconfig.registry import prompt_budget_chars
 
@@ -22,7 +23,7 @@ from .drafting import (
     web_rating,
 )
 from .ingredients import propose_for
-from .models import Campaign, CandidateLink, SourceSite, SystemDraft
+from .models import Campaign, CandidateLink, IngredientProposal, SourceSite, SystemDraft
 from .publishing import auto_publish
 
 log = logging.getLogger(__name__)
@@ -75,7 +76,9 @@ def run_draft(
         CandidateLink.objects.bulk_create(CandidateLink(draft=draft, **link) for link in links)
         checkpoint("drafting", sources=len(sources))
         chat = chat or get_chat_provider()
-        recipe = draft_recipe(draft.dish, sources, draft.language, chat, prompt_budget_chars())
+        recipe = draft_recipe(
+            draft.dish, sources, draft.language, chat, prompt_budget_chars(), vocabulary()
+        )
         if not recipe["title"] or not recipe["ingredients"]:
             raise AIError("The model found no recipe for this dish.")
         agreement = agreement_of(sources)
@@ -102,6 +105,18 @@ def run_draft(
     if draft.status == SystemDraft.Status.READY:
         after_ready(draft, chat)
     announce(draft, draft.status)
+
+
+def vocabulary() -> list[str]:
+    """The ingredient names drafts should use: the system catalog's, and those already
+    proposed (so a new ingredient keeps one name across drafts)."""
+    names = set(Ingredient.objects.system().values_list("name", flat=True))
+    names.update(
+        IngredientProposal.objects.exclude(status=IngredientProposal.Status.REJECTED)
+        .filter(action=IngredientProposal.Action.NEW)
+        .values_list("name", flat=True)
+    )
+    return sorted(names)
 
 
 def after_ready(draft: SystemDraft, chat: ChatProvider) -> None:

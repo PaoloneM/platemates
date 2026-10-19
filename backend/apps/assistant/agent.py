@@ -253,11 +253,26 @@ def run_turn(
     return TurnResult(reply=result.content, draft_updated=draft_updated)
 
 
-def extract_draft(page: PageRecipe, language_name: str, chat: ChatProvider) -> dict[str, Any]:
-    """Structure a page's recipe text into a draft. Facts from structured data win."""
+VOCABULARY_HINT = """
+
+The catalog already has these ingredients: when an ingredient is one of them, whatever the \
+recipe calls it, use exactly the catalog's name (variety, form and origin still go in the note): \
+{names}."""
+
+
+def vocabulary_hint(names: list[str]) -> str:
+    return VOCABULARY_HINT.format(names=", ".join(names)) if names else ""
+
+
+def extract_draft(
+    page: PageRecipe, language_name: str, chat: ChatProvider, vocabulary: list[str] = ()
+) -> dict[str, Any]:
+    """Structure a page's recipe text into a draft. Facts from structured data win.
+    `vocabulary`: catalog names the ingredients should use when they are one of them."""
+    system = EXTRACTION_PROMPT.format(language=language_name) + vocabulary_hint(list(vocabulary))
     result = chat.chat(
         [
-            {"role": "system", "content": EXTRACTION_PROMPT.format(language=language_name)},
+            {"role": "system", "content": system},
             {"role": "user", "content": page.text},
         ],
         temperature=0,

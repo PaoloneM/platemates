@@ -27,41 +27,46 @@ from .models import IngredientProposal, SystemDraft
 
 log = logging.getLogger(__name__)
 
+# What each category holds, for the model (the catalog's own use of them).
+CATEGORY_GUIDE = """\
+vegetable: vegetables, salad, mushrooms, potatoes; fruit: fresh fruit; legume: beans, \
+chickpeas, lentils, peas; cereal: flour, pasta, rice, noodles, bread, breadcrumbs, tortillas; \
+red_meat: beef, pork, lamb; white_meat: chicken, turkey, rabbit; cured_meat: ham, bacon, \
+sausages, salami; fish; seafood: shellfish, molluscs; egg; dairy: milk, cream, butter, \
+yogurt, bechamel; cheese: every cheese, grated or not; fat: cooking oils, lard; nut_seed: \
+nuts and seeds (sesame); herb_spice: herbs, spices, chili, saffron, spice mixes; condiment: \
+salt, vinegar, sauces, stock, tomato paste, wine for cooking; sweetener: sugar, honey, \
+chocolate, cocoa; other: anything else (water, yeast)."""
+
 CLASSIFY_PROMPT = """\
-A recipe catalog does not know these ingredient names, used by recipes written in {language}. \
-For each name decide:
-- "alias" when it is just another name of one of the catalog entries listed with it (a plural, \
-another spelling, a variety cooks treat as the same thing): give that entry's id;
-- "new" when it is a distinct ingredient: give its category, the months it is in season in \
-Italy when fresh (empty when it is available all year, or preserved), its usual unit (g, ml or \
-pc) and whether it is a pantry staple in almost every kitchen (salt, water, oil, black pepper).
-Preserved products (canned, dried, frozen, puree, pickled) are distinct from the fresh one, \
-never its alias. When unsure, choose "new".
+An ingredient name from a recipe in {language}: "{name}". The catalog does not have this name.
+{candidates}
 
-{items}"""
+- same_as: the catalog entry this is just another name of: a plural, another spelling, a \
+grade, cut or form cooks use the same way ("sale fino" is "sale", "zafferano in pistilli" is \
+"zafferano", "olio extravergine di oliva" is "olio extravergine d'oliva"). "none" when it is a \
+different ingredient. Preserved products (canned, dried, frozen, puree, pickled) are never the \
+fresh one.
+- category, one of: {guide}
+- season_months: the months it is in season in Italy when fresh; empty when available all year \
+or preserved.
+- default_unit: g, ml or pc.
+- basic: true only for pantry staples in almost every dish (salt, pepper, water, cooking oil); \
+false for everything else."""
 
-CLASSIFY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "ingredients": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "action": {"type": "string", "enum": ["alias", "new"]},
-                    "alias_of": {"type": ["integer", "null"]},
-                    "category": {"type": "string", "enum": IngredientCategory.values},
-                    "season_months": {"type": "array", "items": {"type": "integer"}},
-                    "default_unit": {"type": "string", "enum": ["g", "ml", "pc"]},
-                    "basic": {"type": "boolean"},
-                },
-                "required": ["name", "action", "category", "default_unit", "basic"],
-            },
-        }
-    },
-    "required": ["ingredients"],
-}
+
+def _schema(options: list[str]) -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "same_as": {"type": "string", "enum": [*options, "none"]},
+            "category": {"type": "string", "enum": IngredientCategory.values},
+            "season_months": {"type": "array", "items": {"type": "integer"}},
+            "default_unit": {"type": "string", "enum": ["g", "ml", "pc"]},
+            "basic": {"type": "boolean"},
+        },
+        "required": ["same_as", "category", "season_months", "default_unit", "basic"],
+    }
 
 
 def known(name: str) -> Ingredient | None:
@@ -101,65 +106,52 @@ def _line_guess(line: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def classify(
-    names: dict[str, dict[str, Any]], language: str, chat: ChatProvider
-) -> dict[str, dict[str, Any]]:
-    """What the model proposes for each unknown name (`names`: name -> its draft line)."""
-    candidates = {name: match_ingredient(name)["candidates"] for name in names}
-    items = "\n".join(
-        f"- {name}: "
-        + (
-            "catalog entries like it: "
-            + ", ".join(f'id {c["id"]} "{c["name"]}"' for c in candidates[name])
-            if candidates[name]
-            else "no similar catalog entry"
-        )
-        for name in names
+def classify_one(
+    name: str, line: dict[str, Any], language: str, chat: ChatProvider
+) -> dict[str, Any]:
+    """What the model proposes for one unknown name: another name of one of the similar
+    catalog entries, or a new ingredient. The draft's own guess when the model fails."""
+    guess = _line_guess(line)
+    candidates = match_ingredient(name)["candidates"]
+    by_name = {c["name"]: c["id"] for c in candidates}
+    listed = (
+        "Catalog entries like it: " + ", ".join(f'"{n}"' for n in by_name)
+        if by_name
+        else "The catalog has nothing like it."
     )
-    guesses = {name: _line_guess(line) for name, line in names.items()}
+    prompt = CLASSIFY_PROMPT.format(
+        language=LANGUAGE_NAMES.get(language, "Italian"),
+        name=name,
+        candidates=listed,
+        guide=CATEGORY_GUIDE,
+    )
     try:
         answer = chat.chat(
-            [
-                {
-                    "role": "user",
-                    "content": CLASSIFY_PROMPT.format(
-                        language=LANGUAGE_NAMES.get(language, "Italian"), items=items
-                    ),
-                }
-            ],
-            temperature=0.1,
+            [{"role": "user", "content": prompt}],
+            temperature=0,
             response_format={
                 "type": "json_schema",
-                "json_schema": {"name": "ingredients", "schema": CLASSIFY_SCHEMA},
+                "json_schema": {"name": "ingredient", "schema": _schema(list(by_name))},
             },
         )
-        rows = json.loads(answer.content or "{}").get("ingredients") or []
+        row = json.loads(answer.content or "{}")
     except (AIError, ValueError) as exc:
-        log.warning("classifying ingredients failed, keeping the drafts' guesses: %s", exc)
-        return guesses
-    for row in rows:
-        name = normalize_name(str(row.get("name") or ""))
-        if name not in guesses:
-            continue
-        offered = {c["id"] for c in candidates[name]}
-        if row.get("action") == "alias" and row.get("alias_of") in offered:
-            guesses[name] = {**guesses[name], "action": "alias", "alias_of": row["alias_of"]}
-            continue
-        category = row.get("category")
-        unit = row.get("default_unit")
-        months = sorted(
-            {m for m in row.get("season_months") or [] if isinstance(m, int) and 1 <= m <= 12}
-        )
-        guesses[name] = {
-            "action": "new",
-            "category": category
-            if category in IngredientCategory.values
-            else guesses[name]["category"],
-            "season_months": [] if len(months) == 12 else months,
-            "default_unit": unit if unit in ("g", "ml", "pc") else guesses[name]["default_unit"],
-            "basic": bool(row.get("basic")),
-        }
-    return guesses
+        log.warning("classifying %r failed, keeping the draft's guess: %s", name, exc)
+        return guess
+    if row.get("same_as") in by_name:
+        return {**guess, "action": "alias", "alias_of": by_name[row["same_as"]]}
+    category = row.get("category")
+    unit = row.get("default_unit")
+    months = sorted(
+        {m for m in row.get("season_months") or [] if isinstance(m, int) and 1 <= m <= 12}
+    )
+    return {
+        "action": "new",
+        "category": category if category in IngredientCategory.values else guess["category"],
+        "season_months": [] if len(months) == 12 else months,
+        "default_unit": unit if unit in ("g", "ml", "pc") else guess["default_unit"],
+        "basic": bool(row.get("basic")),
+    }
 
 
 def propose_for(draft: SystemDraft, chat: ChatProvider) -> list[IngredientProposal]:
@@ -171,7 +163,8 @@ def propose_for(draft: SystemDraft, chat: ChatProvider) -> list[IngredientPropos
     existing = {p.name: p for p in IngredientProposal.objects.filter(name__in=unknown)}
     fresh = {name: line for name, line in unknown.items() if name not in existing}
     if fresh:
-        for name, guess in classify(fresh, draft.language, chat).items():
+        for name, line in fresh.items():
+            guess = classify_one(name, line, draft.language, chat)
             existing[name], _ = IngredientProposal.objects.get_or_create(
                 name=name,
                 defaults={

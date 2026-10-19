@@ -85,6 +85,23 @@ def test_trusted_sites_go_first_and_blocked_ones_are_never_used(db):
     assert links[0]["trusted"] and not links[2]["trusted"]
 
 
+def test_pages_of_one_publisher_are_one_source(db):
+    chat = FakeChat("https://ricette.giallozafferano.it/a https://blog.giallozafferano.it/b")
+    pages = {
+        "https://ricette.giallozafferano.it/a": source("ricette.giallozafferano.it", ["cavolo"]),
+        "https://blog.giallozafferano.it/b": source("blog.giallozafferano.it", ["cavolo"]),
+    }
+    found, links = drafting.search_sources("ribollita", chat, pages.get)
+    assert len(found) == 1 and [link["outcome"] for link in links] == ["used", "same_site"]
+
+
+def test_drafting_is_told_the_catalog_names(campaign, cavolo):
+    draft = SystemDraft.objects.create(dish="ribollita", status=SystemDraft.Status.RUNNING)
+    chat = FakeChat(DRAFT)
+    jobs.run_draft(draft, chat=chat, search_chat=None)
+    assert "cavolo nero" in chat.calls[0][0]["content"]
+
+
 def test_a_draft_keeps_the_links_it_was_offered(db):
     draft = SystemDraft.objects.create(dish="ribollita", status=SystemDraft.Status.RUNNING)
     search = FakeChat("https://a.it/r https://b.it/r")
@@ -118,25 +135,19 @@ def test_unknown_ingredients_become_proposals_once(campaign, cavolo):
     )
     chat = FakeChat(
         {
-            "ingredients": [
-                {
-                    "name": "pomodori",
-                    "action": "alias",
-                    "alias_of": pomodoro.pk,
-                    "category": "vegetable",
-                    "default_unit": "g",
-                    "basic": False,
-                },
-                {
-                    "name": "lemongrass",
-                    "action": "new",
-                    "category": "vegetable",
-                    "season_months": [6, 7, 8],
-                    "default_unit": "pc",
-                    "basic": False,
-                },
-            ]
-        }
+            "same_as": "pomodoro",
+            "category": "vegetable",
+            "season_months": [],
+            "default_unit": "g",
+            "basic": False,
+        },
+        {
+            "same_as": "none",
+            "category": "vegetable",
+            "season_months": [6, 7, 8],
+            "default_unit": "pc",
+            "basic": False,
+        },
     )
     ingredients.propose_for(draft, chat)
     alias = IngredientProposal.objects.get(name="pomodori")
@@ -159,7 +170,7 @@ def test_unknown_ingredients_become_proposals_once(campaign, cavolo):
     assert ingredients.unresolved(other) == ["pomodori", "lemongrass"]
 
 
-def test_an_alias_must_be_one_of_the_offered_entries_and_the_model_may_fail(campaign):
+def test_the_drafts_guess_stands_when_the_model_fails(campaign):
     draft = campaign_draft(campaign)
     ingredients.propose_for(draft, FakeChat(AIError("down")))
     proposal = IngredientProposal.objects.get()

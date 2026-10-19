@@ -26,7 +26,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from ai import AIError, ChatProvider
-from apps.assistant.agent import LANGUAGE_NAMES, extract_draft
+from apps.assistant.agent import LANGUAGE_NAMES, extract_draft, vocabulary_hint
 from apps.assistant.draft import DRAFT_SCHEMA, normalize_draft
 from apps.assistant.search import _urls
 from apps.assistant.web import (
@@ -242,6 +242,12 @@ def _site(url: str) -> str:
     return (urlsplit(url).hostname or "").removeprefix("www.")
 
 
+def publisher(site: str) -> str:
+    """The site's own domain: "blog.giallozafferano.it" and "ricette.giallozafferano.it" are one
+    publisher, whose two pages are not two independent versions of a dish."""
+    return ".".join(site.split(".")[-2:])
+
+
 def search_sources(
     dish: str, search_chat: ChatProvider | None, verify=verify_source, sites=()
 ) -> tuple[list[Source], list[dict[str, Any]]]:
@@ -297,15 +303,15 @@ def search_sources(
         elif len(found) == MAX_SOURCES:
             link["outcome"] = "not_checked"
         # Two pages of the same site are rarely two independent versions of a dish.
-        elif site in seen_sites:
+        elif publisher(site) in seen_sites:
             link["outcome"] = "same_site"
         elif (source := verify(url)) is None:
             link["outcome"] = "rejected"
-        elif source.site in seen_sites:
+        elif publisher(source.site) in seen_sites:
             link["outcome"] = "same_site"
         else:
             found.append(source)
-            seen_sites.update({site, source.site})
+            seen_sites.update({publisher(site), publisher(source.site)})
             link.update(
                 outcome="used",
                 title=source.title[:200],
@@ -371,16 +377,24 @@ def _json_answer(chat: ChatProvider, system: str, user: str, temperature: float)
 
 
 def draft_recipe(
-    dish: str, sources: list[Source], language: str, chat: ChatProvider, budget: int
+    dish: str,
+    sources: list[Source],
+    language: str,
+    chat: ChatProvider,
+    budget: int,
+    vocabulary: list[str] = (),
 ) -> dict[str, Any]:
-    """One recipe draft from the sources (or from the model's knowledge without any)."""
+    """One recipe draft from the sources (or from the model's knowledge without any).
+    `vocabulary`: the catalog's ingredient names, for the draft to use them."""
     language_name = LANGUAGE_NAMES.get(language, "English")
+    hint = vocabulary_hint(list(vocabulary))
     if len(sources) == 1:
         # One page: extracted faithfully, as a linked page is imported.
-        return extract_draft(from_jsonld(sources[0].url, sources[0].recipe), language_name, chat)
+        page = from_jsonld(sources[0].url, sources[0].recipe)
+        return extract_draft(page, language_name, chat, vocabulary)
     if not sources:
         raw = _json_answer(
-            chat, FROM_KNOWLEDGE_PROMPT.format(dish=dish, language=language_name), dish, 0.3
+            chat, FROM_KNOWLEDGE_PROMPT.format(dish=dish, language=language_name) + hint, dish, 0.3
         )
         return normalize_draft(raw)
     share = budget // len(sources)
@@ -390,7 +404,7 @@ def draft_recipe(
     ]
     raw = _json_answer(
         chat,
-        COMBINE_PROMPT.format(count=len(sources), dish=dish, language=language_name),
+        COMBINE_PROMPT.format(count=len(sources), dish=dish, language=language_name) + hint,
         "\n\n".join(texts),
         0.2,
     )
