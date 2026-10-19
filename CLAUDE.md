@@ -222,7 +222,7 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   never leave it; personal values go in the ansible-vault file, never in plain text (the
   repository is public)
 - Keycloak is configured only through `setup_keycloak` (from `.env`), never by hand in its console
-- Cloudflare (DNS, tunnel, Access, zone settings, rate limit) is configured only through
+- Cloudflare (DNS, DNSSEC, tunnel, Access, zone settings, firewall rules, rate limit) is configured only through
   `deploy/roles/cloudflare` (its API), never by hand in its dashboard; the admin host is behind
   Access before any of its traffic goes through Cloudflare
 - Routing lives in Traefik labels on each service in `docker-compose.yml`, one router per entry

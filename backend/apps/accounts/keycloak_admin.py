@@ -161,7 +161,14 @@ def realm_representation(config: KeycloakConfig) -> dict[str, Any]:
         # Both need outgoing email; without SMTP they would lock users out.
         "resetPasswordAllowed": has_email,
         "verifyEmail": has_email,
+        # Password guessing: after 10 failures an account waits, a minute more at each
+        # further one up to 15; never locked for good (that would let anyone lock anyone out).
         "bruteForceProtected": True,
+        "permanentLockout": False,
+        "failureFactor": 10,
+        "waitIncrementSeconds": 60,
+        "maxFailureWaitSeconds": 900,
+        "maxDeltaTimeSeconds": 43200,
     }
     if config.smtp:
         smtp = config.smtp

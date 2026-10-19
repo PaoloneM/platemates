@@ -2,7 +2,7 @@
 # control node by files/cloudflare_setup.py, idempotent and convergent. Runs once the zone is
 # active (`cloudflare_enabled`); `cloudflare_tunnel_hosts` says which hosts go through the
 # tunnel (taking one out gives it back its direct record).
-- name: Configure Cloudflare (zone, Access, tunnel, DNS, rate limit)
+- name: Configure Cloudflare (zone, Access, tunnel, DNS, firewall, rate limit)
   ansible.builtin.command: python3 {{ role_path }}/files/cloudflare_setup.py
   delegate_to: localhost
   become: false
@@ -20,10 +20,19 @@
     CF_MAIL_RECORDS: "{{ cloudflare_mail_records | default([]) | to_json }}"
     CF_MAIL_FORWARDS: "{{ cloudflare_mail_forwards | default([]) | to_json }}"
     CF_MAIL_CATCH_ALL: "{{ cloudflare_mail_catch_all | default('') }}"
+    CF_ALLOWED_COUNTRIES: "{{ cloudflare_allowed_countries | default([]) | join(',') }}"
+    CF_ALLOWED_REGIONS: "{{ cloudflare_allowed_regions | default([]) | join(',') }}"
+    CF_CAA_REPORTS: "{{ cloudflare_caa_reports | default('') }}"
   register: cloudflare_run
-  changed_when: (cloudflare_run.stdout | from_json).changed
-  # Its output holds the tunnel's token.
+  changed_when: cloudflare_run.rc == 0 and (cloudflare_run.stdout | from_json).changed
+  # Its output holds the tunnel's token: hidden; a failure is shown by the next task.
   no_log: true
+  failed_when: false
+
+- name: Stop on a Cloudflare error
+  ansible.builtin.fail:
+    msg: "{{ cloudflare_run.stderr }}"
+  when: cloudflare_run.rc != 0
 
 - name: Keep the tunnel's token for the server's .env
   ansible.builtin.set_fact:
@@ -34,3 +43,7 @@
 - name: Say what changed on Cloudflare
   ansible.builtin.debug:
     msg: "{{ (cloudflare_run.stdout | from_json).changes or ['nothing'] }}"
+
+- name: DNSSEC record for the registrar (add it there once, then it stays)
+  ansible.builtin.debug:
+    msg: "{{ (cloudflare_run.stdout | from_json).dnssec }}"

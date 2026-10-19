@@ -50,6 +50,14 @@ platemates_smtp_from: "no-reply@{{ platemates_domain }}"
 cloudflare_mail_forwards:
   - { from: "chef@{{ platemates_domain }}", to: "{{ platemates_app_admins }}" }
 cloudflare_mail_catch_all: ""
+# Visitors from elsewhere get Cloudflare's challenge (a check most people never see; known
+# search engines are let through): Europe (EU, EEA, UK, Switzerland and the microstates) and
+# California.
+cloudflare_allowed_countries: [IT, AT, BE, BG, HR, CY, CZ, DK, EE, FI, FR, DE, GR, HU, IE, LV,
+  LT, LU, MT, NL, PL, PT, RO, SK, SI, ES, SE, IS, LI, NO, GB, CH, SM, VA, MC, AD]
+cloudflare_allowed_regions: [US-CA]
+# Where certificate authorities report a refused request (CAA iodef).
+cloudflare_caa_reports: "chef@{{ platemates_domain }}"
 cloudflare_mail_records:
   - { type: TXT, name: "{{ platemates_domain }}", content: "v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all" }
   # Reports go to Brevo, which shows them in its dashboard.

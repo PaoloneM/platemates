@@ -162,7 +162,23 @@ proxy, and a tunnel through which the traffic reaches the server, so that no web
 be open. Configured through its API only, by `deploy/roles/cloudflare`
 (`files/cloudflare_setup.py`, idempotent and convergent, like `setup_keycloak`):
 
-- **Zone**: SSL Full (strict), HTTPS only, TLS 1.2 at least, WebSockets (Socket.IO).
+- **Zone**: SSL Full (strict), HTTPS only, TLS 1.2 at least (1.3 on), HSTS for a year with
+  subdomains (not preloaded: that is hard to take back), WebSockets (Socket.IO).
+- **DNSSEC** on. Its DS record is entered once by hand at the registrar (Hostinger), with the
+  values the deploy prints ("DNSSEC record for the registrar"); without it DNSSEC stays
+  pending, harmless.
+- **CAA**: certificates for the domain only from Let's Encrypt (Traefik's, DNS-01) and the
+  authorities Cloudflare adds by itself for its edge certificates; refusals reported to
+  `chef@`.
+- **Firewall** (custom rules, PlateMates' own): scanners' paths (`/.env`, `/.git`, `/wp-*`,
+  `*.php`, phpMyAdmin) blocked; AI crawlers blocked; visitors from outside Europe (EU, EEA, UK,
+  Switzerland, microstates) and California get Cloudflare's managed challenge, known search
+  engines excepted (`cloudflare_allowed_countries`, `cloudflare_allowed_regions`; on a plan
+  without regions, a region's whole country is allowed instead, and the deploy says so).
+  Cloudflare's Free Managed Ruleset is deployed.
+- **Rate limit** (the Free plan's one rule): Keycloak's sign-in, sign-up and password-reset
+  forms, 5 posts in 10 seconds per address. Keycloak's own brute-force detection also slows
+  an account down after 10 failed passwords (never locks it for good).
 - **Tunnel** `platemates`: `cloudflared` (compose profile `cloudflare`, its token written into
   `.env` by the deploy) opens an outbound connection; each host goes to its Traefik over TLS
   inside the compose network (`platemates.cloud` and `www` to `traefik`, `admin` to
