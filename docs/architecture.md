@@ -583,8 +583,16 @@ Campaigns: filling the catalog in bulk (decided with Paolo 2026-10-19), `apps/cu
   Failed or discarded drafts are replaced at the next round, up to twice a target's count of
   attempts; a target the model finds no new dish for stops. Pausing stops both planning and
   drafting of its dishes.
-- **Sites** (`SourceSite`): trusted sites are named to the search and their pages tried first;
-  blocked ones are never used. Seeded with well-known Italian recipe sites and social or video
+- **Searching**: by our own SearXNG (`RECIPE_SEARCH=searxng`, `apps/curation/searching.py`,
+  compose profile `campaign`) or the chat model's search tool (`studio`). Measured on the first
+  full campaign (2026-10-19): Studio's tool, which scrapes the public engines from one address,
+  stopped answering after about 75 searches in fifteen minutes, and the model then drafted
+  from memory or made URLs up. So: campaign searches keep an interval
+  (`curation.search_interval_seconds`) and pause after one that finds nothing
+  (`curation.search_cooldown_minutes`); a campaign draft without a source is queued again up to
+  three times, never drafted from memory, then fails and is replaced.
+- **Sites** (`SourceSite`): trusted sites' pages are tried first (never named to the model, which
+  then invents URLs on them); blocked ones are never used. Seeded with well-known Italian recipe sites and social or video
   sites blocked; staff change the list. Every link the search offered is kept with its outcome
   (`CandidateLink`: used, rejected, blocked, same site, not needed), to look at, never to
   approve one by one.

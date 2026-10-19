@@ -47,6 +47,9 @@ feedback, collaborative recommendation. The README's status table is kept curren
   - Open alternative: cloud API (e.g. Google Cloud) if quality justifies it; usage is occasional (only on new recipes/ingredients), so cost would be negligible
   - Write an adapter for the chosen provider; do not hardcode it
 - **Recipe discovery**: native web search capability of the LLM (no dedicated scraping at this stage).
+  Campaigns (bulk system recipes, run locally) may search through our own SearXNG instead
+  (`RECIPE_SEARCH=searxng`, compose profile `campaign`): Studio's search tool gets cut off by the
+  public engines after a few dozen searches (decided with Paolo 2026-10-19)
   Importing a single page whose link the user gives is allowed: schema.org Recipe data first,
   LLM extraction as fallback; no crawling, no per-site scrapers
 - **Deployment**: **Docker Compose**, portable between a local ARM64 Mac, a home Raspberry Pi, and a cloud VM. No "all-in-one" packaging

@@ -286,6 +286,12 @@ AI = {
     },
 }
 
+# -- Web search for recipe campaigns (apps/curation/searching.py) ------------------------------
+# "studio": the chat model's own search tool. "searxng": our SearXNG (compose profile
+# `campaign`), queried by code, at our pace.
+RECIPE_SEARCH = os.getenv("RECIPE_SEARCH", "studio")
+SEARXNG_URL = os.getenv("SEARXNG_URL", "http://127.0.0.1:8080").rstrip("/")
+
 # -- Outgoing email -----------------------------------------------------------------------------
 # The same relay Keycloak uses (SMTP_*, Brevo on the server): invitations and access requests
 # (apps/accounts/emails.py). Without SMTP_HOST mail is printed to the console instead (a

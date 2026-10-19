@@ -146,6 +146,7 @@ services:
       # Inside a container, "127.0.0.1" is the container itself: reach the host instead.
       LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
+      SEARXNG_URL: http://searxng:8080
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
       REDIS_URL: redis://redis:6379/0
       REALTIME_REDIS_URL: redis://redis:6379/1
@@ -282,6 +283,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-platemates}:${POSTGRES_PASSWORD:-platemates}@db:5432/${POSTGRES_DB:-platemates}
       LLM_BASE_URL: ${LLM_BASE_URL_DOCKER:-http://host.docker.internal:8888}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL_DOCKER:-http://embeddings:8100}
+      SEARXNG_URL: http://searxng:8080
       REDIS_URL: redis://redis:6379/0
       REALTIME_REDIS_URL: redis://redis:6379/1
     extra_hosts:
@@ -293,6 +295,17 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
+
+  # The web search of recipe campaigns (RECIPE_SEARCH=searxng, docs/operations.md): a
+  # metasearch engine of our own, so the pace is ours rather than a search tool's. Only with
+  # `--profile campaign`, on the machine that runs campaigns; never on the server.
+  searxng:
+    image: searxng/searxng:2026.9.30-a9d990033
+    profiles: [campaign]
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-}
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
 
   # One-shot, idempotent: embeds recipes whose vector is missing or stale (e.g. saved while the
   # embedding service was down, or after changing EMBEDDINGS_MODEL). Runs on every `up`, once the

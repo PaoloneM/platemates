@@ -250,22 +250,9 @@ def publisher(site: str) -> str:
     return ".".join(site.split(".")[-2:])
 
 
-def search_sources(
-    dish: str, search_chat: ChatProvider | None, verify=verify_source, sites=()
-) -> tuple[list[Source], list[dict[str, Any]]]:
-    """Up to MAX_SOURCES verified recipe pages for a dish, from one web search (retried once
-    when it brings no URL: Studio's search fails now and then), and every link the search
-    offered with what became of it (`CandidateLink` fields).
-
-    `sites` (`SourceSite`s) steer it: pages of trusted sites are tried first, blocked ones never.
-    """
-    if search_chat is None:
-        return [], []
-    # Trusted sites are not named to the model: asked for them, it makes URLs up on them when
-    # the search fails. Their pages simply go first.
-    trusted = [s for s in sites if s.trusted]
-    blocked = [s for s in sites if not s.trusted]
-    urls: list[str] = []
+def _model_urls(dish: str, search_chat: ChatProvider) -> list[str]:
+    """URLs the chat model's own search found (retried once when it brings none: Studio's
+    search fails now and then)."""
     for _attempt in range(2):
         try:
             answer = search_chat.chat(
@@ -275,9 +262,34 @@ def search_sources(
         except AIError as exc:
             log.warning("web search for %r failed: %s", dish, exc)
             continue
-        urls = _urls(answer)
-        if urls:
-            break
+        if urls := _urls(answer):
+            return urls
+    return []
+
+
+def search_sources(
+    dish: str, search_chat: ChatProvider | None, verify=verify_source, sites=(), searcher=None
+) -> tuple[list[Source], list[dict[str, Any]]]:
+    """Up to MAX_SOURCES verified recipe pages for a dish, and every link the search offered
+    with what became of it (`CandidateLink` fields). The search is `searcher`'s when given
+    (`searching`), otherwise the chat model's own.
+
+    `sites` (`SourceSite`s) steer it: pages of trusted sites are tried first, blocked ones never.
+    """
+    if searcher is not None:
+        try:
+            urls = searcher.urls(f"ricetta {dish}")
+        except Exception as exc:
+            log.warning("web search for %r failed: %s", dish, exc)
+            urls = []
+    elif search_chat is not None:
+        urls = _model_urls(dish, search_chat)
+    else:
+        return [], []
+    # Trusted sites are not named to the model: asked for them, it makes URLs up on them when
+    # the search fails. Their pages simply go first.
+    trusted = [s for s in sites if s.trusted]
+    blocked = [s for s in sites if not s.trusted]
 
     def is_trusted(url: str) -> bool:
         return any(s.covers(_site(url)) for s in trusted)

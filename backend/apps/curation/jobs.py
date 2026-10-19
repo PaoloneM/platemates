@@ -28,6 +28,7 @@ from .drafting import (
 from .ingredients import propose_for
 from .models import Campaign, CandidateLink, IngredientProposal, SourceSite, SystemDraft
 from .publishing import auto_publish
+from .searching import get_recipe_searcher
 
 log = logging.getLogger(__name__)
 
@@ -93,6 +94,7 @@ def run_draft(
     search_chat: ChatProvider | None = None,
     verify=verify_source,
     should_stop=lambda: False,
+    searcher=None,
 ) -> None:
     """Research and draft one recipe: ready for review (published at once if it meets the bar,
     `publishing`), or failed."""
@@ -104,16 +106,19 @@ def run_draft(
 
     try:
         checkpoint("searching")
-        if search_chat is None:
-            search_chat = get_web_search_provider()
-        if search_chat is not None and draft.campaign_id is not None:
+        if searcher is None and search_chat is None:
+            searcher = get_recipe_searcher()
+            if searcher is None:
+                search_chat = get_web_search_provider()
+        searching = searcher is not None or search_chat is not None
+        if searching and draft.campaign_id is not None:
             wait_to_search(should_stop)
         sources, links = search_sources(
-            draft.dish, search_chat, verify, list(SourceSite.objects.all())
+            draft.dish, search_chat, verify, list(SourceSite.objects.all()), searcher
         )
         draft.links.all().delete()
         CandidateLink.objects.bulk_create(CandidateLink(draft=draft, **link) for link in links)
-        if draft.campaign_id is not None and search_chat is not None and not sources:
+        if draft.campaign_id is not None and searching and not sources:
             raise NoSource
         checkpoint("drafting", sources=len(sources))
         chat = chat or get_chat_provider()

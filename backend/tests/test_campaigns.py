@@ -9,7 +9,7 @@ from django.core.management import call_command
 
 from ai import AIError
 from apps.catalog.models import Ingredient
-from apps.curation import campaigns, drafting, ingredients, jobs, publishing
+from apps.curation import campaigns, drafting, ingredients, jobs, publishing, searching
 from apps.curation.models import Campaign, IngredientProposal, SourceSite, SystemDraft
 from apps.recipes.models import Recipe
 from apps.siteconfig.models import ConfigVar
@@ -438,3 +438,76 @@ def test_staff_manage_the_sites(staff):
     assert response.json()["domain"] == "ricette.it"
     domains = [s["domain"] for s in staff.get("/api/source-sites/").json()]
     assert "giallozafferano.it" in domains and "ricette.it" in domains
+
+
+# -- searching with SearXNG --------------------------------------------------------------------
+
+
+class FakeSearcher:
+    def __init__(self, *answers):
+        self.answers = list(answers)
+        self.queries = []
+
+    def urls(self, query, language="it"):
+        self.queries.append(query)
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+
+def test_searxng_results_become_candidate_urls(monkeypatch):
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "results": [
+                    {"url": "https://a.it/r"},
+                    {"url": "https://a.it/r"},
+                    {"url": "ftp://x"},
+                    {"url": "https://b.it/r"},
+                ]
+            }
+
+    calls = []
+    monkeypatch.setattr(
+        "apps.curation.searching.httpx.get", lambda url, **kw: calls.append((url, kw)) or Response()
+    )
+    assert searching.SearxngSearch("http://searxng:8080").urls("ricetta ribollita") == [
+        "https://a.it/r",
+        "https://b.it/r",
+    ]
+    assert calls[0][0] == "http://searxng:8080/search"
+    assert calls[0][1]["params"]["format"] == "json"
+
+
+def test_the_searxng_searcher_is_chosen_by_setting(settings):
+    assert searching.get_recipe_searcher() is None
+    settings.RECIPE_SEARCH = "searxng"
+    assert isinstance(searching.get_recipe_searcher(), searching.SearxngSearch)
+
+
+def test_a_campaign_draft_searched_by_code_needs_no_model_search(campaign, no_wait, cavolo):
+    draft = SystemDraft.objects.create(
+        dish="ribollita", status=SystemDraft.Status.RUNNING, campaign=campaign, target="zuppe"
+    )
+    searcher = FakeSearcher(["https://a.it/r", "https://b.it/r"])
+    pages = {
+        "https://a.it/r": source("a.it", ["cavolo nero"], 4.5, 30),
+        "https://b.it/r": source("b.it", ["cavolo nero"], 4.5, 30),
+    }
+    jobs.run_draft(draft, chat=FakeChat(DRAFT), searcher=searcher, verify=pages.get)
+    draft.refresh_from_db()
+    assert searcher.queries == ["ricetta ribollita"]
+    assert draft.status == "published" and draft.reliability == "high"
+
+
+def test_a_failing_searcher_pauses_the_campaign_searches(campaign, no_wait):
+    draft = SystemDraft.objects.create(
+        dish="ribollita", status=SystemDraft.Status.RUNNING, campaign=campaign, target="zuppe"
+    )
+    jobs.run_draft(draft, chat=FakeChat(), searcher=FakeSearcher(searching.SearchError("down")))
+    draft.refresh_from_db()
+    assert draft.status == "queued" and jobs.cooling_down()

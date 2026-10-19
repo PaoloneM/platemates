@@ -320,7 +320,10 @@ server only receives the result.
 1. **Start the model.** Unsloth Studio on the host, with the chat model loaded and its web
    search available; set `llm.context_tokens` (Management > Settings) to the context it was
    loaded with. A larger quantization or more context is fine: the work is in the background.
-2. **Start the local stack**: `docker compose up -d --build` (the `worker` drafts).
+2. **Start the local stack with the search engine**: `RECIPE_SEARCH=searxng` in `.env`, then
+   `docker compose --profile campaign up -d --build` (the `worker` drafts, `searxng` searches).
+   Studio's own search tool works too (`RECIPE_SEARCH=studio`) but the public engines it asks
+   cut it off after a few dozen searches in a row.
 3. **Bring the production catalog in** so the model does not plan dishes that already exist:
    on the server's admin plane, Management > Export / import > system scope, then import the
    file locally (dry run first). Ingredients are matched by name, so this is optional, but it

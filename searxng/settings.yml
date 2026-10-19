@@ -1,0 +1,15 @@
+# SearXNG for recipe campaigns (compose profile `campaign`): the web search behind them,
+# reached by the backend and the worker inside the compose network only. Defaults otherwise;
+# the secret comes from SEARXNG_SECRET (.env).
+use_default_settings: true
+general:
+  instance_name: PlateMates recipe search
+search:
+  formats: [html, json]
+  default_lang: it
+  safe_search: 0
+server:
+  # Private to the stack: no bot limiter (it would need Valkey) and no public features.
+  limiter: false
+  public_instance: false
+  image_proxy: false

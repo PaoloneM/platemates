@@ -30,6 +30,8 @@ SECRETS = {
     "GRAFANA_OIDC_CLIENT_SECRET": lambda: secrets.token_urlsafe(32),
     "GRAFANA_DB_PASSWORD": lambda: secrets.token_urlsafe(24),
     "MONITORING_DB_PASSWORD": lambda: secrets.token_urlsafe(24),
+    # The campaigns' search engine (compose profile `campaign`).
+    "SEARXNG_SECRET": lambda: secrets.token_urlsafe(32),
 }
 
 # Required, but only a person can provide them.
