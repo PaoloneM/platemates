@@ -28,7 +28,7 @@ from urllib.parse import urlsplit
 from ai import AIError, ChatProvider
 from apps.assistant.agent import LANGUAGE_NAMES, extract_draft
 from apps.assistant.draft import DRAFT_SCHEMA, normalize_draft
-from apps.assistant.search import DISH_SEARCH_PROMPT, _urls
+from apps.assistant.search import _urls
 from apps.assistant.web import (
     PageError,
     clean_title,
@@ -232,16 +232,42 @@ def verify_source(url: str) -> Source | None:
     )
 
 
-def find_sources(dish: str, search_chat: ChatProvider | None, verify=verify_source) -> list[Source]:
+SEARCH_PROMPT = (
+    "Do one web search for: ricetta {dish}. Then list the pages from the results that contain "
+    "one recipe each: title and exact URL, one per line, up to eight.{hint}"
+)
+
+
+def _site(url: str) -> str:
+    return (urlsplit(url).hostname or "").removeprefix("www.")
+
+
+def search_sources(
+    dish: str, search_chat: ChatProvider | None, verify=verify_source, sites=()
+) -> tuple[list[Source], list[dict[str, Any]]]:
     """Up to MAX_SOURCES verified recipe pages for a dish, from one web search (retried once
-    when it brings no URL: Studio's search fails now and then)."""
+    when it brings no URL: Studio's search fails now and then), and every link the search
+    offered with what became of it (`CandidateLink` fields).
+
+    `sites` (`SourceSite`s) steer it: pages of trusted sites are tried first, blocked ones never.
+    """
     if search_chat is None:
-        return []
+        return [], []
+    trusted = [s for s in sites if s.trusted]
+    blocked = [s for s in sites if not s.trusted]
+    hint = (
+        " Prefer pages from these sites when the results have them: "
+        + ", ".join(s.domain for s in trusted)
+        + "."
+        if trusted
+        else ""
+    )
     urls: list[str] = []
     for _attempt in range(2):
         try:
             answer = search_chat.chat(
-                [{"role": "user", "content": DISH_SEARCH_PROMPT.format(dish=dish)}], temperature=0.2
+                [{"role": "user", "content": SEARCH_PROMPT.format(dish=dish, hint=hint)}],
+                temperature=0.2,
             ).content
         except AIError as exc:
             log.warning("web search for %r failed: %s", dish, exc)
@@ -249,18 +275,50 @@ def find_sources(dish: str, search_chat: ChatProvider | None, verify=verify_sour
         urls = _urls(answer)
         if urls:
             break
+
+    def is_trusted(url: str) -> bool:
+        return any(s.covers(_site(url)) for s in trusted)
+
+    # Trusted sites first, otherwise in the search's order.
+    ordered = sorted(urls, key=lambda url: not is_trusted(url))
     found: list[Source] = []
+    links: list[dict[str, Any]] = []
     seen_sites: set[str] = set()
-    for url in urls:
-        source = verify(url)
+    for position, url in enumerate(ordered):
+        site = _site(url)
+        link = {
+            "url": url[:500],
+            "site": site[:120],
+            "trusted": is_trusted(url),
+            "position": position,
+        }
+        if any(s.covers(site) for s in blocked):
+            link["outcome"] = "blocked"
+        elif len(found) == MAX_SOURCES:
+            link["outcome"] = "not_checked"
         # Two pages of the same site are rarely two independent versions of a dish.
-        if source is None or source.site in seen_sites:
-            continue
-        found.append(source)
-        seen_sites.add(source.site)
-        if len(found) == MAX_SOURCES:
-            break
-    return found
+        elif site in seen_sites:
+            link["outcome"] = "same_site"
+        elif (source := verify(url)) is None:
+            link["outcome"] = "rejected"
+        elif source.site in seen_sites:
+            link["outcome"] = "same_site"
+        else:
+            found.append(source)
+            seen_sites.update({site, source.site})
+            link.update(
+                outcome="used",
+                title=source.title[:200],
+                rating=source.rating,
+                rating_count=source.rating_count,
+            )
+        links.append(link)
+    return found, links
+
+
+def find_sources(dish: str, search_chat: ChatProvider | None, verify=verify_source) -> list[Source]:
+    """The verified pages alone (see `search_sources`)."""
+    return search_sources(dish, search_chat, verify)[0]
 
 
 # -- drafting ----------------------------------------------------------------------------------
@@ -341,11 +399,15 @@ def draft_recipe(
     return draft
 
 
-def dishes_for_theme(theme: str, count: int, language: str, chat: ChatProvider) -> list[str]:
-    """Dish names for a theme ("10 autumn first courses"), leaving out existing system recipes."""
+def dishes_for_theme(
+    theme: str, count: int, language: str, chat: ChatProvider, exclude: list[str] = ()
+) -> list[str]:
+    """Dish names for a theme ("10 autumn first courses"), leaving out existing system recipes
+    and the dishes in `exclude` (already drafted or queued)."""
     existing = list(
-        Recipe.objects.filter(owner_team__is_system=True).values_list("title", flat=True)[:200]
+        Recipe.objects.filter(owner_team__is_system=True).values_list("title", flat=True)[:300]
     )
+    avoid = list(dict.fromkeys([*existing, *exclude]))
     result = chat.chat(
         [
             {
@@ -354,7 +416,7 @@ def dishes_for_theme(theme: str, count: int, language: str, chat: ChatProvider) 
                     count=count,
                     theme=theme,
                     language=LANGUAGE_NAMES.get(language, "English"),
-                    existing=", ".join(existing) or "(none)",
+                    existing=", ".join(avoid[:600]) or "(none)",
                 ),
             }
         ],
@@ -365,7 +427,7 @@ def dishes_for_theme(theme: str, count: int, language: str, chat: ChatProvider) 
         },
     )
     names = json.loads(result.content or "{}").get("dishes") or []
-    taken = {title.casefold() for title in existing}
+    taken = {title.casefold() for title in avoid}
     unique = dict.fromkeys(
         str(name).strip()[:200]
         for name in names

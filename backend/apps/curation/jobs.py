@@ -16,12 +16,14 @@ from apps.siteconfig.registry import prompt_budget_chars
 from .drafting import (
     agreement_of,
     draft_recipe,
-    find_sources,
     reliability_of,
+    search_sources,
     verify_source,
     web_rating,
 )
-from .models import SystemDraft
+from .ingredients import propose_for
+from .models import Campaign, CandidateLink, SourceSite, SystemDraft
+from .publishing import auto_publish
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +56,8 @@ def run_draft(
     verify=verify_source,
     should_stop=lambda: False,
 ) -> None:
-    """Research and draft one recipe: ready for review, or failed."""
+    """Research and draft one recipe: ready for review (published at once if it meets the bar,
+    `publishing`), or failed."""
 
     def checkpoint(phase: str, **extra: Any) -> None:
         if should_stop():
@@ -65,11 +68,14 @@ def run_draft(
         checkpoint("searching")
         if search_chat is None:
             search_chat = get_web_search_provider()
-        sources = find_sources(draft.dish, search_chat, verify)
-        checkpoint("drafting", sources=len(sources))
-        recipe = draft_recipe(
-            draft.dish, sources, draft.language, chat or get_chat_provider(), prompt_budget_chars()
+        sources, links = search_sources(
+            draft.dish, search_chat, verify, list(SourceSite.objects.all())
         )
+        draft.links.all().delete()
+        CandidateLink.objects.bulk_create(CandidateLink(draft=draft, **link) for link in links)
+        checkpoint("drafting", sources=len(sources))
+        chat = chat or get_chat_provider()
+        recipe = draft_recipe(draft.dish, sources, draft.language, chat, prompt_budget_chars())
         if not recipe["title"] or not recipe["ingredients"]:
             raise AIError("The model found no recipe for this dish.")
         agreement = agreement_of(sources)
@@ -93,14 +99,28 @@ def run_draft(
         draft.error = f"Unexpected error: {exc}"[:2000]
     draft.finished_at = timezone.now()
     draft.save()
+    if draft.status == SystemDraft.Status.READY:
+        after_ready(draft, chat)
     announce(draft, draft.status)
+
+
+def after_ready(draft: SystemDraft, chat: ChatProvider) -> None:
+    """Propose the ingredients the catalog lacks, then publish the draft if it meets the bar.
+    Neither may cost the draft itself: it stays ready for staff."""
+    try:
+        propose_for(draft, chat)
+        if auto_publish(draft) is not None:
+            draft.refresh_from_db()
+    except Exception:
+        log.exception("after drafting %s", draft.pk)
 
 
 def claim_next() -> SystemDraft | None:
     with transaction.atomic():
         draft = (
-            SystemDraft.objects.select_for_update(skip_locked=True)
+            SystemDraft.objects.select_for_update(skip_locked=True, of=("self",))
             .filter(status=SystemDraft.Status.QUEUED)
+            .exclude(campaign__status=Campaign.Status.PAUSED)
             .order_by("created_at")
             .first()
         )

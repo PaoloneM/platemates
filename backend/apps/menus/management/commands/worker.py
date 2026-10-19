@@ -21,6 +21,8 @@ import time
 from django.core.management.base import BaseCommand
 from django.db import InterfaceError, OperationalError, connection
 
+from ai import get_chat_provider
+from apps.curation import campaigns
 from apps.curation import jobs as drafts
 from apps.menus import generation as menus
 from apps.teams.models import Team
@@ -108,6 +110,14 @@ class Command(BaseCommand):
             with attribute(team=Team.system(), feature=Feature.SYSTEM_DRAFTS):
                 drafts.run_draft(draft, should_stop=stopping)
             done = f"Draft {draft.pk}: {draft.status}"
+        elif (campaign := campaigns.next_to_plan()) is not None:
+            # Only with no draft waiting: each round knows every dish drafted so far.
+            self.stdout.write(f"Planning campaign {campaign.name!r}...")
+            with attribute(team=Team.system(), feature=Feature.SYSTEM_DRAFTS):
+                planned = campaigns.plan(campaign, get_chat_provider())
+            if not planned:
+                return False
+            done = f"Campaign {campaign.pk}: {planned} dish(es) queued"
         else:
             return False
         self.stdout.write(f"{done} in {time.monotonic() - started:.0f} s.")

@@ -87,6 +87,19 @@ SETTINGS: dict[str, Setting] = {
         # and beyond this many events in all (every team together) the oldest go first.
         Setting("audit.retention_days", "int", 90, "audit", minimum=1, maximum=3650),
         Setting("audit.max_events", "int", 1000, "audit", minimum=100, maximum=1000000),
+        # Publishing a campaign's drafts without staff (apps/curation/publishing.py): on or
+        # off, and the bar. The rating is in tenths of a star (40 = 4.0 out of 5), on at least
+        # `min_votes` votes; reliability "high" needs two agreeing sources, "medium" one.
+        Setting("curation.auto_publish", "bool", True, "curation"),
+        Setting(
+            "curation.min_reliability",
+            "choice",
+            "high",
+            "curation",
+            choices=("high", "medium"),
+        ),
+        Setting("curation.min_rating", "int", 40, "curation", minimum=0, maximum=50),
+        Setting("curation.min_votes", "int", 5, "curation", minimum=0, maximum=100000),
         # Compact recipe pages: actions as icons beside the tabs instead of labelled buttons,
         # never, on phones only, or everywhere.
         Setting(

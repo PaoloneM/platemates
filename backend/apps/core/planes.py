@@ -38,6 +38,9 @@ ADMIN_ONLY_PATHS = (
     "/api/invite-requests/",
     "/api/transfer/",
     "/api/system-drafts/",
+    "/api/campaigns/",
+    "/api/source-sites/",
+    "/api/ingredient-proposals/",
 )
 
 _plane: contextvars.ContextVar[str | None] = contextvars.ContextVar("plane", default=None)

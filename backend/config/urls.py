@@ -10,7 +10,12 @@ from apps.assistant.views import AssistantSessionViewSet
 from apps.audit.views import AuditEventViewSet, stats_view
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
 from apps.core.views import health
-from apps.curation.views import SystemDraftViewSet
+from apps.curation.views import (
+    CampaignViewSet,
+    IngredientProposalViewSet,
+    SourceSiteViewSet,
+    SystemDraftViewSet,
+)
 from apps.menus.shopping_api import ShoppingItemViewSet, ShoppingListViewSet
 from apps.menus.views import (
     MealSlotViewSet,
@@ -56,6 +61,9 @@ router.register("audit-events", AuditEventViewSet, basename="audit-event")
 router.register("invite-requests", InviteRequestViewSet, basename="invite-request")
 router.register("team-requests", MyTeamRequestViewSet, basename="team-request")
 router.register("access-requests", AccessRequestViewSet, basename="access-request")
+router.register("campaigns", CampaignViewSet)
+router.register("source-sites", SourceSiteViewSet)
+router.register("ingredient-proposals", IngredientProposalViewSet, basename="ingredient-proposal")
 router.register("usage/prices", ModelPriceViewSet)
 router.register("assistant/sessions", AssistantSessionViewSet, basename="assistant-session")
 
