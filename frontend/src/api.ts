@@ -215,10 +215,74 @@ export type SystemDraft = {
   error: string
   recipe: number | null
   requested_by_name: string | null
+  // Drafted for a campaign, for one of its targets (by key).
+  campaign: number | null
+  campaign_name: string | null
+  target: string
+  published_automatically: boolean
   created_at: string
   finished_at: string | null
   // Detail only: each draft ingredient's catalog match.
   matches?: IngredientMatch[]
+  // Detail only: every link the web search offered, and why a ready campaign draft was not
+  // published automatically.
+  links?: CandidateLink[]
+  blockers?: PublishBlocker[]
+}
+
+export type CandidateLink = {
+  url: string
+  site: string
+  trusted: boolean
+  outcome: 'used' | 'rejected' | 'blocked' | 'same_site' | 'not_checked'
+  title: string
+  rating: number | null
+  rating_count: number | null
+}
+
+export type PublishBlocker = 'not_campaign' | 'not_ready' | 'reliability' | 'rating' | 'votes' | 'ingredients' | 'duplicate'
+
+export type CampaignTarget = { key: string; theme: string; count: number }
+
+// Per target: the drafts in each status, how many were published without staff, and how many
+// ready ones wait for ingredient proposals.
+export type CampaignProgress = { count: number; automatic: number; waiting_ingredients: number } & Record<DraftStatus, number>
+
+export type Campaign = {
+  id: number
+  name: string
+  language: string
+  brief: string
+  targets: CampaignTarget[]
+  status: 'running' | 'paused' | 'done'
+  // Targets the model found no more new dishes for.
+  notes: Record<string, string>
+  progress: Record<string, CampaignProgress>
+  // The system recipes it published, for exporting them to another installation.
+  recipe_ids: number[]
+  created_at: string
+}
+
+export type SourceSite = { id: number; domain: string; trusted: boolean; note: string }
+
+export type IngredientProposal = {
+  id: number
+  name: string
+  status: 'pending' | 'approved' | 'rejected'
+  action: 'new' | 'alias'
+  alias_of: number | null
+  alias_of_name: string | null
+  category: string
+  default_unit: 'g' | 'ml' | 'pc' | ''
+  season_months: number[]
+  basic: boolean
+  edited: string[]
+  ingredient: number | null
+  ingredient_name: string | null
+  used_by: string[]
+  waiting: number
+  candidates: { id: number; name: string; category: string; similarity: number }[]
+  created_at: string
 }
 
 // The worker's progress on a draft, sent to staff in real time.

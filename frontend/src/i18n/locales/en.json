@@ -404,7 +404,9 @@
       "usage": "Usage",
       "searchProbe": "Search probe",
       "activity": "Team activity",
-      "inviteRequests": "Team requests"
+      "inviteRequests": "Team requests",
+      "campaigns": "Campaigns",
+      "proposals": "Proposed ingredients"
     },
     "rows": "{{from}}–{{to}} of {{count}}",
     "ingredients": {
@@ -672,7 +674,8 @@
       "menu": "Menu generation",
       "ui": "Interface",
       "search": "Recipe search",
-      "audit": "Team activity"
+      "audit": "Team activity",
+      "curation": "Recipe campaigns"
     },
     "item": {
       "llm_context_tokens": {
@@ -723,6 +726,26 @@
       "audit_max_events": {
         "label": "Maximum number of events",
         "hint": "For the whole installation, every team together: beyond it the oldest are deleted."
+      },
+      "curation_auto_publish": {
+        "label": "Automatic publishing",
+        "hint": "A campaign's drafts that meet the bar (reliable sources, web rating, known ingredients) become system recipes without review."
+      },
+      "curation_min_reliability": {
+        "label": "Minimum reliability",
+        "hint": "High: two sources that agree. Medium: one source is enough.",
+        "choices": {
+          "high": "High",
+          "medium": "Medium"
+        }
+      },
+      "curation_min_rating": {
+        "label": "Minimum web rating (tenths of a star)",
+        "hint": "40 = 4.0 stars out of 5: below it, the draft waits for review."
+      },
+      "curation_min_votes": {
+        "label": "Minimum votes",
+        "hint": "How many votes the web rating needs to count."
       }
     },
     "on": "on",
@@ -876,7 +899,29 @@
     "editRetry": "Change and try again",
     "editRetryHint": "Change or narrow the dish (e.g. \"pasta e fagioli alla veneta\"), then try again: the previous result is replaced.",
     "dish": "Dish",
-    "restore": "Restore"
+    "restore": "Restore",
+    "automatic": "Published automatically",
+    "showLinks": "Links found",
+    "hideLinks": "Hide links",
+    "noLinks": "The search found no links.",
+    "trusted": "trusted site",
+    "blockedBy": "Not published automatically: {{reasons}}.",
+    "blocker": {
+      "not_campaign": "not part of a campaign",
+      "not_ready": "not ready",
+      "reliability": "sources not reliable enough",
+      "rating": "low or no web rating",
+      "votes": "too few votes",
+      "ingredients": "ingredients to approve",
+      "duplicate": "a recipe with this title already exists"
+    },
+    "outcome": {
+      "used": "used as a source",
+      "rejected": "not a complete recipe, or unreachable",
+      "blocked": "blocked site",
+      "same_site": "another page of a site already used",
+      "not_checked": "not needed (sources already found)"
+    }
   },
   "transfer": {
     "hint": "Move data between PlateMates installations (from the Mac to the server, say) as a JSON file. Users do not travel: an imported team belongs to whoever imports it, or goes into a team that already exists.",
@@ -1188,5 +1233,129 @@
     "teamName": "Team «{{team}}»",
     "created": "Created",
     "createTeam": "Create the team"
+  },
+  "campaigns": {
+    "hint": "A campaign fills the catalog with many system recipes: the model picks the dishes for each target, looks them up on trusted sites and publishes by itself those that meet the bar (Settings → Recipe campaigns). The others stay in Drafts; new ingredients wait in Proposed ingredients.",
+    "none": "No campaigns.",
+    "new": "New campaign",
+    "name": "Name",
+    "brief": "Guidance for every target",
+    "briefHint": "Applies to every theme: kind of recipes, difficulty, ingredients.",
+    "targets_one": "Targets ({{count}} recipe)",
+    "targets_other": "Targets ({{count}} recipes)",
+    "key": "Key",
+    "theme": "Theme",
+    "count": "Recipes",
+    "addTarget": "Add target",
+    "start": "Start the campaign",
+    "invalid": "Check the targets: each with its own key, a theme and 1 to 500 recipes.",
+    "status": {
+      "running": "Running",
+      "paused": "Paused",
+      "done": "Done"
+    },
+    "pause": "Pause",
+    "resume": "Resume",
+    "restart": "Retry the missing ones",
+    "export_one": "Export {{count}} recipe",
+    "export_other": "Export {{count}} recipes",
+    "summary": "{{published}} published of {{count}}, {{automatic}} of them automatically",
+    "toReview_one": "{{count}} draft to review",
+    "toReview_other": "{{count}} drafts to review",
+    "waitingIngredients_one": "{{count}} waiting for ingredients",
+    "waitingIngredients_other": "{{count}} waiting for ingredients",
+    "part": {
+      "ready_one": "{{count}} to review",
+      "ready_other": "{{count}} to review",
+      "running_one": "{{count}} in progress",
+      "running_other": "{{count}} in progress",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "exhausted": "the model finds no more new dishes"
+    },
+    "defaults": {
+      "name": "Base catalog",
+      "brief": "Simple everyday recipes that home cooks can make, with ingredients easy to find in Italy. Vary across the seasons.",
+      "targets": [
+        {
+          "key": "primi",
+          "theme": "Everyday Italian first courses: pasta, risotto and gnocchi with simple sauces",
+          "count": 50
+        },
+        {
+          "key": "zuppe",
+          "theme": "Italian soups, including legume soups",
+          "count": 20
+        },
+        {
+          "key": "carne",
+          "theme": "Simple Italian meat main courses: chicken, turkey, pork, beef, meatballs",
+          "count": 30
+        },
+        {
+          "key": "pesce",
+          "theme": "Simple, quick Italian fish main courses",
+          "count": 25
+        },
+        {
+          "key": "uova-legumi",
+          "theme": "Italian main courses with eggs, cheese or legumes: frittatas, bakes, legume patties",
+          "count": 20
+        },
+        {
+          "key": "contorni",
+          "theme": "Italian side dishes of seasonal vegetables",
+          "count": 35
+        },
+        {
+          "key": "unici",
+          "theme": "Italian one-dish meals: savoury pies, big salads, homemade pizza and focaccia",
+          "count": 20
+        },
+        {
+          "key": "mondo",
+          "theme": "Simple Asian and international dishes with ingredients from Italian supermarkets: fried rice, curry, wok, noodles, tacos, hummus",
+          "count": 20
+        }
+      ]
+    },
+    "sites": {
+      "title": "Recipe sites",
+      "hint": "The search tries pages of trusted sites first and never uses blocked ones. A page counts as a source only if it holds one complete recipe in structured form.",
+      "trusted": "Trusted",
+      "blocked": "Blocked",
+      "domain": "Domain",
+      "asTrusted": "Trusted",
+      "asBlocked": "Blocked",
+      "add": "Add"
+    }
+  },
+  "proposals": {
+    "hint": "Ingredients campaign drafts use that the catalog lacks. The model proposes whether each is a new ingredient (with category, season and unit) or another name of an existing one: check, fix if needed and approve them together. Drafts waiting only for these are published at once, if they meet the bar.",
+    "view": {
+      "pending": "To decide",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "none": "Nothing here.",
+    "selectAll_one": "Select {{count}}",
+    "selectAll_other": "Select all ({{count}})",
+    "approve_one": "Approve {{count}}",
+    "approve_other": "Approve {{count}}",
+    "reject": "Reject",
+    "approved_one": "{{count}} ingredient approved; recipes published: {{published}}",
+    "approved_other": "{{count}} ingredients approved; recipes published: {{published}}",
+    "rejected_one": "{{count}} rejected: its drafts wait for review",
+    "rejected_other": "{{count}} rejected: their drafts wait for review",
+    "waiting_one": "{{count}} draft waiting",
+    "waiting_other": "{{count}} drafts waiting",
+    "became": "→ {{name}}",
+    "usedBy": "In: {{dishes}}",
+    "new": "New ingredient",
+    "alias": "Another name of…",
+    "aliasOf": "Existing ingredient",
+    "category": "Category",
+    "unit": "Unit",
+    "basic": "Staple (salt, oil…)"
   }
 }

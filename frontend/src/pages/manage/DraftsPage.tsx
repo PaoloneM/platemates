@@ -110,6 +110,13 @@ function DraftRow({ draft, phase, onChanged }: {
   const [busy, setBusy] = useState(false)
   // Rewording the dish before trying again; null when not editing.
   const [rewording, setRewording] = useState<string | null>(null)
+  // The links the search found and what stopped automatic publishing, loaded on demand.
+  const [details, setDetails] = useState<SystemDraft | null>(null)
+
+  async function toggleDetails() {
+    if (details) setDetails(null)
+    else setDetails(await api<SystemDraft>(`/system-drafts/${draft.id}/`))
+  }
 
   async function act(action: 'discard' | 'retry' | 'restore', body?: object) {
     setBusy(true)
@@ -137,6 +144,8 @@ function DraftRow({ draft, phase, onChanged }: {
             label={t(`drafts.reliability.${draft.reliability}`)} />
         )}
         <WebRating rating={draft.web_rating} count={draft.web_rating_count} />
+        {draft.campaign_name && <Chip size="small" variant="outlined" label={draft.campaign_name} />}
+        {draft.published_automatically && <Chip size="small" color="success" variant="outlined" label={t('drafts.automatic')} />}
         {running && <CircularProgress size={16} />}
         {running && phase && (
           <Typography variant="body2" color="text.secondary">{t(`drafts.phase.${phase.phase}`, { count: phase.sources ?? 0 })}</Typography>
@@ -158,6 +167,27 @@ function DraftRow({ draft, phase, onChanged }: {
         </Typography>
       ) : draft.status === 'ready' && (
         <Typography variant="body2" color="error.main">{t('drafts.noSources')}</Typography>
+      )}
+      {details && (
+        <Box>
+          {details.blockers && details.blockers.length > 0 && (
+            <Typography variant="body2" color="warning.main">
+              {t('drafts.blockedBy', { reasons: details.blockers.map((b) => t(`drafts.blocker.${b}`)).join(', ') })}
+            </Typography>
+          )}
+          {(details.links ?? []).length === 0 ? (
+            <Typography variant="body2" color="text.secondary">{t('drafts.noLinks')}</Typography>
+          ) : (
+            <Stack component="ul" spacing={0.25} sx={{ m: 0, pl: 2.5 }}>
+              {details.links!.map((link) => (
+                <Typography key={link.url} component="li" variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+                  <Link href={link.url} target="_blank" rel="noopener noreferrer">{link.title || link.url}</Link>
+                  {' · '}{t(`drafts.outcome.${link.outcome}`)}{link.trusted && ` · ${t('drafts.trusted')}`}
+                </Typography>
+              ))}
+            </Stack>
+          )}
+        </Box>
       )}
       {draft.error && <Typography variant="body2" color="error.main" sx={{ overflowWrap: 'anywhere' }}>{draft.error}</Typography>}
       {rewording !== null && (
@@ -194,6 +224,11 @@ function DraftRow({ draft, phase, onChanged }: {
         )}
         {draft.status === 'discarded' && draft.draft && rewording === null && (
           <Button size="small" color="inherit" disabled={busy} onClick={() => void act('restore')}>{t('drafts.restore')}</Button>
+        )}
+        {draft.status !== 'queued' && draft.status !== 'running' && (
+          <Button size="small" color="inherit" onClick={() => void toggleDetails()}>
+            {details ? t('drafts.hideLinks') : t('drafts.showLinks')}
+          </Button>
         )}
         <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
           {draft.requested_by_name && `${draft.requested_by_name} · `}

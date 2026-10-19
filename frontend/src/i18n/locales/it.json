@@ -404,7 +404,9 @@
       "usage": "Consumi",
       "searchProbe": "Prova ricerca",
       "activity": "Attività dei team",
-      "inviteRequests": "Richieste di team"
+      "inviteRequests": "Richieste di team",
+      "campaigns": "Campagne",
+      "proposals": "Ingredienti proposti"
     },
     "rows": "{{from}}–{{to}} di {{count}}",
     "ingredients": {
@@ -672,7 +674,8 @@
       "menu": "Generazione del menu",
       "ui": "Interfaccia",
       "search": "Ricerca delle ricette",
-      "audit": "Attività dei team"
+      "audit": "Attività dei team",
+      "curation": "Campagne di ricette"
     },
     "item": {
       "llm_context_tokens": {
@@ -723,6 +726,26 @@
       "audit_max_events": {
         "label": "Numero massimo di eventi",
         "hint": "Per tutta l'installazione, tutti i team insieme: oltre questo numero si cancellano i più vecchi."
+      },
+      "curation_auto_publish": {
+        "label": "Pubblicazione automatica",
+        "hint": "Le bozze di una campagna che superano la soglia (fonti affidabili, voto web, ingredienti noti) diventano ricette di sistema senza passare dalla revisione."
+      },
+      "curation_min_reliability": {
+        "label": "Affidabilità minima",
+        "hint": "Alta: due fonti che concordano. Media: basta una fonte.",
+        "choices": {
+          "high": "Alta",
+          "medium": "Media"
+        }
+      },
+      "curation_min_rating": {
+        "label": "Voto web minimo (decimi di stella)",
+        "hint": "40 = 4,0 stelle su 5: sotto questo voto la bozza aspetta la revisione."
+      },
+      "curation_min_votes": {
+        "label": "Voti minimi",
+        "hint": "Quanti voti deve avere il voto web perché conti."
       }
     },
     "on": "attivo",
@@ -876,7 +899,29 @@
     "editRetry": "Modifica e riprova",
     "editRetryHint": "Cambia o precisa il piatto (es. «pasta e fagioli alla veneta»), poi riprova: il risultato precedente viene sostituito.",
     "dish": "Piatto",
-    "restore": "Ripristina"
+    "restore": "Ripristina",
+    "automatic": "Pubblicata in automatico",
+    "showLinks": "Link trovati",
+    "hideLinks": "Nascondi link",
+    "noLinks": "La ricerca non ha trovato link.",
+    "trusted": "sito fidato",
+    "blockedBy": "Non pubblicata in automatico: {{reasons}}.",
+    "blocker": {
+      "not_campaign": "non fa parte di una campagna",
+      "not_ready": "non è pronta",
+      "reliability": "fonti poco affidabili",
+      "rating": "voto web basso o assente",
+      "votes": "pochi voti",
+      "ingredients": "ingredienti da approvare",
+      "duplicate": "esiste già una ricetta con questo titolo"
+    },
+    "outcome": {
+      "used": "usata come fonte",
+      "rejected": "non è una ricetta completa o non risponde",
+      "blocked": "sito escluso",
+      "same_site": "altra pagina di un sito già usato",
+      "not_checked": "non serviva (fonti già trovate)"
+    }
   },
   "transfer": {
     "hint": "Sposta dati tra installazioni di PlateMates (per esempio dal Mac al server) con un file JSON. Gli utenti non viaggiano: un team importato appartiene a chi lo importa, o va in un team che esiste già.",
@@ -1188,5 +1233,129 @@
     "teamName": "Team «{{team}}»",
     "created": "Creato",
     "createTeam": "Crea il team"
+  },
+  "campaigns": {
+    "hint": "Una campagna riempie il catalogo con molte ricette di sistema: il modello sceglie i piatti per ogni obiettivo, li cerca sui siti fidati e pubblica da solo quelli che superano la soglia (Impostazioni → Campagne di ricette). Gli altri restano nelle Bozze; gli ingredienti nuovi aspettano in Ingredienti proposti.",
+    "none": "Nessuna campagna.",
+    "new": "Nuova campagna",
+    "name": "Nome",
+    "brief": "Indicazioni per tutti gli obiettivi",
+    "briefHint": "Valgono per ogni tema: tipo di ricette, difficoltà, ingredienti.",
+    "targets_one": "Obiettivi ({{count}} ricetta)",
+    "targets_other": "Obiettivi ({{count}} ricette)",
+    "key": "Sigla",
+    "theme": "Tema",
+    "count": "Ricette",
+    "addTarget": "Aggiungi obiettivo",
+    "start": "Avvia la campagna",
+    "invalid": "Controlla gli obiettivi: ognuno con una sigla diversa, un tema e da 1 a 500 ricette.",
+    "status": {
+      "running": "In corso",
+      "paused": "In pausa",
+      "done": "Conclusa"
+    },
+    "pause": "Metti in pausa",
+    "resume": "Riprendi",
+    "restart": "Riprova le mancanti",
+    "export_one": "Esporta {{count}} ricetta",
+    "export_other": "Esporta {{count}} ricette",
+    "summary": "{{published}} pubblicate su {{count}}, di cui {{automatic}} in automatico",
+    "toReview_one": "{{count}} bozza da rivedere",
+    "toReview_other": "{{count}} bozze da rivedere",
+    "waitingIngredients_one": "{{count}} in attesa di ingredienti",
+    "waitingIngredients_other": "{{count}} in attesa di ingredienti",
+    "part": {
+      "ready_one": "{{count}} da rivedere",
+      "ready_other": "{{count}} da rivedere",
+      "running_one": "{{count}} in lavorazione",
+      "running_other": "{{count}} in lavorazione",
+      "failed_one": "{{count}} non riuscita",
+      "failed_other": "{{count}} non riuscite",
+      "exhausted": "il modello non trova altri piatti nuovi"
+    },
+    "defaults": {
+      "name": "Catalogo di base",
+      "brief": "Ricette semplici per tutti i giorni, alla portata di chi cucina a casa, con ingredienti facili da trovare in Italia. Varia tra le stagioni.",
+      "targets": [
+        {
+          "key": "primi",
+          "theme": "Primi piatti italiani di tutti i giorni: pasta, risotti e gnocchi con sughi semplici",
+          "count": 50
+        },
+        {
+          "key": "zuppe",
+          "theme": "Minestre, zuppe e vellutate italiane, anche con legumi",
+          "count": 20
+        },
+        {
+          "key": "carne",
+          "theme": "Secondi piatti italiani di carne semplici: pollo, tacchino, maiale, manzo, polpette",
+          "count": 30
+        },
+        {
+          "key": "pesce",
+          "theme": "Secondi piatti italiani di pesce semplici e veloci",
+          "count": 25
+        },
+        {
+          "key": "uova-legumi",
+          "theme": "Secondi italiani con uova, formaggi o legumi: frittate, sformati, polpette di legumi",
+          "count": 20
+        },
+        {
+          "key": "contorni",
+          "theme": "Contorni italiani di verdure di stagione",
+          "count": 35
+        },
+        {
+          "key": "unici",
+          "theme": "Piatti unici italiani: torte salate, insalatone, pizze e focacce fatte in casa",
+          "count": 20
+        },
+        {
+          "key": "mondo",
+          "theme": "Piatti orientali e internazionali semplici con ingredienti dei supermercati italiani: riso saltato, curry, wok, noodles, tacos, hummus",
+          "count": 20
+        }
+      ]
+    },
+    "sites": {
+      "title": "Siti delle ricette",
+      "hint": "La ricerca prova prima le pagine dei siti fidati e non usa mai quelli esclusi. Una pagina vale come fonte solo se contiene una ricetta completa in formato strutturato.",
+      "trusted": "Fidati",
+      "blocked": "Esclusi",
+      "domain": "Dominio",
+      "asTrusted": "Fidato",
+      "asBlocked": "Escluso",
+      "add": "Aggiungi"
+    }
+  },
+  "proposals": {
+    "hint": "Ingredienti che le bozze delle campagne usano e che il catalogo non ha. Il modello propone se è un ingrediente nuovo (con categoria, stagione e unità) o un altro nome di uno esistente: controlla, correggi se serve e approva insieme. Le bozze che aspettavano solo questi ingredienti vengono pubblicate subito, se superano la soglia.",
+    "view": {
+      "pending": "Da decidere",
+      "approved": "Approvati",
+      "rejected": "Rifiutati"
+    },
+    "none": "Niente qui.",
+    "selectAll_one": "Seleziona {{count}}",
+    "selectAll_other": "Seleziona tutti ({{count}})",
+    "approve_one": "Approva {{count}}",
+    "approve_other": "Approva {{count}}",
+    "reject": "Rifiuta",
+    "approved_one": "{{count}} ingrediente approvato; ricette pubblicate: {{published}}",
+    "approved_other": "{{count}} ingredienti approvati; ricette pubblicate: {{published}}",
+    "rejected_one": "{{count}} rifiutato: le sue bozze aspettano la revisione",
+    "rejected_other": "{{count}} rifiutati: le loro bozze aspettano la revisione",
+    "waiting_one": "{{count}} bozza in attesa",
+    "waiting_other": "{{count}} bozze in attesa",
+    "became": "→ {{name}}",
+    "usedBy": "In: {{dishes}}",
+    "new": "Nuovo ingrediente",
+    "alias": "Altro nome di…",
+    "aliasOf": "Ingrediente esistente",
+    "category": "Categoria",
+    "unit": "Unità",
+    "basic": "Di base (sale, olio…)"
   }
 }

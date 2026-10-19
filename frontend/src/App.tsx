@@ -22,6 +22,8 @@ import { UsagePage } from './pages/manage/UsagePage'
 import { SearchProbePage } from './pages/manage/SearchProbePage'
 import { ActivityStatsPage } from './pages/manage/ActivityStatsPage'
 import { InviteRequestsPage } from './pages/manage/InviteRequestsPage'
+import { CampaignsPage } from './pages/manage/CampaignsPage'
+import { IngredientProposalsPage } from './pages/manage/IngredientProposalsPage'
 import { SystemRulesPage } from './pages/manage/SystemRulesPage'
 import { ManageIndex, ManageLayout } from './pages/manage/ManageLayout'
 import { LoginPage } from './pages/LoginPage'
@@ -61,6 +63,8 @@ function Protected() {
             <Route path="/manage/ingredients" element={<ManageLayout><IngredientsPage /></ManageLayout>} />
             <Route path="/manage/rules" element={<ManageLayout><SystemRulesPage /></ManageLayout>} />
             <Route path="/manage/drafts" element={<ManageLayout><DraftsPage /></ManageLayout>} />
+            <Route path="/manage/campaigns" element={<ManageLayout><CampaignsPage /></ManageLayout>} />
+            <Route path="/manage/ingredient-proposals" element={<ManageLayout><IngredientProposalsPage /></ManageLayout>} />
             <Route path="/manage/settings" element={<ManageLayout><SettingsPage /></ManageLayout>} />
             <Route path="/manage/transfer" element={<ManageLayout><TransferPage /></ManageLayout>} />
             <Route path="/manage/usage" element={<ManageLayout><UsagePage /></ManageLayout>} />

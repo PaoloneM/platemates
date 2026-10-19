@@ -569,6 +569,39 @@ System drafts with sources (2026-10-09), `apps/curation`:
   `system_draft` creates the system recipe, copies the web rating (`Recipe.web_rating`, read
   only, shown to everyone) and marks the draft published. Drafts can be discarded and retried.
 
+Campaigns: filling the catalog in bulk (decided with Paolo 2026-10-19), `apps/curation`:
+
+- **Run on the developer's Mac with the local model, promoted to production by export.** The
+  server has no model of its own (it uses paid APIs) and never reaches Unsloth Studio; a
+  campaign runs on the local stack, as slowly as it needs, and the recipes it published travel
+  as a transfer file (`apps/transfer`, recipes by id, ingredients with them, matched by name on
+  the other side). Procedure in `docs/operations.md`.
+- **A campaign** (`Campaign`) has targets, each a theme and a number of recipes, and a brief
+  for all of them. The worker plans dishes for the first target that needs some, at most 20 at
+  a time and only when no draft is waiting, so every round of planning knows every dish
+  drafted so far (all campaigns and system recipes are left out of the model's suggestions).
+  Failed or discarded drafts are replaced at the next round, up to twice a target's count of
+  attempts; a target the model finds no new dish for stops. Pausing stops both planning and
+  drafting of its dishes.
+- **Sites** (`SourceSite`): trusted sites are named to the search and their pages tried first;
+  blocked ones are never used. Seeded with well-known Italian recipe sites and social or video
+  sites blocked; staff change the list. Every link the search offered is kept with its outcome
+  (`CandidateLink`: used, rejected, blocked, same site, not needed), to look at, never to
+  approve one by one.
+- **Unknown ingredients** become one `IngredientProposal` per name, however many drafts use it:
+  the model proposes, among the similar catalog entries it is shown, whether it is another name
+  of one (an alias) or a new ingredient with category, season, unit and whether it is a staple.
+  Nothing enters the catalog until staff approve, in one list (Management > Proposed
+  ingredients); what they changed becomes their decision on the ingredient, the rest stays the
+  model's (`ProvenanceMixin.propose`).
+- **Automatic publishing**: a campaign draft is published as a system recipe without staff when
+  its sources are reliable enough, its web rating and number of votes reach the bar, every
+  ingredient is known or approved and no system recipe has its title yet
+  (`publishing.blockers`; the bar is four `curation.*` settings: on, reliability "high",
+  4.0 stars, 5 votes). Its fields are proposed by the model, so staff edits always win.
+  Approving a proposal publishes the drafts that waited only for it. The rest wait in Drafts,
+  each saying what stopped it.
+
 Promoting a team's recipe to a system recipe (decided with Paolo 2026-10-11):
 
 - Staff (admin plane) can make any recipe they can see, their teams' or one shared by another

@@ -252,9 +252,13 @@ python3 scripts/backup.py restore backups/<file>.tar    # replace all data (take
   no members, only staff write its recipes, and they are always shared. Whether a team's
   recipe is shared is the user's choice at creation: never give `visibility` a default in the
   API or the editor
-- System recipe drafts (`apps/curation`) never become recipes by themselves: staff publish them
-  from the recipe editor (`system_draft` on create). Their ratings are computed from the
-  verified source pages, never asked of the model
+- System recipe drafts (`apps/curation`) become recipes only when staff publish them from the
+  recipe editor (`system_draft` on create), or, for a campaign's drafts, through
+  `publishing.auto_publish` when they meet the `curation.*` bar. Their ratings are computed
+  from the verified source pages, never asked of the model. Ingredients drafts need enter the
+  catalog only as `IngredientProposal`s staff approve
+- Campaigns run on a local installation with the local model; their recipes reach production
+  only as a transfer file (`docs/operations.md`), never by pointing the server at a local model
 - Data moves between installations through `apps/transfer` (export/import by stable `uid`,
   catalogs matched by name too), never by copying database ids. A model whose objects travel in
   export files has a `uid`; add new fields to `exporting.py` and `importing.py` together

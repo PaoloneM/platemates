@@ -1,3 +1,5 @@
+import CampaignIcon from '@mui/icons-material/AutoAwesomeOutlined'
+import ProposalIcon from '@mui/icons-material/PlaylistAddCheckOutlined'
 import CachedIcon from '@mui/icons-material/Cached'
 import DraftIcon from '@mui/icons-material/AutoStoriesOutlined'
 import EggIcon from '@mui/icons-material/EggOutlined'
@@ -36,6 +38,8 @@ const SECTIONS = [
   { key: 'ingredients', path: '/manage/ingredients', icon: <EggIcon />, who: 'staff' },
   { key: 'rules', path: '/manage/rules', icon: <RuleIcon />, who: 'staff' },
   { key: 'drafts', path: '/manage/drafts', icon: <DraftIcon />, who: 'staff' },
+  { key: 'campaigns', path: '/manage/campaigns', icon: <CampaignIcon />, who: 'staff' },
+  { key: 'proposals', path: '/manage/ingredient-proposals', icon: <ProposalIcon />, who: 'staff' },
   { key: 'settings', path: '/manage/settings', icon: <TuneIcon />, who: 'admin' },
   { key: 'usage', path: '/manage/usage', icon: <UsageIcon />, who: 'admin' },
   { key: 'searchProbe', path: '/manage/search-probe', icon: <ProbeIcon />, who: 'admin' },

@@ -312,6 +312,32 @@ docker compose up -d
 decrypt the `.env` (its database password must match the restored roles):
 `openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:<passphrase> -in platemates.env.enc -out .env`.
 
+## Filling the catalog with a campaign
+
+Campaigns (`apps/curation`, `docs/architecture.md`) run on the Mac with the local model; the
+server only receives the result.
+
+1. **Start the model.** Unsloth Studio on the host, with the chat model loaded and its web
+   search available; set `llm.context_tokens` (Management > Settings) to the context it was
+   loaded with. A larger quantization or more context is fine: the work is in the background.
+2. **Start the local stack**: `docker compose up -d --build` (the `worker` drafts).
+3. **Bring the production catalog in** so the model does not plan dishes that already exist:
+   on the server's admin plane, Management > Export / import > system scope, then import the
+   file locally (dry run first). Ingredients are matched by name, so this is optional, but it
+   also brings production's system recipes into the "already done" list.
+4. **Start the campaign** in Management > Campaigns (the default plan: 200 everyday Italian
+   recipes and 20 Asian or international, to adjust), and the sites list under it. It runs
+   unattended; pause and resume at will (stopping the stack only interrupts the draft in
+   progress, retried later).
+5. **Decide the proposed ingredients** in Management > Proposed ingredients, now and then: the
+   drafts waiting only for them are published as soon as they are approved.
+6. **Review the rest** in Management > System drafts: each draft below the bar says why
+   (`blockers`), with the links the search found.
+7. **Promote**: "Export N recipes" on the campaign card downloads the transfer file of the
+   recipes it published; on the server's admin plane, Management > Export / import, import it
+   as a dry run, read the summary, then import it for real. Recipes keep their identity
+   (`uid`): importing the same file again changes nothing.
+
 ## Moving to another machine
 
 1. On the old machine: `python3 scripts/backup.py create`.

@@ -16,6 +16,7 @@ application.
 | **Recipe book**: structured recipes, ingredients scaled to the number of people, two-level seasonality, cuisine, tools, ratings | Built |
 | **Community**: system recipes (PlateMates), recipes teams choose to share (signed or anonymous), added to the team's book as they are, and changed into the team's own version at the first edit (shown beside the original, differences marked); recipe book, community or both in one screen, one card per dish | Built |
 | **System recipes from the web**: LLM drafts grounded on verified recipe pages, with reliability and web rating, reviewed and published by staff | Built |
+| **Campaigns**: hundreds of system recipes planned by theme and drafted by the local model from trusted sites; the well-rated ones published on their own, new ingredients approved in one list, the result exported to production | Built |
 | **Menu generation from community recipes**: real recipes instead of invented dishes, so every constraint and the shopping list hold | Next |
 | **Recipe assistant**: add a recipe by telling it in your own words, by pasting a link, by taking a photo of a cookbook page or a handwritten card, or by asking it to search your recipes, other teams' recipes and the web; every draft is reviewed before saving | Built |
 | **Teams**: sign-in with email/password or Google, Microsoft, Apple (Keycloak); invitation-only access; interface in Italian and English, remembered per user | Built |
