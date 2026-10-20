@@ -278,3 +278,13 @@ def test_creating_a_second_team_with_the_same_name_is_flagged(user, world):
     report = import_document(document, user=user, dry_run=True)
 
     assert any("already have a team named «Test team»" in w for w in report.warnings)
+
+
+def test_a_browser_opening_the_export_link_gets_the_file(api, admin, world):
+    """A plain link asks for HTML: it must still get the JSON document, not DRF's page."""
+    response = api.get(
+        f"/api/transfer/export/?scope=team&team={world['team'].pk}",
+        HTTP_ACCEPT="text/html,application/xhtml+xml,*/*;q=0.8",
+    )
+    assert response["Content-Type"] == "application/json"
+    assert json.loads(response.content)["format"] == "platemates-export"

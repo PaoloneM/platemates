@@ -8,8 +8,14 @@ from django.db.models import Count
 from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework import status
-from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    parser_classes,
+    permission_classes,
+    renderer_classes,
+)
 from rest_framework.parsers import MultiPartParser
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 
 from apps.catalog.models import Ingredient
@@ -27,6 +33,9 @@ def _ids(value: str) -> list[int]:
 
 @api_view(["GET"])
 @permission_classes([IsAppAdmin])
+# Always the JSON file, also when a browser opens the link (it asks for HTML, which would get
+# the browsable API page instead of the document).
+@renderer_classes([JSONRenderer])
 def export_view(request):
     """`?scope=team&team=<id>`, `?scope=recipes&ids=1,2`, `?scope=ingredients&ids=...` or
     `&owner=system`, `?scope=system`: the document, as a file to save."""
