@@ -35,7 +35,7 @@ from apps.teams.views import (
     RecipeBookEntryViewSet,
     TeamViewSet,
 )
-from apps.transfer.views import choices_view, export_view, import_view
+from apps.transfer.views import choices_view, confirm_view, export_view, import_view, job_view
 from apps.usage.views import ModelPriceViewSet, usage_view
 
 router = DefaultRouter()
@@ -82,6 +82,8 @@ urlpatterns = [
     path("api/audit-stats/", stats_view),
     path("api/transfer/export/", export_view),
     path("api/transfer/import/", import_view),
+    path("api/transfer/jobs/<int:pk>/", job_view),
+    path("api/transfer/jobs/<int:pk>/confirm/", confirm_view),
     path("api/transfer/choices/", choices_view),
     path("api/calendar/", CalendarView.as_view()),
     path("api/calendar/<str:date>/", CalendarDayView.as_view()),

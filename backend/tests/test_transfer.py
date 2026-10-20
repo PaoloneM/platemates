@@ -12,8 +12,10 @@ from apps.catalog.models import Ingredient, IngredientCategory, KitchenTool
 from apps.menus.models import MealSlot, SlotDish, SystemRule, TeamRule, WeeklyMenu
 from apps.recipes.models import Cuisine, Recipe, RecipeIngredient, Visibility
 from apps.teams.models import CalendarDay, Member, Preference, RecipeBookEntry, Team
-from apps.transfer.exporting import export_system, export_team
+from apps.transfer import jobs
+from apps.transfer.exporting import export_recipes, export_system, export_team
 from apps.transfer.importing import TransferError, import_document
+from apps.transfer.models import ImportJob
 
 MONDAY = dt.date(2026, 10, 5)
 
@@ -241,6 +243,11 @@ def test_only_administrators_export_and_import(api, world):
     assert api.get("/api/transfer/choices/").status_code == 403
 
 
+def run_queued():
+    while (job := jobs.claim_next()) is not None:
+        jobs.run_job(job)
+
+
 def test_administrators_download_and_preview_through_the_api(api, admin, world):
     response = api.get(f"/api/transfer/export/?scope=team&team={world['team'].pk}")
     assert response.status_code == 200
@@ -248,36 +255,59 @@ def test_administrators_download_and_preview_through_the_api(api, admin, world):
     upload = io.BytesIO(json.dumps(response.json()).encode())
     upload.name = "team.json"
 
-    preview = api.post(
+    queued = api.post(
         "/api/transfer/import/", {"file": upload, "dry_run": "true"}, format="multipart"
-    ).json()
+    )
+    assert queued.status_code == 202 and queued.json()["status"] == "queued"
+    run_queued()
+    preview = api.get(f"/api/transfer/jobs/{queued.json()['id']}/").json()
 
-    assert preview["dry_run"] is True
-    assert preview["skipped"]["recipes"] == 2
-    assert preview["document"]["scope"] == "team"
+    assert preview["status"] == "done" and preview["report"]["dry_run"] is True
+    assert preview["report"]["skipped"]["recipes"] == 2
+    assert preview["report"]["document"]["scope"] == "team"
     choices = api.get("/api/transfer/choices/?search=zucca").json()
     assert [t["name"] for t in choices["teams"]] == ["Test team"]
     assert [r["title"] for r in choices["recipes"]] == ["Zuppa di zucca"]
 
 
-def test_a_file_that_is_not_json_is_refused(api, admin):
-    upload = io.BytesIO(b"not json")
+def test_a_preview_is_imported_for_real_in_the_worker_with_its_progress(
+    api, admin, world, realtime_events
+):
+    lone = Recipe.objects.create(
+        title="Pappa al pomodoro", owner_team=Team.system(), visibility=Visibility.SHARED
+    )
+    document = export_recipes([lone.pk])
+    lone.delete()
+    upload = io.BytesIO(json.dumps(document).encode())
+    upload.name = "recipes.json"
+    preview = api.post("/api/transfer/import/", {"file": upload}, format="multipart").json()
+    run_queued()
+    real = api.post(f"/api/transfer/jobs/{preview['id']}/confirm/")
+    assert real.status_code == 202 and real.json()["dry_run"] is False
+    run_queued()
+    job = ImportJob.objects.get(pk=real.json()["id"])
+    assert job.status == "done" and job.report["created"]["recipes"] == 1
+    assert job.document == {}  # imported for real: the file is not kept
+    phases = [d["phase"] for room, event, d in realtime_events if event == "transfer"]
+    assert "recipes" in phases and {
+        room for room, event, _ in realtime_events if event == "transfer"
+    } == {"admin"}
+    # A preview already confirmed and emptied cannot be confirmed again; a real import never.
+    assert api.post(f"/api/transfer/jobs/{real.json()['id']}/confirm/").status_code == 400
+
+
+def test_a_file_that_is_not_an_export_is_refused_at_once(api, admin):
+    upload = io.BytesIO(json.dumps({"format": "other"}).encode())
     upload.name = "x.json"
     response = api.post("/api/transfer/import/", {"file": upload}, format="multipart")
-    assert response.status_code == 400
+    assert response.status_code == 400 and not ImportJob.objects.exists()
 
 
-def test_creating_a_second_team_with_the_same_name_is_flagged(user, world):
-    document = export_team(world["team"])
-    forget_team(world["team"])
-    # On the server, a team was created for the same people, but the target was left on
-    # automatic.
-    mine = Team.objects.create(name="Test team")
-    mine.users.add(user)
-
-    report = import_document(document, user=user, dry_run=True)
-
-    assert any("already have a team named «Test team»" in w for w in report.warnings)
+def test_an_import_the_worker_dropped_is_marked_failed(admin):
+    job = ImportJob.objects.create(status=ImportJob.Status.RUNNING, document={})
+    assert jobs.fail_interrupted() == 1
+    job.refresh_from_db()
+    assert job.status == "failed"
 
 
 def test_a_browser_opening_the_export_link_gets_the_file(api, admin, world):

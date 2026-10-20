@@ -21,7 +21,7 @@ from django.db import close_old_connections
 from apps.core.planes import ADMIN, plane_of
 from apps.teams.models import Membership
 
-from .events import STAFF_ROOM, team_room
+from .events import ADMIN_ROOM, STAFF_ROOM, team_room
 
 
 def user_from_cookies(cookie_header: str):
@@ -38,8 +38,8 @@ def user_from_cookies(cookie_header: str):
 
 
 def rooms_of(cookie_header: str, plane: str | None = None) -> tuple[int, list[str]] | None:
-    """The user's id and the rooms they may join, or None if not signed in. The staff room
-    only on the admin plane (apps/core/planes.py)."""
+    """The user's id and the rooms they may join, or None if not signed in. The staff and
+    administrators' rooms only on the admin plane (apps/core/planes.py)."""
     close_old_connections()
     try:
         user = user_from_cookies(cookie_header)
@@ -47,8 +47,12 @@ def rooms_of(cookie_header: str, plane: str | None = None) -> tuple[int, list[st
             return None
         teams = Membership.objects.filter(user=user).values_list("team_id", flat=True)
         rooms = [team_room(team) for team in teams]
-        staff = user.is_staff and (plane or settings.DEFAULT_PLANE) == ADMIN
-        return user.pk, [*rooms, STAFF_ROOM] if staff else rooms
+        admin_plane = (plane or settings.DEFAULT_PLANE) == ADMIN
+        if admin_plane and user.is_staff:
+            rooms.append(STAFF_ROOM)
+        if admin_plane and getattr(getattr(user, "profile", None), "is_admin", False):
+            rooms.append(ADMIN_ROOM)
+        return user.pk, rooms
     finally:
         close_old_connections()
 

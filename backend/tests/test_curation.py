@@ -410,3 +410,7 @@ def test_staff_join_their_own_room(user, team, monkeypatch):
     assert server.rooms_of(cookie, "admin")[1] == [f"team-{team.pk}", "staff"]
     # On the public plane a staff account is an ordinary member (apps/core/planes.py).
     assert server.rooms_of(cookie, "public")[1] == [f"team-{team.pk}"]
+    # Administrators also join theirs (imports' progress), on the admin plane only.
+    UserProfile.objects.filter(user=user).update(is_admin=True)
+    assert server.rooms_of(cookie, "admin")[1] == [f"team-{team.pk}", "staff", "admin"]
+    assert server.rooms_of(cookie, "public")[1] == [f"team-{team.pk}"]

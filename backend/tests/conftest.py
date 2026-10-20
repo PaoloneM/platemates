@@ -44,11 +44,15 @@ def isolated_caches(settings):
 
 @pytest.fixture(autouse=True)
 def no_real_models(settings):
-    """Tests never reach a real model (Unsloth Studio may be running on the machine): a provider
-    a test did not replace points at a closed port and fails at once."""
+    """Tests never reach a real model or search engine (Unsloth Studio, SearXNG may be running
+    on the machine): a provider a test did not replace points at a closed port and fails at
+    once."""
     from ai import factory
 
     nowhere = "http://127.0.0.1:9"
+    # Nor our SearXNG, whatever the developer's .env says.
+    settings.RECIPE_SEARCH = "studio"
+    settings.SEARXNG_URL = nowhere
     settings.AI = {
         **settings.AI,
         "CHAT": {**settings.AI["CHAT"], "BASE_URL": nowhere},

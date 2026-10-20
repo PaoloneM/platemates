@@ -1070,6 +1070,12 @@ one that already has its own users.
 - **Preview**: the import runs in a transaction and, for a preview, is rolled back, so the
   preview is exactly what the import will do. Values are restored as stored, provenance
   included (data moved, not decisions taken); embeddings are refreshed after commit.
+- **In the background** (2026-10-20): the page uploads the file and gets an `ImportJob` back
+  at once; the worker runs it (after menu generations, before system drafts), so a large file
+  and its embeddings (one API call per recipe on the server) never meet a request timeout. Its
+  phases (catalog, recipes n/N, team contents, embeddings) reach the administrators' realtime
+  room (`admin`, event `transfer`); the page also reloads the job on reconnection. A preview
+  keeps the file, so "Import" confirms it without uploading it again; a real import empties it.
 
 ## Shopping lists (decided with Paolo 2026-10-11)
 

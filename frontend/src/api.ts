@@ -684,6 +684,22 @@ export type ImportReport = {
   teams: { file: string; into: string; new: boolean }[]
   document: { scope: string; exported_at: string }
 }
+// An import running in the worker: where it is, and its report once done.
+export type ImportPhase = 'catalog' | 'recipes' | 'teams' | 'embeddings'
+export type ImportJob = {
+  id: number
+  file_name: string
+  dry_run: boolean
+  status: 'queued' | 'running' | 'done' | 'failed'
+  phase: ImportPhase | ''
+  done: number
+  total: number
+  report: ImportReport | null
+  error: string
+  created_at: string
+}
+// Live progress of an import, sent to the administrators.
+export type ImportJobEvent = Pick<ImportJob, 'id' | 'status' | 'phase' | 'done' | 'total'>
 
 // AI usage and estimated costs (Management > Usage, administrators). Costs in USD.
 export type UsageCounts = {

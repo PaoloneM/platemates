@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Chip,
+  LinearProgress,
   MenuItem,
   Paper,
   Stack,
@@ -19,9 +20,19 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { api, apiDownload, ApiError, apiUpload, type ImportReport, type TransferChoices } from '../../api'
+import {
+  api,
+  apiDownload,
+  ApiError,
+  apiUpload,
+  type ImportJob,
+  type ImportJobEvent,
+  type ImportReport,
+  type TransferChoices,
+} from '../../api'
+import { useOnConnect, useRealtimeEvent } from '../../realtime'
 
 type Scope = 'team' | 'recipes' | 'system' | 'ingredients'
 type RecipeChoice = TransferChoices['recipes'][number]
@@ -167,39 +178,79 @@ function ReportView({ report }: { report: ImportReport }) {
   )
 }
 
+/** Where an import running in the worker is: its phase, and how many items of it are done. */
+function JobProgress({ job }: { job: ImportJob }) {
+  const { t } = useTranslation()
+  const counted = job.total > 1
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="body2">
+        {job.status === 'queued' || !job.phase
+          ? t('transfer.queued')
+          : t(`transfer.phase.${job.phase}`) + (counted ? ` · ${job.done} / ${job.total}` : '')}
+        {job.dry_run && ` (${t('transfer.dryRun')})`}
+      </Typography>
+      <LinearProgress variant={counted ? 'determinate' : 'indeterminate'}
+        value={counted ? (job.done / job.total) * 100 : undefined} />
+    </Stack>
+  )
+}
+
 function ImportPanel({ choices }: { choices: TransferChoices }) {
   const { t, i18n } = useTranslation()
   const [file, setFile] = useState<File | null>(null)
   const [target, setTarget] = useState<number | ''>('')
   const [mode, setMode] = useState<'skip' | 'update'>('skip')
-  const [report, setReport] = useState<ImportReport | null>(null)
+  // The import running in the worker (a preview or the real one), followed live.
+  const [job, setJob] = useState<ImportJob | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const report = job?.status === 'done' ? job.report : null
+  const running = job?.status === 'queued' || job?.status === 'running'
 
   // Any change of file or options needs a new preview before importing.
   function reset() {
-    setReport(null)
+    setJob(null)
     setError(null)
   }
 
-  async function run(dryRun: boolean) {
-    if (!file) return
+  async function start(request: Promise<ImportJob>) {
     setBusy(true)
     setError(null)
-    const form = new FormData()
-    form.append('file', file)
-    form.append('mode', mode)
-    form.append('target_team', String(target))
-    form.append('dry_run', String(dryRun))
     try {
-      setReport(await apiUpload<ImportReport>('/transfer/import/', form))
+      setJob(await request)
     } catch (e) {
-      setReport(null)
+      setJob(null)
       setError(errorOf(e, t('common.error')))
     } finally {
       setBusy(false)
     }
   }
+
+  function preview() {
+    if (!file) return
+    const form = new FormData()
+    form.append('file', file)
+    form.append('mode', mode)
+    form.append('target_team', String(target))
+    form.append('dry_run', 'true')
+    void start(apiUpload<ImportJob>('/transfer/import/', form))
+  }
+
+  // The real import reads the file the preview read, with the same options.
+  function confirm() {
+    if (job) void start(api<ImportJob>(`/transfer/jobs/${job.id}/confirm/`, { method: 'POST' }))
+  }
+
+  const reload = useCallback(() => {
+    if (job) void api<ImportJob>(`/transfer/jobs/${job.id}/`).then(setJob).catch(() => undefined)
+  }, [job])
+  useOnConnect(reload)
+  useRealtimeEvent<ImportJobEvent>('transfer', (event) => {
+    if (!job || event.id !== job.id) return
+    if (event.status === 'done' || event.status === 'failed') reload()
+    else setJob({ ...job, ...event })
+  })
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
@@ -227,14 +278,16 @@ function ImportPanel({ choices }: { choices: TransferChoices }) {
         </ToggleButtonGroup>
         <Typography variant="body2" color="text.secondary">{t(`transfer.modeHint.${mode}`)}</Typography>
         <Stack direction="row" spacing={1}>
-          <Button variant="outlined" disabled={!file || busy} onClick={() => void run(true)}>
+          <Button variant="outlined" disabled={!file || busy || running} onClick={preview}>
             {t('transfer.preview')}
           </Button>
-          <Button variant="contained" disabled={!report?.dry_run || busy} onClick={() => void run(false)}>
+          <Button variant="contained" disabled={!report?.dry_run || busy || running} onClick={confirm}>
             {t('transfer.confirm')}
           </Button>
         </Stack>
         {error && <Alert severity="error">{error}</Alert>}
+        {job && running && <JobProgress job={job} />}
+        {job?.status === 'failed' && <Alert severity="error">{t('transfer.failed', { error: job.error })}</Alert>}
         {report && (
           <>
             <Alert severity={report.dry_run ? 'info' : 'success'}>

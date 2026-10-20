@@ -53,6 +53,8 @@ def _emit(event: str, data: dict[str, Any], room: str) -> None:
 
 # Staff's own room: the progress of system recipe drafts.
 STAFF_ROOM = "staff"
+# The administrators' room: the progress of imports.
+ADMIN_ROOM = "admin"
 
 
 def publish(team_id: int, event: str, data: dict[str, Any]) -> None:

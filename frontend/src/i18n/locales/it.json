@@ -982,6 +982,15 @@
       "team_rules": "Regole del team",
       "book_entries": "Voci del ricettario",
       "menus": "Menu settimanali"
+    },
+    "queued": "In coda: parte appena il worker è libero…",
+    "dryRun": "prova a vuoto",
+    "failed": "Importazione non riuscita: {{error}}",
+    "phase": {
+      "catalog": "Catalogo (ingredienti, cucine, regole)",
+      "recipes": "Ricette",
+      "teams": "Contenuti dei team",
+      "embeddings": "Calcolo per la ricerca (embedding)"
     }
   },
   "usage": {

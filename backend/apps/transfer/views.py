@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 from django.utils.text import slugify
@@ -24,7 +25,9 @@ from apps.recipes.models import Recipe
 from apps.teams.models import Team
 
 from .exporting import export_ingredients, export_recipes, export_system, export_team
-from .importing import MODES, TransferError, import_document
+from .importing import MODES, Importer, TransferError
+from .jobs import notify_worker
+from .models import ImportJob
 
 
 def _ids(value: str) -> list[int]:
@@ -69,12 +72,36 @@ def export_view(request):
     return response
 
 
+def _job_data(job: ImportJob) -> dict:
+    return {
+        "id": job.pk,
+        "file_name": job.file_name,
+        "dry_run": job.dry_run,
+        "status": job.status,
+        "phase": job.phase,
+        "done": job.done,
+        "total": job.total,
+        "report": job.report,
+        "error": job.error,
+        "created_at": job.created_at,
+    }
+
+
+def _queue(**fields) -> ImportJob:
+    with transaction.atomic():
+        job = ImportJob.objects.create(**fields)
+        notify_worker()
+    return job
+
+
 @api_view(["POST"])
 @permission_classes([IsAppAdmin])
 @parser_classes([MultiPartParser])
 def import_view(request):
     """Multipart: `file` (an export), `mode` (skip | update), `target_team` (id, or empty for
-    the team with the file's identity, else a new one), `dry_run` (true: preview only)."""
+    the team with the file's identity, else a new one), `dry_run` (true: preview only). The
+    import runs in the worker: 202 with the job, followed at `jobs/<id>/` and live (`transfer`
+    events in the administrators' room)."""
     upload = request.FILES.get("file")
     if upload is None:
         return Response({"file": "Choose a file."}, status=status.HTTP_400_BAD_REQUEST)
@@ -88,19 +115,47 @@ def import_view(request):
         target = Team.objects.filter(pk=target_id, is_system=False).first()
         if target is None:
             return Response({"target_team": "No such team."}, status=status.HTTP_400_BAD_REQUEST)
-    dry_run = str(request.data.get("dry_run", "true")).lower() != "false"
     try:
-        report = import_document(
-            document,
-            user=request.user,
-            mode=mode if mode in MODES else "",
-            target_team=target,
-            dry_run=dry_run,
-        )
+        # The file's format, version and the mode are checked now, not in the worker.
+        Importer(document, user=request.user, mode=mode if mode in MODES else "")
     except TransferError as exc:
         return Response({"file": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    summary = {k: document.get(k) for k in ("scope", "exported_at")}
-    return Response({**report.as_dict(), "document": summary})
+    job = _queue(
+        created_by=request.user,
+        file_name=upload.name[:255],
+        document=document,
+        mode=mode,
+        target_team=target,
+        dry_run=str(request.data.get("dry_run", "true")).lower() != "false",
+    )
+    return Response(_job_data(job), status=status.HTTP_202_ACCEPTED)
+
+
+@api_view(["GET"])
+@permission_classes([IsAppAdmin])
+def job_view(request, pk: int):
+    job = ImportJob.objects.filter(pk=pk).first()
+    if job is None:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    return Response(_job_data(job))
+
+
+@api_view(["POST"])
+@permission_classes([IsAppAdmin])
+def confirm_view(request, pk: int):
+    """Import for real the file a finished preview read, with the same options."""
+    preview = ImportJob.objects.filter(pk=pk, dry_run=True, status=ImportJob.Status.DONE).first()
+    if preview is None or not preview.document:
+        return Response({"detail": "Preview the file first."}, status=status.HTTP_400_BAD_REQUEST)
+    job = _queue(
+        created_by=request.user,
+        file_name=preview.file_name,
+        document=preview.document,
+        mode=preview.mode,
+        target_team=preview.target_team,
+        dry_run=False,
+    )
+    return Response(_job_data(job), status=status.HTTP_202_ACCEPTED)
 
 
 @api_view(["GET"])

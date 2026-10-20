@@ -76,6 +76,7 @@ class Importer:
         mode: str = "skip",
         target_team: Team | None = None,
         dry_run: bool = False,
+        progress=None,
     ) -> None:
         if not isinstance(document, dict) or document.get("format") != FORMAT:
             raise TransferError("Not a PlateMates export file.")
@@ -95,18 +96,24 @@ class Importer:
         self.touched_recipes: list[Recipe] = []
         # Book entries this import created with a recipe: completed from the file's book.
         self.new_entries: set[int] = set()
+        # `progress(phase, done, total)`: how far the import is, for whoever waits for it.
+        self.progress = progress or (lambda phase, done, total: None)
 
     # -- entry point -----------------------------------------------------------------------------
 
     def run(self) -> Report:
         with transaction.atomic():
+            self.progress("catalog", 0, 1)
             self._tools()
             self._cuisines()
             self._teams()
             self._ingredients()
             self._system_rules()
+            self.progress("catalog", 1, 1)
             self._recipes()
-            for data in self.doc.get("teams") or []:
+            teams = self.doc.get("teams") or []
+            for done, data in enumerate(teams):
+                self.progress("teams", done, len(teams))
                 self._team_contents(self.teams[data["uid"]], data)
             if self.report.dry_run:
                 transaction.set_rollback(True)
@@ -117,8 +124,11 @@ class Importer:
     def _embed(self) -> None:
         from apps.recipes.embeddings import refresh_embedding
 
-        for recipe in self.touched_recipes:
+        total = len(self.touched_recipes)
+        for done, recipe in enumerate(self.touched_recipes):
+            self.progress("embeddings", done, total)
             refresh_embedding(recipe)
+        self.progress("embeddings", total, total)
 
     def _count(self, outcome: str, kind: str) -> None:
         getattr(self.report, outcome)[kind] += 1
@@ -307,7 +317,8 @@ class Importer:
 
     def _recipes(self) -> None:
         files = self.doc.get("recipes") or []
-        for data in files:
+        for done, data in enumerate(files):
+            self.progress("recipes", done, len(files))
             recipe = self._find_recipe(data)
             if recipe is not None and not self.update:
                 self._count("skipped", "recipes")
@@ -545,5 +556,14 @@ class Importer:
             )
 
 
-def import_document(document, *, user, mode="skip", target_team=None, dry_run=False) -> Report:
-    return Importer(document, user=user, mode=mode, target_team=target_team, dry_run=dry_run).run()
+def import_document(
+    document, *, user, mode="skip", target_team=None, dry_run=False, progress=None
+) -> Report:
+    return Importer(
+        document,
+        user=user,
+        mode=mode,
+        target_team=target_team,
+        dry_run=dry_run,
+        progress=progress,
+    ).run()

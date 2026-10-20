@@ -26,6 +26,7 @@ from apps.curation import campaigns
 from apps.curation import jobs as drafts
 from apps.menus import generation as menus
 from apps.teams.models import Team
+from apps.transfer import jobs as imports
 from apps.usage.context import attribute
 from apps.usage.models import Feature
 
@@ -38,7 +39,7 @@ STOP_CHECK_SECONDS = 1
 RECONNECT_SECONDS = 5
 
 
-CHANNELS = (menus.CHANNEL, drafts.CHANNEL)
+CHANNELS = (menus.CHANNEL, drafts.CHANNEL, imports.CHANNEL)
 
 
 def listen() -> None:
@@ -77,7 +78,9 @@ class Command(BaseCommand):
 
         signal.signal(signal.SIGTERM, stop)
         signal.signal(signal.SIGINT, stop)
-        if interrupted := menus.fail_interrupted() + drafts.fail_interrupted():
+        if interrupted := (
+            menus.fail_interrupted() + drafts.fail_interrupted() + imports.fail_interrupted()
+        ):
             self.stdout.write(f"Marked {interrupted} interrupted task(s) as failed.")
         self.stdout.write("Worker started.")
         while not stopping:
@@ -105,6 +108,11 @@ class Command(BaseCommand):
             with attribute(team=generation.menu.team_id, feature=Feature.MENU):
                 menus.run_generation(generation, should_stop=stopping)
             done = f"Generation {generation.pk}: {generation.status}"
+        elif (job := imports.claim_next()) is not None:
+            # An administrator waits for it, as for a menu.
+            self.stdout.write(f"Importing {job.file_name!r} ({job.pk})...")
+            imports.run_job(job)
+            done = f"Import {job.pk}: {job.status}"
         elif (draft := drafts.claim_next()) is not None:
             self.stdout.write(f"Drafting system recipe {draft.dish!r} ({draft.pk})...")
             with attribute(team=Team.system(), feature=Feature.SYSTEM_DRAFTS):

@@ -982,6 +982,15 @@
       "team_rules": "Team rules",
       "book_entries": "Recipe book entries",
       "menus": "Weekly menus"
+    },
+    "queued": "Queued: it starts as soon as the worker is free…",
+    "dryRun": "dry run",
+    "failed": "Import failed: {{error}}",
+    "phase": {
+      "catalog": "Catalog (ingredients, cuisines, rules)",
+      "recipes": "Recipes",
+      "teams": "Team contents",
+      "embeddings": "Search vectors (embeddings)"
     }
   },
   "usage": {
