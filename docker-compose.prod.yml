@@ -221,8 +221,9 @@ services:
   # port. Started only with the `cloudflare` profile, once the deploy gave it its token.
   cloudflared:
     image: cloudflare/cloudflared:2026.10.1
-    # HTTP/2 over TCP, not QUIC: from the Hetzner VM QUIC's UDP streams kept timing out ("no
-    # recent network activity"), and pages took 0.1 to 4 s at random (2026-10-21).
+    # HTTP/2 over TCP, not QUIC: from the Hetzner VM QUIC's UDP streams kept timing out and
+    # reconnecting ("no recent network activity", 2026-10-21). The slow pages seen then came
+    # from Cloudflare's edge, not from the tunnel (docs/operations.md).
     command: tunnel --no-autoupdate --protocol http2 run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:-}
