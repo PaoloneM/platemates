@@ -16,13 +16,14 @@ from __future__ import annotations
 import hashlib
 import logging
 
+from django.db import connection, transaction
 from pgvector.django import CosineDistance
 
 from ai import AIError, EmbeddingProvider, get_embedding_provider
 from apps.usage.context import attribute
 from apps.usage.models import Feature
 
-from .models import Recipe, RecipeEmbedding
+from .models import PendingEmbedding, Recipe, RecipeEmbedding
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +77,52 @@ def refresh_embedding(recipe: Recipe, provider: EmbeddingProvider | None = None)
         defaults={"vector": vector, "content_hash": content_hash},
     )
     return True
+
+
+# PostgreSQL channel on which queued recipes wake the worker up.
+CHANNEL = "embeddings"
+# Recipes embedded per round of the worker, between which a menu or an import may go first.
+BATCH = 25
+
+
+def queue(recipes) -> None:
+    """Have the worker embed these recipes once the current transaction commits."""
+    ids = sorted({r.pk for r in recipes})
+    if not ids:
+        return
+
+    def enqueue() -> None:
+        PendingEmbedding.objects.bulk_create(
+            [PendingEmbedding(recipe_id=pk) for pk in ids], ignore_conflicts=True
+        )
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT pg_notify(%s, '')", [CHANNEL])
+
+    transaction.on_commit(enqueue)
+
+
+def embed_pending(limit: int = BATCH) -> int:
+    """Embed up to `limit` queued recipes (the worker). How many were taken off the queue.
+    One that fails is dropped from the queue all the same: `embed_recipes` (run at every start)
+    catches up on it."""
+    with transaction.atomic():
+        rows = list(
+            PendingEmbedding.objects.select_for_update(skip_locked=True)
+            .order_by("queued_at")
+            .values_list("pk", "recipe_id")[:limit]
+        )
+        PendingEmbedding.objects.filter(pk__in=[pk for pk, _ in rows]).delete()
+    if not rows:
+        return 0
+    provider = None
+    for recipe in Recipe.objects.filter(pk__in=[r for _, r in rows]).select_related("cuisine"):
+        try:
+            provider = provider or get_embedding_provider()
+        except AIError as exc:
+            log.warning("embedding service unavailable: %s", exc)
+            break
+        refresh_embedding(recipe, provider)
+    return len(rows)
 
 
 def refresh_all(provider: EmbeddingProvider | None = None) -> tuple[int, int]:

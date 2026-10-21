@@ -1004,8 +1004,11 @@ The public server has no local model: Claude answers (`LLM_PROVIDER=anthropic`, 
   dimensioned, indexed column if that ever stops being true.
 - `content_hash` records which text was embedded, so stale vectors can be found after edits.
 - Recipes are embedded (`apps/recipes/embeddings.py`) from a short document: title, course,
-  cuisine, ingredient names, description, the start of the method. On every save, after the
-  transaction and best effort (a down embedding service never blocks a save); the one-shot
+  cuisine, ingredient names, description, the start of the method. A save (of a recipe, or of
+  an ingredient, for every recipe using it) only queues the recipe (`PendingEmbedding`, after
+  the transaction); the worker embeds the queue, after menu generations and imports, before
+  system drafts (2026-10-21: an ingredient in 200 recipes held its save while each was
+  embedded). Best effort: a down embedding service never blocks a save; the one-shot
   `embed-recipes` compose service (`manage.py embed_recipes`, idempotent) catches up on every
   `up`. The embedding service is part of the default stack, with a readiness check that passes
   once the model is loaded.

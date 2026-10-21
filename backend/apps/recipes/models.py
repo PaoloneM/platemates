@@ -180,6 +180,18 @@ class RecipeIngredient(models.Model):
         return self.quantity * Decimal(people) / Decimal(self.recipe.servings)
 
 
+class PendingEmbedding(models.Model):
+    """A recipe whose vector must be brought up to date, by the worker
+    (`embeddings.embed_pending`): saving a recipe or an ingredient never waits for the
+    embedding service."""
+
+    recipe = models.OneToOneField(Recipe, on_delete=models.CASCADE, related_name="+")
+    queued_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"embed {self.recipe_id}"
+
+
 class RecipeEmbedding(models.Model):
     """A recipe's vector, one per embedding model.
 

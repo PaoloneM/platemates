@@ -12,7 +12,7 @@ from .models import Ingredient
 def recompute_recipes(ingredient: Ingredient) -> int:
     """Re-derive the season of every recipe using `ingredient` (unless the user set it), and
     refresh their embeddings. Returns how many recipes changed season."""
-    from apps.recipes.embeddings import refresh_embedding
+    from apps.recipes.embeddings import queue as queue_embedding
     from apps.recipes.models import Recipe
 
     changed = 0
@@ -21,7 +21,8 @@ def recompute_recipes(ingredient: Ingredient) -> int:
         if recipe.propose("season_months", recipe.derive_season_months(), Source.DERIVED):
             recipe.save(update_fields=["season_months", "provenance"])
             changed += 1
-    transaction.on_commit(lambda: [refresh_embedding(r) for r in recipes])
+    # By the worker: an ingredient in hundreds of recipes must not hold its save.
+    queue_embedding(recipes)
     return changed
 
 

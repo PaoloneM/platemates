@@ -9,7 +9,7 @@ from apps.core.serializers import SeasonalityField, UserDecisionSerializerMixin
 from apps.curation.models import SystemDraft
 from apps.teams.models import Membership, RecipeBookEntry, Team
 
-from .embeddings import refresh_embedding
+from .embeddings import queue as queue_embedding
 from .models import Cuisine, Recipe, RecipeIngredient, Visibility
 
 
@@ -399,9 +399,9 @@ class RecipeSerializer(UserDecisionSerializerMixin, serializers.ModelSerializer)
         """Recompute derived properties the user has not taken over, and the embedding."""
         if recipe.propose("season_months", recipe.derive_season_months(), Source.DERIVED):
             recipe.save(update_fields=["season_months", "provenance"])
-        # After the transaction, so a slow or failing embedding service never blocks or undoes
-        # the save; `embed_recipes` catches up on whatever was missed.
-        transaction.on_commit(lambda: refresh_embedding(recipe))
+        # By the worker, after the transaction: a slow or failing embedding service never
+        # blocks or undoes the save; `embed_recipes` catches up on whatever was missed.
+        queue_embedding([recipe])
 
     @staticmethod
     def _replace_lines(recipe: Recipe, lines: list[dict]) -> None:

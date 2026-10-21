@@ -129,6 +129,8 @@ def test_marking_an_ingredient_basic_reembeds_its_recipes(
     with django_capture_on_commit_callbacks(execute=True):
         response = api.patch(f"/api/ingredients/{cream.pk}/", {"basic": True}, format="json")
     assert response.json()["basic"] is True
+    assert fake_embeddings.calls == calls  # the save only queued it
+    embeddings.embed_pending()  # the worker
     assert fake_embeddings.calls == calls + 1
     assert "panna" not in embeddings.recipe_document(soup)
 

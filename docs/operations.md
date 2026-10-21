@@ -197,6 +197,13 @@ be open. Configured through its API only, by `deploy/roles/cloudflare`
   `cloudflare_enabled: true` once the zone is active; hosts added to `cloudflare_tunnel_hosts`
   one at a time (admin first; taking a host out gives it back its direct record); last,
   `platemates_public_ports_open: false` (Traefik's 80 and 443 only on 127.0.0.1, closed in ufw).
+- **Speed** (measured 2026-10-21): the server answers in 13 ms, cloudflared to Traefik in
+  15-25 ms, and through Cloudflare from the server itself in 0.3-0.6 s. From Paolo's home,
+  half the requests took 1-4 s (one hung 300 s), with slow TLS handshakes on the zone's
+  Free-plan addresses (188.114.96/97.x) while cloudflare.com answered in 40 ms: the slowness is
+  between that ISP and Cloudflare's edge, not in the tunnel or the app. The tunnel runs over
+  HTTP/2 (QUIC kept timing out); half its connections land in Moscow (dme), half in Helsinki,
+  and cloudflared offers no way to pick (its only other region, `us`, only added latency).
 - **Mail**: incoming through Cloudflare Email Routing (it replaced ImprovMX on 2026-10-18; its MX
   and DKIM records are its own, never touched by the role). Outgoing mail
   (Keycloak's password reset and email verification) goes through Brevo's SMTP relay on port 587
@@ -233,8 +240,11 @@ Everything that is not the app is served only on the VM's loopback (decided with
   `platemates-backup`, and each container's CPU and memory read from its cgroup by
   `platemates-container-metrics` every 30 s; cAdvisor was dropped, as it now needs containerd's
   socket, i.e. control of the machine), PostgreSQL and WAL archiving (postgres-exporter, role
-  `monitoring`), both Traefiks (requests, errors and latency per service) and Keycloak
-  (`monitoring/scrape.yml`). Grafana, at `/grafana`, is embedded in the app's Monitoring page
+  `monitoring`), both Traefiks (requests, errors and latency per service), the backend itself
+  (time, database time and queries per endpoint, by view name: `apps/core/metrics.py`, served
+  at `/metrics` inside Docker's network only; dashboard "API") and Keycloak
+  (`monitoring/scrape.yml`). Every response also carries a `Server-Timing` header (app, db),
+  shown by the browser's developer tools: the server's share of a slow page at a glance. Grafana, at `/grafana`, is embedded in the app's Monitoring page
   (user menu, administrators, admin host only); it signs in through Keycloak (client
   `platemates-grafana`, administrators only) and reads the AI usage from PostgreSQL as
   `grafana_reader` (usage, prices, team names, and the invite requests' dates and status only;

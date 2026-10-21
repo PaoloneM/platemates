@@ -1,5 +1,7 @@
 """Run the background work, one task at a time, until stopped: menu generations
-(`apps.menus.generation`) and system recipe drafts (`apps.curation.jobs`).
+(`apps.menus.generation`), imports (`apps.transfer.jobs`), recipe embeddings
+(`apps.recipes.embeddings.embed_pending`) and system recipe drafts (`apps.curation.jobs`), in
+that order of priority.
 
 `docker compose` runs it as the `worker` service; in native development run it beside
 `runserver`. One worker is enough: both kinds of task wait for the LLM, which serves one request
@@ -25,6 +27,7 @@ from ai import get_chat_provider
 from apps.curation import campaigns
 from apps.curation import jobs as drafts
 from apps.menus import generation as menus
+from apps.recipes import embeddings
 from apps.teams.models import Team
 from apps.transfer import jobs as imports
 from apps.usage.context import attribute
@@ -39,7 +42,7 @@ STOP_CHECK_SECONDS = 1
 RECONNECT_SECONDS = 5
 
 
-CHANNELS = (menus.CHANNEL, drafts.CHANNEL, imports.CHANNEL)
+CHANNELS = (menus.CHANNEL, drafts.CHANNEL, imports.CHANNEL, embeddings.CHANNEL)
 
 
 def listen() -> None:
@@ -113,6 +116,9 @@ class Command(BaseCommand):
             self.stdout.write(f"Importing {job.file_name!r} ({job.pk})...")
             imports.run_job(job)
             done = f"Import {job.pk}: {job.status}"
+        elif embedded := embeddings.embed_pending():
+            # Quick (one call each), and what a user just saved: before the drafts.
+            done = f"Embedded {embedded} recipe(s)"
         elif (draft := drafts.claim_next()) is not None:
             self.stdout.write(f"Drafting system recipe {draft.dish!r} ({draft.pk})...")
             with attribute(team=Team.system(), feature=Feature.SYSTEM_DRAFTS):
