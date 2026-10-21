@@ -223,7 +223,7 @@ services:
     image: cloudflare/cloudflared:2026.10.1
     # HTTP/2 over TCP, not QUIC: from the Hetzner VM QUIC's UDP streams kept timing out ("no
     # recent network activity"), and pages took 0.1 to 4 s at random (2026-10-21).
-    command: tunnel --no-autoupdate --protocol http2 run
+    command: tunnel --no-autoupdate --region us run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:-}
     profiles: [cloudflare]
