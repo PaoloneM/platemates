@@ -11,7 +11,7 @@ def test_every_response_says_its_times(api, team):
 
 def test_metrics_are_by_view_with_no_id_in_them(api, team):
     api.get(f"/api/teams/{team.pk}/")
-    body = APIClient().get("/metrics").content.decode()
+    body = APIClient().get("/metrics", HTTP_HOST="backend:8000").content.decode()
     assert (
         'platemates_http_request_duration_seconds_count{method="GET",status="2xx",view="team-detail"}'
         in body

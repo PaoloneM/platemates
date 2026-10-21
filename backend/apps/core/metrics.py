@@ -75,7 +75,9 @@ class MetricsMiddleware:
 
     def __call__(self, request):
         if request.path == "/metrics":
-            return self.get_response(request)
+            # Answered here, before Django checks the Host: the scrape asks for `backend:8000`,
+            # which is no public host name. Only Docker's network reaches this path.
+            return metrics_view(request)
         timer = _QueryTimer()
         start = time.perf_counter()
         with connection.execute_wrapper(timer):
