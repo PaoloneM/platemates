@@ -76,6 +76,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # How long each endpoint takes (apps/core/metrics.py): outermost, so it times everything.
+    "apps.core.metrics.MetricsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     # Which plane the request came through (apps/core/planes.py): first, so nothing below runs
     # for an admin-only path asked on the public plane.

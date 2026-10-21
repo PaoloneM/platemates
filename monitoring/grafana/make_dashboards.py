@@ -32,19 +32,24 @@ class Layout:
         return pos
 
 
-def metric(title, exprs, unit="short", w=12, h=8, kind="timeseries", stack=False):
-    """A panel on VictoriaMetrics: exprs is a list of (PromQL, legend)."""
+def metric(title, exprs, unit="short", w=12, h=8, kind="timeseries", stack=False, instant=False):
+    """A panel on VictoriaMetrics: exprs is a list of (PromQL, legend). `instant`: one value
+    per series, at the end of the range (rankings)."""
     panel = {
         "type": kind,
         "title": title,
         "datasource": VM,
         "targets": [
-            {"refId": chr(65 + i), "expr": expr, "legendFormat": legend, "datasource": VM}
+            {"refId": chr(65 + i), "expr": expr, "legendFormat": legend, "datasource": VM,
+             **({"instant": True, "range": False} if instant else {})}
             for i, (expr, legend) in enumerate(exprs)
         ],
         "fieldConfig": {"defaults": {"unit": unit}, "overrides": []},
         "_size": (w, h),
     }
+    if kind == "bargauge":
+        panel["options"] = {"orientation": "horizontal", "displayMode": "basic",
+                            "reduceOptions": {"calcs": ["lastNotNull"], "values": False}}
     if kind == "timeseries":
         panel["fieldConfig"]["defaults"]["custom"] = {
             "fillOpacity": 15,
@@ -125,6 +130,24 @@ traffic = dashboard("pm-traffic", "Traffic", [
            unit="reqps", w=12),
 ])
 
+# By endpoint (the view's name), from the backend itself (apps/core/metrics.py): what the user
+# waits for, without Cloudflare's or the network's share.
+API_SLOW = 'topk(15, histogram_quantile(0.95, sum by (view, method, le) (rate(platemates_http_request_duration_seconds_bucket[$__range]))))'
+api = dashboard("pm-api", "API", [
+    metric("95th percentile by endpoint (slowest 15, over the range)", [(API_SLOW, "{{method}} {{view}}")],
+           unit="s", w=24, h=10, kind="bargauge", instant=True),
+    metric("Latency, 95th percentile, by endpoint", [('histogram_quantile(0.95, sum by (view, method, le) (rate(platemates_http_request_duration_seconds_bucket[15m])))', "{{method}} {{view}}")],
+           unit="s", w=12),
+    metric("Requests per minute, by endpoint", [('60 * sum by (view, method) (rate(platemates_http_request_duration_seconds_count[15m]))', "{{method}} {{view}}")],
+           unit="short", w=12),
+    metric("Database time, 95th percentile, by endpoint", [('histogram_quantile(0.95, sum by (view, method, le) (rate(platemates_http_db_duration_seconds_bucket[15m])))', "{{method}} {{view}}")],
+           unit="s", w=12),
+    metric("Queries per request, 95th percentile, by endpoint", [('histogram_quantile(0.95, sum by (view, method, le) (rate(platemates_http_db_queries_bucket[15m])))', "{{method}} {{view}}")],
+           unit="short", w=12),
+    metric("Server errors (5xx) per minute, by endpoint", [('60 * sum by (view, method) (rate(platemates_http_request_duration_seconds_count{status="5xx"}[15m]))', "{{method}} {{view}}")],
+           unit="short", w=24),
+], time_from="now-24h")
+
 database = dashboard("pm-database", "Database and backups", [
     metric("Last successful backup", [("time() - platemates_backup_last_success_timestamp_seconds", "age")],
            unit="s", w=8, kind="stat"),
@@ -180,7 +203,7 @@ GROUP BY 1, 2 ORDER BY cost_usd DESC NULLS LAST""", w=24, h=10, kind="table", fm
 
 def main() -> None:
     OUT.mkdir(exist_ok=True)
-    for board in (server, containers, traffic, database, keycloak, ai):
+    for board in (server, containers, traffic, api, database, keycloak, ai):
         path = OUT / f"{board['uid']}.json"
         path.write_text(json.dumps(board, indent=1) + "\n")
         print(f"wrote {path.relative_to(OUT.parent.parent.parent)}")

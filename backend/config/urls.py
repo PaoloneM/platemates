@@ -9,6 +9,7 @@ from apps.assistant.probe import probe_view
 from apps.assistant.views import AssistantSessionViewSet
 from apps.audit.views import AuditEventViewSet, stats_view
 from apps.catalog.views import IngredientViewSet, KitchenToolViewSet
+from apps.core.metrics import metrics_view
 from apps.core.views import health
 from apps.curation.views import (
     CampaignViewSet,
@@ -68,6 +69,8 @@ router.register("usage/prices", ModelPriceViewSet)
 router.register("assistant/sessions", AssistantSessionViewSet, basename="assistant-session")
 
 urlpatterns = [
+    # For VictoriaMetrics, inside Docker's network: no Traefik routes it (apps/core/metrics.py).
+    path("metrics", metrics_view),
     path("admin/", admin.site.urls),
     path("api/health/", health),
     path("oidc/", include("mozilla_django_oidc.urls")),

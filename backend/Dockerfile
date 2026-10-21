@@ -20,5 +20,6 @@ RUN DJANGO_DEBUG=true python manage.py collectstatic --noinput
 EXPOSE 8000
 # Migrations run at start so that `docker compose up` on a fresh machine is enough.
 # Threaded workers: an assistant request waits 10-60 s on the LLM, and must not hold a whole
-# worker while other requests queue behind it.
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --worker-class gthread --threads 4 --timeout 300"]
+# worker while other requests queue behind it. The metrics of the workers are gathered in
+# PROMETHEUS_MULTIPROC_DIR (apps/core/metrics.py), emptied at every start.
+CMD ["sh", "-c", "python manage.py migrate --noinput && if [ -n \"$PROMETHEUS_MULTIPROC_DIR\" ]; then rm -rf \"$PROMETHEUS_MULTIPROC_DIR\" && mkdir -p \"$PROMETHEUS_MULTIPROC_DIR\"; fi && gunicorn config.wsgi:application --config gunicorn.conf.py --bind 0.0.0.0:8000 --workers 2 --worker-class gthread --threads 4 --timeout 300"]
